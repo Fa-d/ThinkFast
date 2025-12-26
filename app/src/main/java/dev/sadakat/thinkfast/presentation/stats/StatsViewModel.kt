@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.sadakat.thinkfast.domain.model.DailyStatistics
 import dev.sadakat.thinkfast.domain.model.MonthlyStatistics
 import dev.sadakat.thinkfast.domain.model.SessionBreakdown
+import dev.sadakat.thinkfast.domain.model.UsageSession
 import dev.sadakat.thinkfast.domain.model.UsageTrend
 import dev.sadakat.thinkfast.domain.model.WeeklyStatistics
 import dev.sadakat.thinkfast.domain.usecase.stats.CalculateTrendsUseCase
@@ -56,11 +57,22 @@ class StatsViewModel(
                 val weeklyStats = getWeeklyStatisticsUseCase(today)
                 val monthlyStats = getMonthlyStatisticsUseCase(today)
 
-                // Load session breakdown for current week
-                val sessionBreakdown = getSessionBreakdownUseCase(
+                // Load session breakdown for each period
+                val dailySessions = getSessionBreakdownUseCase(today, today).sessions
+                val weeklySessionBreakdown = getSessionBreakdownUseCase(
                     startDate = weeklyStats.weekStart,
                     endDate = weeklyStats.weekEnd
                 )
+                val weeklySessions = weeklySessionBreakdown.sessions
+
+                // Calculate month start and end from month string (yyyy-MM)
+                val monthYear = monthlyStats.month // Format: yyyy-MM
+                val monthStart = getMonthStart(monthYear)
+                val monthEnd = getMonthEnd(monthYear)
+                val monthlySessions = getSessionBreakdownUseCase(
+                    startDate = monthStart,
+                    endDate = monthEnd
+                ).sessions
 
                 // Calculate trends
                 val dailyTrend = calculateTrendsUseCase.calculateDailyTrend(today)
@@ -72,7 +84,10 @@ class StatsViewModel(
                     dailyStats = dailyStats,
                     weeklyStats = weeklyStats,
                     monthlyStats = monthlyStats,
-                    sessionBreakdown = sessionBreakdown,
+                    sessionBreakdown = weeklySessionBreakdown,
+                    dailySessions = dailySessions,
+                    weeklySessions = weeklySessions,
+                    monthlySessions = monthlySessions,
                     dailyTrend = dailyTrend,
                     weeklyTrend = weeklyTrend,
                     monthlyTrend = monthlyTrend,
@@ -100,6 +115,29 @@ class StatsViewModel(
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
+
+    /**
+     * Get the first day of the month in yyyy-MM-dd format
+     */
+    private fun getMonthStart(monthYear: String): String {
+        return "${monthYear}-01"
+    }
+
+    /**
+     * Get the last day of the month in yyyy-MM-dd format
+     */
+    private fun getMonthEnd(monthYear: String): String {
+        val parts = monthYear.split("-")
+        val year = parts[0].toInt()
+        val month = parts[1].toInt()
+
+        // Get the last day of the month
+        val calendar = java.util.Calendar.getInstance()
+        calendar.set(year, month - 1, 1)
+        val lastDay = calendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+
+        return String.format("%04d-%02d-%02d", year, month, lastDay)
+    }
 }
 
 /**
@@ -111,12 +149,25 @@ data class StatsUiState(
     val weeklyStats: WeeklyStatistics? = null,
     val monthlyStats: MonthlyStatistics? = null,
     val sessionBreakdown: SessionBreakdown? = null,
+    val dailySessions: List<UsageSession> = emptyList(),
+    val weeklySessions: List<UsageSession> = emptyList(),
+    val monthlySessions: List<UsageSession> = emptyList(),
     val dailyTrend: UsageTrend? = null,
     val weeklyTrend: UsageTrend? = null,
     val monthlyTrend: UsageTrend? = null,
     val selectedPeriod: StatsPeriod = StatsPeriod.DAILY,
     val error: String? = null
-)
+) {
+    /**
+     * Get sessions for the currently selected period
+     */
+    val currentPeriodSessions: List<UsageSession>
+        get() = when (selectedPeriod) {
+            StatsPeriod.DAILY -> dailySessions
+            StatsPeriod.WEEKLY -> weeklySessions
+            StatsPeriod.MONTHLY -> monthlySessions
+        }
+}
 
 /**
  * Time period selection for statistics display

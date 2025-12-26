@@ -15,6 +15,7 @@ workManager = "2.9.0"
 coroutines = "1.8.0"
 ksp = "2.0.21-1.0.25"
 vico = "2.0.0-alpha.28"
+mpandroidchart = "3.1.0"
 # Testing
 mockk = "1.13.9"
 turbine = "1.1.0"
@@ -62,6 +63,9 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico" }
+
+# Charts (MPAndroidChart)
+mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpandroidchart" }
 
 # Testing
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }

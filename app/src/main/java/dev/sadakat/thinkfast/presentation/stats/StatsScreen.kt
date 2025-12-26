@@ -112,16 +112,34 @@ fun StatsScreen(
                         StatsPeriod.DAILY -> {
                             uiState.dailyStats?.let { stats ->
                                 item { DailyStatsContent(stats, uiState.dailyTrend) }
+                                item {
+                                    SessionDistributionCard(
+                                        sessions = uiState.dailySessions,
+                                        period = "Today"
+                                    )
+                                }
                             }
                         }
                         StatsPeriod.WEEKLY -> {
                             uiState.weeklyStats?.let { stats ->
                                 item { WeeklyStatsContent(stats, uiState.weeklyTrend) }
+                                item {
+                                    SessionDistributionCard(
+                                        sessions = uiState.weeklySessions,
+                                        period = "This Week"
+                                    )
+                                }
                             }
                         }
                         StatsPeriod.MONTHLY -> {
                             uiState.monthlyStats?.let { stats ->
                                 item { MonthlyStatsContent(stats, uiState.monthlyTrend) }
+                                item {
+                                    SessionDistributionCard(
+                                        sessions = uiState.monthlySessions,
+                                        period = stats.monthName
+                                    )
+                                }
                             }
                         }
                     }
@@ -520,5 +538,57 @@ private fun formatDuration(durationMillis: Long): String {
         hours > 0 -> "${hours}h ${minutes}m"
         minutes > 0 -> "${minutes}m"
         else -> "<1m"
+    }
+}
+
+/**
+ * Card displaying the normal distribution of session durations
+ */
+@Composable
+private fun SessionDistributionCard(sessions: List<dev.sadakat.thinkfast.domain.model.UsageSession>, period: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Session Duration Distribution",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Normal distribution of app usage sessions for $period",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (sessions.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No sessions recorded yet",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                NormalDistributionChart(
+                    sessions = sessions,
+                    modifier = Modifier.fillMaxWidth(),
+                    lineColor = MaterialTheme.colorScheme.primary,
+                    fillColor = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
     }
 }

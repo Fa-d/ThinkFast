@@ -32,7 +32,11 @@ class SessionDetectorTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        sessionDetector = SessionDetector(mockRepository, CoroutineScope(testDispatcher))
+        sessionDetector = SessionDetector(
+            usageRepository = mockRepository,
+            scope = CoroutineScope(testDispatcher),
+            getTimerDurationMillis = { 600000L } // 10 minutes default
+        )
     }
 
     @After

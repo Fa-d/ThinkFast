@@ -80,6 +80,9 @@ dependencies {
     implementation(libs.vico.compose.m3)
     implementation(libs.vico.core)
 
+    // Charts (MPAndroidChart)
+    implementation(libs.mpandroidchart)
+
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
