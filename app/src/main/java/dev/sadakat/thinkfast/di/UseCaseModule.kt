@@ -1,5 +1,8 @@
 package dev.sadakat.thinkfast.di
 
+import dev.sadakat.thinkfast.domain.usecase.goals.GetGoalProgressUseCase
+import dev.sadakat.thinkfast.domain.usecase.goals.SetGoalUseCase
+import dev.sadakat.thinkfast.domain.usecase.goals.UpdateStreakUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.CalculateTrendsUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.GetDailyStatisticsUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.GetMonthlyStatisticsUseCase
@@ -17,4 +20,9 @@ val useCaseModule = module {
     factory { GetMonthlyStatisticsUseCase(usageRepository = get(), getDailyStatisticsUseCase = get(), getWeeklyStatisticsUseCase = get()) }
     factory { GetSessionBreakdownUseCase(usageRepository = get()) }
     factory { CalculateTrendsUseCase(getDailyStatisticsUseCase = get(), getWeeklyStatisticsUseCase = get(), getMonthlyStatisticsUseCase = get()) }
+
+    // Goal use cases
+    factory { SetGoalUseCase(goalRepository = get()) }
+    factory { GetGoalProgressUseCase(goalRepository = get(), usageRepository = get()) }
+    factory { UpdateStreakUseCase(goalRepository = get(), usageRepository = get()) }
 }
