@@ -27,7 +27,8 @@ import kotlin.math.roundToInt
 @Composable
 fun SettingsScreen(
     navController: NavHostController,
-    viewModel: GoalViewModel = koinViewModel()
+    viewModel: GoalViewModel = koinViewModel(),
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -47,6 +48,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(contentPadding)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
@@ -142,6 +144,71 @@ fun SettingsScreen(
                     isSaving = uiState.isSaving,
                     onSetGoal = { viewModel.setInstagramGoal(it) }
                 )
+            }
+
+            // App Settings section header
+            item {
+                Text(
+                    text = "⚙️ App Settings",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+            }
+
+            // Timer alert duration setting
+            item {
+                TimerDurationCard(
+                    currentDuration = uiState.appSettings.timerAlertMinutes,
+                    onDurationChange = { viewModel.setTimerAlertDuration(it) }
+                )
+            }
+
+            // Always show reminder toggle
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(text = "🔔", fontSize = 24.sp)
+                                Text(
+                                    text = "Always Show Reminder",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Show reminder overlay every time you open Facebook or Instagram",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 20.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Switch(
+                            checked = uiState.appSettings.alwaysShowReminder,
+                            onCheckedChange = { viewModel.setAlwaysShowReminder(it) }
+                        )
+                    }
+                }
             }
 
             // Info section
@@ -351,6 +418,100 @@ private fun GoalCard(
                 } else {
                     Text(
                         text = if (progress?.goal != null) "Update Goal" else "Set Goal",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimerDurationCard(
+    currentDuration: Int,
+    onDurationChange: (Int) -> Unit
+) {
+    var sliderValue by remember { mutableStateOf(currentDuration.toFloat()) }
+    val hasChanged = sliderValue.roundToInt() != currentDuration
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(text = "⏰", fontSize = 24.sp)
+                Text(
+                    text = "Timer Alert Duration",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Text(
+                text = "Get an alert after using the app continuously for this duration",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Current value display
+            Text(
+                text = "${sliderValue.roundToInt()} minutes",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            // Slider
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it },
+                valueRange = 1f..120f,
+                steps = 118, // 1-minute increments
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Range labels
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "1 min",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "120 min",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Apply button (only shown when value changed)
+            if (hasChanged) {
+                Button(
+                    onClick = { onDurationChange(sliderValue.roundToInt()) },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Apply",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )

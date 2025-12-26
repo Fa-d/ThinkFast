@@ -33,7 +33,8 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    navController: NavHostController
+    navController: NavHostController,
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     val context = LocalContext.current
     var isServiceRunning by remember { mutableStateOf(isMonitorServiceRunning(context)) }
@@ -67,6 +68,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(contentPadding)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)

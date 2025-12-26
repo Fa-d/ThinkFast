@@ -16,14 +16,20 @@ import androidx.core.app.NotificationCompat
 import dev.sadakat.thinkfast.MainActivity
 import dev.sadakat.thinkfast.R
 import dev.sadakat.thinkfast.domain.model.UsageEvent
+import dev.sadakat.thinkfast.domain.repository.SettingsRepository
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
+import dev.sadakat.thinkfast.presentation.overlay.ReminderOverlayWindow
+import dev.sadakat.thinkfast.presentation.overlay.TimerOverlayWindow
 import dev.sadakat.thinkfast.util.Constants
+import dev.sadakat.thinkfast.util.ErrorLogger
+import dev.sadakat.thinkfast.util.PermissionHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
 
 /**
@@ -36,9 +42,14 @@ import org.koin.android.ext.android.inject
 class UsageMonitorService : Service() {
 
     private val usageRepository: UsageRepository by inject()
+    private val settingsRepository: SettingsRepository by inject()
 
     private lateinit var appLaunchDetector: AppLaunchDetector
     private lateinit var sessionDetector: SessionDetector
+
+    // WindowManager-based overlays
+    private lateinit var reminderOverlay: ReminderOverlayWindow
+    private lateinit var timerOverlay: TimerOverlayWindow
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var monitoringJob: Job? = null
@@ -78,9 +89,46 @@ class UsageMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
 
+        // Verify critical permissions before initializing overlays
+        val missingPermissions = PermissionHelper.getMissingPermissions(this)
+        if (missingPermissions.isNotEmpty()) {
+            ErrorLogger.warning(
+                "Service started with missing permissions: ${missingPermissions.joinToString()}",
+                context = "UsageMonitorService.onCreate"
+            )
+
+            // Log specific guidance for overlay permission
+            if (!PermissionHelper.hasOverlayPermission(this)) {
+                ErrorLogger.warning(
+                    "Overlay permission not granted - overlays will not be shown. " +
+                    "User must enable 'Display Over Other Apps' in app settings.",
+                    context = "UsageMonitorService.onCreate"
+                )
+            }
+        } else {
+            ErrorLogger.info(
+                "All required permissions granted",
+                context = "UsageMonitorService.onCreate"
+            )
+        }
+
         // Initialize detectors
         appLaunchDetector = AppLaunchDetector(this)
-        sessionDetector = SessionDetector(usageRepository, serviceScope)
+        sessionDetector = SessionDetector(
+            usageRepository = usageRepository,
+            scope = serviceScope,
+            getTimerDurationMillis = {
+                // Get timer duration from settings (blocking call is acceptable here)
+                runBlocking {
+                    settingsRepository.getSettingsOnce().getTimerDurationMillis()
+                }
+            }
+        )
+
+        // Initialize WindowManager-based overlays
+        // These will be created even without permission, but won't show until granted
+        reminderOverlay = ReminderOverlayWindow(this)
+        timerOverlay = TimerOverlayWindow(this)
 
         // Set up session detector callbacks
         setupSessionCallbacks()
@@ -131,6 +179,14 @@ class UsageMonitorService : Service() {
 
         // Stop monitoring
         monitoringJob?.cancel()
+
+        // Dismiss any showing overlays
+        try {
+            reminderOverlay.dismiss()
+            timerOverlay.dismiss()
+        } catch (e: Exception) {
+            // Overlays might not be initialized
+        }
 
         // Unregister receivers
         try {
@@ -206,14 +262,25 @@ class UsageMonitorService : Service() {
      * Check for target app usage
      */
     private suspend fun checkForAppUsage() {
-        // Check for app launch
+        // Check for app launch (detects NEW launches only)
         val launchEvent = appLaunchDetector.checkForAppLaunch()
 
+        // Also check if a target app is currently in foreground (for continuing sessions)
+        val currentForegroundApp = appLaunchDetector.isTargetAppInForeground()
+
         if (launchEvent != null) {
-            // Target app detected in foreground
+            // New launch detected
             lastTargetAppDetectedTime = launchEvent.timestamp
             isTargetAppActive = true
             onTargetAppDetected(launchEvent)
+        } else if (currentForegroundApp != null) {
+            // Target app is in foreground (continuing from previous detection)
+            val currentTime = System.currentTimeMillis()
+            lastTargetAppDetectedTime = currentTime
+            isTargetAppActive = true
+
+            // Continue the session (this will trigger timer check)
+            sessionDetector.onAppInForeground(currentForegroundApp, currentTime)
         } else {
             // No target app in foreground
             isTargetAppActive = false
@@ -226,8 +293,32 @@ class UsageMonitorService : Service() {
      * Handle target app detection
      */
     private suspend fun onTargetAppDetected(launchEvent: AppLaunchDetector.AppLaunchEvent) {
-        // Update session detector
+        // Update session detector first (this will trigger onSessionStart for new sessions)
         sessionDetector.onAppInForeground(launchEvent.appTarget, launchEvent.timestamp)
+
+        // Check if we should always show reminder
+        val settings = settingsRepository.getSettingsOnce()
+
+        // If always show reminder is enabled, show overlay every time app is opened
+        if (settings.alwaysShowReminder) {
+            // Get current session state (should exist now after onAppInForeground)
+            val currentSession = sessionDetector.getCurrentSession()
+            if (currentSession != null) {
+                showReminderOverlay(currentSession)
+
+                // Log event
+                serviceScope.launch {
+                    usageRepository.insertEvent(
+                        UsageEvent(
+                            sessionId = currentSession.sessionId,
+                            eventType = Constants.EVENT_REMINDER_SHOWN,
+                            timestamp = System.currentTimeMillis(),
+                            metadata = "App: ${launchEvent.appTarget.displayName} (Every Time)"
+                        )
+                    )
+                }
+            }
+        }
     }
 
     /**
@@ -236,23 +327,31 @@ class UsageMonitorService : Service() {
     private fun setupSessionCallbacks() {
         // Called when a new session starts
         sessionDetector.onSessionStart = { sessionState ->
-            // Show reminder overlay
-            showReminderOverlay(sessionState)
+            // Get settings to check reminder behavior
+            val settings = runBlocking {
+                settingsRepository.getSettingsOnce()
+            }
 
-            // Log event
-            serviceScope.launch {
-                usageRepository.insertEvent(
-                    UsageEvent(
-                        sessionId = sessionState.sessionId,
-                        eventType = Constants.EVENT_REMINDER_SHOWN,
-                        timestamp = System.currentTimeMillis(),
-                        metadata = "App: ${sessionState.targetApp.displayName}"
+            // Only show reminder here if alwaysShowReminder is false
+            // (If true, it will be shown in onTargetAppDetected instead)
+            if (!settings.alwaysShowReminder) {
+                showReminderOverlay(sessionState)
+
+                // Log event
+                serviceScope.launch {
+                    usageRepository.insertEvent(
+                        UsageEvent(
+                            sessionId = sessionState.sessionId,
+                            eventType = Constants.EVENT_REMINDER_SHOWN,
+                            timestamp = System.currentTimeMillis(),
+                            metadata = "App: ${sessionState.targetApp.displayName} (Session Start)"
+                        )
                     )
-                )
+                }
             }
         }
 
-        // Called when 10-minute threshold is reached
+        // Called when configured timer threshold is reached
         sessionDetector.onTenMinuteAlert = { sessionState ->
             // Show timer overlay
             showTimerOverlay(sessionState)
@@ -280,26 +379,52 @@ class UsageMonitorService : Service() {
      * Show reminder overlay when app is first opened
      */
     private fun showReminderOverlay(sessionState: SessionDetector.SessionState) {
-        val intent = Intent(this, dev.sadakat.thinkfast.presentation.overlay.ReminderOverlayActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(Constants.EXTRA_SESSION_ID, sessionState.sessionId)
-            putExtra(Constants.EXTRA_TARGET_APP, sessionState.targetApp.packageName)
+        // Check if overlay permission is granted
+        if (!PermissionHelper.hasOverlayPermission(this)) {
+            ErrorLogger.warning(
+                "Cannot show reminder overlay - overlay permission not granted",
+                context = "UsageMonitorService.showReminderOverlay"
+            )
+            return
         }
-        startActivity(intent)
+
+        ErrorLogger.debug(
+            "Showing reminder overlay for ${sessionState.targetApp.displayName}",
+            context = "UsageMonitorService.showReminderOverlay"
+        )
+
+        // Show WindowManager-based overlay (appears on top of current app)
+        reminderOverlay.show(
+            sessionId = sessionState.sessionId,
+            targetApp = sessionState.targetApp
+        )
     }
 
     /**
-     * Show timer overlay after 10 minutes
+     * Show timer overlay after configured duration
      */
     private fun showTimerOverlay(sessionState: SessionDetector.SessionState) {
-        val intent = Intent(this, dev.sadakat.thinkfast.presentation.overlay.TimerOverlayActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(Constants.EXTRA_SESSION_ID, sessionState.sessionId)
-            putExtra(Constants.EXTRA_TARGET_APP, sessionState.targetApp.packageName)
-            putExtra("session_start_time", sessionState.startTimestamp)
-            putExtra("session_duration", sessionState.totalDuration)
+        // Check if overlay permission is granted
+        if (!PermissionHelper.hasOverlayPermission(this)) {
+            ErrorLogger.warning(
+                "Cannot show timer overlay - overlay permission not granted",
+                context = "UsageMonitorService.showTimerOverlay"
+            )
+            return
         }
-        startActivity(intent)
+
+        ErrorLogger.debug(
+            "Showing timer overlay for ${sessionState.targetApp.displayName} (duration: ${sessionState.totalDuration}ms)",
+            context = "UsageMonitorService.showTimerOverlay"
+        )
+
+        // Show WindowManager-based overlay (appears on top of current app)
+        timerOverlay.show(
+            sessionId = sessionState.sessionId,
+            targetApp = sessionState.targetApp,
+            sessionStartTime = sessionState.startTimestamp,
+            sessionDuration = sessionState.totalDuration
+        )
 
         // Force end the session after showing timer alert
         sessionDetector.forceEndSession(

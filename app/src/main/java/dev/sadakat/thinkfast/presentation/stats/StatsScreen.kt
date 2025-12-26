@@ -1,6 +1,7 @@
 package dev.sadakat.thinkfast.presentation.stats
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,7 +51,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun StatsScreen(
     navController: NavHostController,
-    viewModel: StatsViewModel = koinViewModel()
+    viewModel: StatsViewModel = koinViewModel(),
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -78,6 +80,7 @@ fun StatsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .padding(contentPadding)
             ) {
                 // Period selector tabs
                 TabRow(selectedTabIndex = uiState.selectedPeriod.ordinal) {

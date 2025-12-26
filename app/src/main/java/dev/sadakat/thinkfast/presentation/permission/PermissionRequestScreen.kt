@@ -30,7 +30,8 @@ import dev.sadakat.thinkfast.util.PermissionHelper
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionRequestScreen(
-    navController: NavHostController
+    navController: NavHostController,
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     val context = LocalContext.current
     var permissionsState by remember { mutableStateOf(getPermissionsState(context)) }
@@ -69,6 +70,7 @@ fun PermissionRequestScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(contentPadding)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)

@@ -123,7 +123,8 @@ fun MainScreen() {
     ) { innerPadding ->
         NavGraph(
             navController = navController,
-            startDestination = startDestination
+            startDestination = startDestination,
+            contentPadding = innerPadding
         )
     }
 }

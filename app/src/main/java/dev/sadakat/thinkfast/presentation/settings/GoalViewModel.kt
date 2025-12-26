@@ -2,8 +2,10 @@ package dev.sadakat.thinkfast.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.sadakat.thinkfast.domain.model.AppSettings
 import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.GoalProgress
+import dev.sadakat.thinkfast.domain.repository.SettingsRepository
 import dev.sadakat.thinkfast.domain.usecase.goals.GetGoalProgressUseCase
 import dev.sadakat.thinkfast.domain.usecase.goals.SetGoalUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,11 +14,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel for managing goals in the settings screen
+ * ViewModel for managing goals and app settings in the settings screen
  */
 class GoalViewModel(
     private val setGoalUseCase: SetGoalUseCase,
-    private val getGoalProgressUseCase: GetGoalProgressUseCase
+    private val getGoalProgressUseCase: GetGoalProgressUseCase,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GoalUiState())
@@ -24,6 +27,18 @@ class GoalViewModel(
 
     init {
         loadGoalProgress()
+        loadSettings()
+    }
+
+    /**
+     * Load app settings
+     */
+    private fun loadSettings() {
+        viewModelScope.launch {
+            settingsRepository.getSettings().collect { settings ->
+                _uiState.value = _uiState.value.copy(appSettings = settings)
+            }
+        }
     }
 
     fun loadGoalProgress() {
@@ -96,16 +111,54 @@ class GoalViewModel(
     fun refresh() {
         loadGoalProgress()
     }
+
+    /**
+     * Update timer alert duration
+     */
+    fun setTimerAlertDuration(minutes: Int) {
+        viewModelScope.launch {
+            try {
+                settingsRepository.setTimerAlertMinutes(minutes)
+                _uiState.value = _uiState.value.copy(
+                    successMessage = "Timer alert set to ${minutes} minutes"
+                )
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to update timer duration"
+                )
+            }
+        }
+    }
+
+    /**
+     * Toggle always show reminder setting
+     */
+    fun setAlwaysShowReminder(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsRepository.setAlwaysShowReminder(enabled)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to update reminder setting"
+                )
+            }
+        }
+    }
 }
 
 /**
- * UI state for goal management
+ * UI state for goal management and app settings
  */
 data class GoalUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val facebookProgress: GoalProgress? = null,
     val instagramProgress: GoalProgress? = null,
+    val appSettings: AppSettings = AppSettings(),
     val error: String? = null,
     val successMessage: String? = null
 )

@@ -17,7 +17,8 @@ import java.util.Locale
  */
 class SessionDetector(
     private val usageRepository: UsageRepository,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val getTimerDurationMillis: () -> Long  // Function to get dynamic timer duration
 ) {
 
     private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.US)
@@ -199,8 +200,9 @@ class SessionDetector(
         val duration = timestamp - current.startTimestamp
         current.totalDuration = duration
 
-        // Check if 10-minute threshold is reached and alert hasn't been shown yet
-        if (!current.hasShownTenMinuteAlert && duration >= Constants.TEN_MINUTES_MILLIS) {
+        // Check if timer threshold is reached and alert hasn't been shown yet
+        val timerDuration = getTimerDurationMillis()
+        if (!current.hasShownTenMinuteAlert && duration >= timerDuration) {
             current.hasShownTenMinuteAlert = true
             onTenMinuteAlert?.invoke(current)
         }
