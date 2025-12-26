@@ -13,6 +13,11 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Keystore files - NEVER commit these!
+*.jks
+*.keystore
+keystore.properties
 /.idea/vcs.xml
 /.idea/.gitignore
 /.idea/AndroidProjectSystem.xml
@@ -24,3 +29,4 @@ local.properties
 /.idea/misc.xml
 /.idea/gradle.xml
 /.idea/markdown.xml
+/app/release/app-release.aab

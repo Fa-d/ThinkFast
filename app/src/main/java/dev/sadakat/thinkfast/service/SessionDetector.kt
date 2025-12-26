@@ -231,19 +231,6 @@ class SessionDetector(
             timeSinceTimerStarted - current.lastTimerAlertTime  // Time since last alert
         }
 
-        // Debug logging to help diagnose timer issues (only log when close to threshold or when triggered)
-        val timeUntilThreshold = timerDuration - timeSinceLastAlert
-        if (timeUntilThreshold <= 30000L || timeSinceLastAlert >= timerDuration) {
-            ErrorLogger.info(
-                "Timer check: duration=${timerDuration}ms (${timerDuration/60000}min), " +
-                "timeSinceTimerStarted=${timeSinceTimerStarted}ms (${timeSinceTimerStarted/1000}s), " +
-                "timeSinceLastAlert=${timeSinceLastAlert}ms (${timeSinceLastAlert/1000}s), " +
-                "timeUntilThreshold=${timeUntilThreshold}ms (${timeUntilThreshold/1000}s), " +
-                "willTrigger=${timeSinceLastAlert >= timerDuration}",
-                context = "SessionDetector.continueSession"
-            )
-        }
-
         if (timeSinceLastAlert >= timerDuration) {
             ErrorLogger.info(
                 "Timer threshold reached! Triggering alert for ${current.targetApp.displayName}",
