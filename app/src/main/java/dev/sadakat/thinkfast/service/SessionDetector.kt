@@ -35,7 +35,8 @@ class SessionDetector(
         val startTimestamp: Long,
         var lastActiveTimestamp: Long,
         var totalDuration: Long = 0L,
-        var hasShownTenMinuteAlert: Boolean = false
+        var timerStartTime: Long = 0L,  // When the current timer countdown started (reset on reminder shown)
+        var lastTimerAlertTime: Long = 0L  // Track when the last timer alert was shown (relative to timerStartTime)
     )
 
     // Current active session (null if no session is active)
@@ -128,6 +129,18 @@ class SessionDetector(
     fun hasActiveSession(): Boolean = currentSession != null
 
     /**
+     * Reset the timer for the current session
+     * This should be called when reminder overlay is shown
+     * so the timer countdown starts fresh after reminder dismissal
+     */
+    fun resetTimer() {
+        currentSession?.let {
+            it.timerStartTime = System.currentTimeMillis()
+            it.lastTimerAlertTime = 0L
+        }
+    }
+
+    /**
      * Get the duration of the current session in milliseconds
      */
     fun getCurrentSessionDuration(): Long {
@@ -138,22 +151,13 @@ class SessionDetector(
     /**
      * Initialize by loading any active session from database
      * Call this when service starts
+     * Note: We don't resume old sessions to avoid timer triggering immediately
+     * Old sessions will be ended by the database's automatic timeout logic
      */
     suspend fun initialize() {
-        val activeSession = usageRepository.getActiveSession()
-        if (activeSession != null) {
-            // Resume the active session
-            val targetApp = AppTarget.fromPackageName(activeSession.targetApp)
-            if (targetApp != null) {
-                currentSession = SessionState(
-                    sessionId = activeSession.id,
-                    targetApp = targetApp,
-                    startTimestamp = activeSession.startTimestamp,
-                    lastActiveTimestamp = System.currentTimeMillis(),
-                    totalDuration = activeSession.duration
-                )
-            }
-        }
+        // Don't resume old sessions - always start fresh when app is opened
+        // This prevents timer from triggering immediately after reminder dismissal
+        currentSession = null
     }
 
     /**
@@ -180,7 +184,8 @@ class SessionDetector(
             sessionId = sessionId,
             targetApp = targetApp,
             startTimestamp = timestamp,
-            lastActiveTimestamp = timestamp
+            lastActiveTimestamp = timestamp,
+            timerStartTime = timestamp  // Timer starts when session begins
         )
         currentSession = sessionState
 
@@ -209,28 +214,42 @@ class SessionDetector(
         // Update last active timestamp
         current.lastActiveTimestamp = timestamp
 
-        // Calculate total duration
+        // Calculate total duration (for database tracking)
         val duration = timestamp - current.startTimestamp
         current.totalDuration = duration
 
-        // Check if timer threshold is reached and alert hasn't been shown yet
+        // Check if timer threshold is reached
+        // The alert should show periodically at timerDuration intervals
+        // Timer is based on timerStartTime (resets when reminder is shown)
         val timerDuration = getTimerDurationMillis()
+        val timeSinceTimerStarted = timestamp - current.timerStartTime
 
-        ErrorLogger.debug(
-            "continueSession: app=${current.targetApp.displayName}, " +
-                    "duration=${duration}ms (${duration / 1000 / 60} minutes), " +
-                    "timerThreshold=${timerDuration}ms (${timerDuration / 1000 / 60} minutes), " +
-                    "hasShownAlert=${current.hasShownTenMinuteAlert}, " +
-                    "shouldTrigger=${!current.hasShownTenMinuteAlert && duration >= timerDuration}",
-            context = "SessionDetector.continueSession"
-        )
+        // Time since the last alert was shown (relative to timerStartTime)
+        val timeSinceLastAlert = if (current.lastTimerAlertTime == 0L) {
+            timeSinceTimerStarted  // No alert shown yet, use full time since timer started
+        } else {
+            timeSinceTimerStarted - current.lastTimerAlertTime  // Time since last alert
+        }
 
-        if (!current.hasShownTenMinuteAlert && duration >= timerDuration) {
+        // Debug logging to help diagnose timer issues (only log when close to threshold or when triggered)
+        val timeUntilThreshold = timerDuration - timeSinceLastAlert
+        if (timeUntilThreshold <= 30000L || timeSinceLastAlert >= timerDuration) {
             ErrorLogger.info(
-                "continueSession: Timer threshold reached! Triggering alert for ${current.targetApp.displayName}",
+                "Timer check: duration=${timerDuration}ms (${timerDuration/60000}min), " +
+                "timeSinceTimerStarted=${timeSinceTimerStarted}ms (${timeSinceTimerStarted/1000}s), " +
+                "timeSinceLastAlert=${timeSinceLastAlert}ms (${timeSinceLastAlert/1000}s), " +
+                "timeUntilThreshold=${timeUntilThreshold}ms (${timeUntilThreshold/1000}s), " +
+                "willTrigger=${timeSinceLastAlert >= timerDuration}",
                 context = "SessionDetector.continueSession"
             )
-            current.hasShownTenMinuteAlert = true
+        }
+
+        if (timeSinceLastAlert >= timerDuration) {
+            ErrorLogger.info(
+                "Timer threshold reached! Triggering alert for ${current.targetApp.displayName}",
+                context = "SessionDetector.continueSession"
+            )
+            current.lastTimerAlertTime = timeSinceTimerStarted
             onTenMinuteAlert?.invoke(current)
         }
 
@@ -258,13 +277,6 @@ class SessionDetector(
         interruptionType: String? = null
     ) {
         val current = currentSession ?: return
-
-        ErrorLogger.debug(
-            "endCurrentSession: Ending session ${current.sessionId} for ${current.targetApp.displayName}, " +
-                    "duration=${endTimestamp - current.startTimestamp}ms, " +
-                    "interrupted=$wasInterrupted, type=$interruptionType",
-            context = "SessionDetector.endCurrentSession"
-        )
 
         val duration = endTimestamp - current.startTimestamp
 
@@ -294,10 +306,6 @@ class SessionDetector(
             onSessionEnd?.invoke(current)
         } else {
             // Session too short - delete it
-            ErrorLogger.debug(
-                "endCurrentSession: Session too short (${duration}ms < ${Constants.MIN_SESSION_DURATION}ms), deleting",
-                context = "SessionDetector.endCurrentSession"
-            )
             scope.launch {
                 usageRepository.endSession(
                     sessionId = current.sessionId,
@@ -310,21 +318,12 @@ class SessionDetector(
 
         // Clear current session
         currentSession = null
-
-        ErrorLogger.debug(
-            "endCurrentSession: currentSession set to null",
-            context = "SessionDetector.endCurrentSession"
-        )
     }
 
     /**
      * Reset the detector state
      */
     fun reset() {
-        ErrorLogger.warning(
-            "reset() called - clearing currentSession. Was ${if (currentSession != null) currentSession!!.targetApp.displayName else "null"}",
-            context = "SessionDetector.reset"
-        )
         currentSession = null
     }
 }

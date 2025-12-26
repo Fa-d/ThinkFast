@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -59,9 +60,10 @@ class UsageMonitorService : Service() {
     private var lastTargetAppDetectedTime = 0L
     private var isPowerSaveMode = false
 
-    // Track when reminder overlay is showing to avoid false session timeouts
+    // Track when overlays are shown to handle app detection delays
     private var reminderOverlayShowing = false
-    private var reminderOverlayShownTime = 0L  // When the overlay was first shown
+    private var reminderOverlayShownTime = 0L  // When reminder overlay was first shown
+    private var timerOverlayShownTime = 0L     // When timer overlay was shown
 
     // Broadcast receiver for screen on/off events
     private val screenStateReceiver = object : BroadcastReceiver() {
@@ -160,7 +162,15 @@ class UsageMonitorService : Service() {
         }
 
         // Start foreground service with notification
-        startForeground(NOTIFICATION_ID, createNotification())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID,
+                createNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, createNotification())
+        }
 
         // Start monitoring
         startMonitoring()
@@ -286,6 +296,10 @@ class UsageMonitorService : Service() {
             lastTargetAppDetectedTime = currentTime
             isTargetAppActive = true
 
+            // Reset overlay tracking since app is now detected
+            reminderOverlayShownTime = 0L
+            timerOverlayShownTime = 0L
+
             // Continue the session (this will trigger timer check)
             sessionDetector.onAppInForeground(currentForegroundApp, currentTime)
         } else {
@@ -294,18 +308,24 @@ class UsageMonitorService : Service() {
 
             // Check if we should continue the session despite app not being detected
             // This happens after overlay dismissal when UsageStatsManager hasn't updated yet
-            // We continue until the timer threshold is reached to ensure timer overlay can appear
             val currentSession = sessionDetector.getCurrentSession()
+            val currentTime = System.currentTimeMillis()
+
+            // Continue session if an overlay was shown recently (within 30 seconds)
+            // This gives UsageStatsManager time to update after overlay dismissal
+            val timeSinceReminderOverlay = if (reminderOverlayShownTime > 0) currentTime - reminderOverlayShownTime else Long.MAX_VALUE
+            val timeSinceTimerOverlay = if (timerOverlayShownTime > 0) currentTime - timerOverlayShownTime else Long.MAX_VALUE
+            val gracePeriod = 30000L // 30 seconds
+
             val shouldContinueSession = currentSession != null &&
-                    reminderOverlayShownTime > 0 &&
-                    !currentSession.hasShownTenMinuteAlert
+                    (timeSinceReminderOverlay < gracePeriod || timeSinceTimerOverlay < gracePeriod)
 
             if (shouldContinueSession) {
                 // Continue the session to update duration and check timer threshold
-                sessionDetector.onAppInForeground(currentSession.targetApp, System.currentTimeMillis())
+                sessionDetector.onAppInForeground(currentSession.targetApp, currentTime)
             } else {
                 // Check for session timeout
-                sessionDetector.checkForSessionTimeout(System.currentTimeMillis())
+                sessionDetector.checkForSessionTimeout(currentTime)
             }
         }
     }
@@ -374,6 +394,12 @@ class UsageMonitorService : Service() {
 
         // Called when configured timer threshold is reached
         sessionDetector.onTenMinuteAlert = { sessionState ->
+            ErrorLogger.info(
+                "onTenMinuteAlert callback triggered for ${sessionState.targetApp.displayName}, " +
+                "sessionId=${sessionState.sessionId}, duration=${sessionState.totalDuration}ms",
+                context = "UsageMonitorService.setupSessionCallbacks"
+            )
+
             // Show timer overlay
             showTimerOverlay(sessionState)
 
@@ -408,6 +434,10 @@ class UsageMonitorService : Service() {
             )
             return
         }
+
+        // Reset the timer so it starts counting fresh after reminder dismissal
+        // This prevents timer from triggering immediately after reminder is dismissed
+        sessionDetector.resetTimer()
 
         // Track that reminder overlay is showing
         reminderOverlayShowing = true
@@ -452,6 +482,11 @@ class UsageMonitorService : Service() {
      * Show timer overlay after configured duration
      */
     private fun showTimerOverlay(sessionState: SessionDetector.SessionState) {
+        ErrorLogger.info(
+            "showTimerOverlay called for ${sessionState.targetApp.displayName}",
+            context = "UsageMonitorService.showTimerOverlay"
+        )
+
         // Check if overlay permission is granted
         if (!PermissionHelper.hasOverlayPermission(this)) {
             ErrorLogger.warning(
@@ -461,6 +496,14 @@ class UsageMonitorService : Service() {
             return
         }
 
+        ErrorLogger.info(
+            "Overlay permission granted, showing timer overlay",
+            context = "UsageMonitorService.showTimerOverlay"
+        )
+
+        // Track that timer overlay is being shown
+        timerOverlayShownTime = System.currentTimeMillis()
+
         // Show WindowManager-based overlay (appears on top of current app)
         timerOverlay.show(
             sessionId = sessionState.sessionId,
@@ -469,12 +512,13 @@ class UsageMonitorService : Service() {
             sessionDuration = sessionState.totalDuration
         )
 
-        // Force end the session after showing timer alert
-        sessionDetector.forceEndSession(
-            timestamp = System.currentTimeMillis(),
-            wasInterrupted = true,
-            interruptionType = Constants.INTERRUPTION_TEN_MINUTE_ALERT
+        ErrorLogger.info(
+            "Timer overlay shown successfully",
+            context = "UsageMonitorService.showTimerOverlay"
         )
+
+        // Note: Session continues after timer alert dismissal
+        // The alert will show again after another timer duration elapses
     }
 
     /**

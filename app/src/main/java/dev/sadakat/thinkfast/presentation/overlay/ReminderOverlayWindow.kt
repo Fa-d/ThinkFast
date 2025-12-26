@@ -79,17 +79,8 @@ class ReminderOverlayWindow(
      * This method can be called from any thread - it will post to main thread
      */
     fun show(sessionId: Long, targetApp: AppTarget) {
-        ErrorLogger.debug(
-            "show() called for ${targetApp.displayName}, isShowing=$isShowing, thread=${Thread.currentThread().name}",
-            context = "ReminderOverlayWindow.show"
-        )
-
         // Ensure we're on the main thread
         if (Looper.myLooper() != Looper.getMainLooper()) {
-            ErrorLogger.debug(
-                "Not on main thread, posting to main handler",
-                context = "ReminderOverlayWindow.show"
-            )
             mainHandler.post { show(sessionId, targetApp) }
             return
         }
@@ -167,18 +158,8 @@ class ReminderOverlayWindow(
 
         // Add view to window manager
         try {
-            ErrorLogger.debug(
-                "Adding overlay view to WindowManager for ${targetApp.displayName}",
-                context = "ReminderOverlayWindow.show"
-            )
-
             windowManager.addView(overlayView, params)
             isShowing = true
-
-            ErrorLogger.debug(
-                "Overlay view added successfully, transitioning to RESUMED state",
-                context = "ReminderOverlayWindow.show"
-            )
 
             // Move lifecycle to RESUMED
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
@@ -225,26 +206,13 @@ class ReminderOverlayWindow(
      * This method can be called from any thread - it will post to main thread
      */
     fun dismiss() {
-        ErrorLogger.debug(
-            "dismiss() called, isShowing=$isShowing, thread=${Thread.currentThread().name}",
-            context = "ReminderOverlayWindow.dismiss"
-        )
-
         // Ensure we're on the main thread
         if (Looper.myLooper() != Looper.getMainLooper()) {
-            ErrorLogger.debug(
-                "Not on main thread, posting to main handler",
-                context = "ReminderOverlayWindow.dismiss"
-            )
             mainHandler.post { dismiss() }
             return
         }
 
         if (!isShowing || overlayView == null) {
-            ErrorLogger.debug(
-                "Overlay not showing or view is null, skipping dismiss",
-                context = "ReminderOverlayWindow.dismiss"
-            )
             return
         }
 
@@ -255,11 +223,6 @@ class ReminderOverlayWindow(
             windowManager.removeView(overlayView)
             overlayView = null
             isShowing = false
-
-            ErrorLogger.debug(
-                "Overlay dismissed successfully",
-                context = "ReminderOverlayWindow.dismiss"
-            )
 
             // Call the dismiss callback
             onDismissCallback?.invoke()

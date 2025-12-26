@@ -90,17 +90,8 @@ class TimerOverlayWindow(
         sessionStartTime: Long,
         sessionDuration: Long
     ) {
-        ErrorLogger.debug(
-            "show() called for ${targetApp.displayName}, isShowing=$isShowing, thread=${Thread.currentThread().name}, duration=${sessionDuration}ms",
-            context = "TimerOverlayWindow.show"
-        )
-
         // Ensure we're on the main thread
         if (Looper.myLooper() != Looper.getMainLooper()) {
-            ErrorLogger.debug(
-                "Not on main thread, posting to main handler",
-                context = "TimerOverlayWindow.show"
-            )
             mainHandler.post { show(sessionId, targetApp, sessionStartTime, sessionDuration) }
             return
         }
@@ -182,18 +173,8 @@ class TimerOverlayWindow(
 
         // Add view to window manager
         try {
-            ErrorLogger.debug(
-                "Adding timer overlay view to WindowManager for ${targetApp.displayName}",
-                context = "TimerOverlayWindow.show"
-            )
-
             windowManager.addView(overlayView, params)
             isShowing = true
-
-            ErrorLogger.debug(
-                "Timer overlay view added successfully, transitioning to RESUMED state",
-                context = "TimerOverlayWindow.show"
-            )
 
             // Move lifecycle to RESUMED
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
@@ -240,26 +221,13 @@ class TimerOverlayWindow(
      * This method can be called from any thread - it will post to main thread
      */
     fun dismiss() {
-        ErrorLogger.debug(
-            "dismiss() called, isShowing=$isShowing, thread=${Thread.currentThread().name}",
-            context = "TimerOverlayWindow.dismiss"
-        )
-
         // Ensure we're on the main thread
         if (Looper.myLooper() != Looper.getMainLooper()) {
-            ErrorLogger.debug(
-                "Not on main thread, posting to main handler",
-                context = "TimerOverlayWindow.dismiss"
-            )
             mainHandler.post { dismiss() }
             return
         }
 
         if (!isShowing || overlayView == null) {
-            ErrorLogger.debug(
-                "Timer overlay not showing or view is null, skipping dismiss",
-                context = "TimerOverlayWindow.dismiss"
-            )
             return
         }
 
@@ -270,11 +238,6 @@ class TimerOverlayWindow(
             windowManager.removeView(overlayView)
             overlayView = null
             isShowing = false
-
-            ErrorLogger.debug(
-                "Timer overlay dismissed successfully",
-                context = "TimerOverlayWindow.dismiss"
-            )
         } catch (e: Exception) {
             ErrorLogger.error(
                 e,

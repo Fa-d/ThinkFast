@@ -268,7 +268,7 @@ private fun updateChartData(
         setDrawCircleHole(true)
         setDrawFilled(false)
         mode = LineDataSet.Mode.CUBIC_BEZIER  // Curved lines
-        cubicIntensity = 0.4f  // Increased for more dramatic curves
+        cubicIntensity = 0.5f  // Increased for more dramatic curves
         valueTextSize = 10f
         setDrawValues(false)
     }
@@ -288,7 +288,7 @@ private fun updateChartData(
         setDrawCircleHole(true)
         setDrawFilled(false)
         mode = LineDataSet.Mode.CUBIC_BEZIER  // Curved lines
-        cubicIntensity = 0.4f  // Increased for more dramatic curves
+        cubicIntensity = 0.5f  // Increased for more dramatic curves
         valueTextSize = 10f
         setDrawValues(false)
     }
