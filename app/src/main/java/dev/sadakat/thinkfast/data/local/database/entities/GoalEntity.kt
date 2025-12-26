@@ -6,9 +6,8 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "goals")
 data class GoalEntity(
     @PrimaryKey
-    val id: String = "current_goal",  // Single active goal
+    val targetApp: String,  // One goal per app
     val dailyLimitMinutes: Int,
-    val targetApp: String,
     val startDate: String,
     val currentStreak: Int,
     val longestStreak: Int,

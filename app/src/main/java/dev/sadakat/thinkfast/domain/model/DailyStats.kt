@@ -8,5 +8,6 @@ data class DailyStats(
     val longestSession: Long,
     val averageSession: Long,
     val alertsShown: Int = 0,
-    val alertsProceeded: Int = 0
+    val alertsProceeded: Int = 0,
+    val lastUpdated: Long = System.currentTimeMillis()
 )

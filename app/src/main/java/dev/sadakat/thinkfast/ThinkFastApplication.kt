@@ -2,6 +2,7 @@ package dev.sadakat.thinkfast
 
 import android.app.Application
 import dev.sadakat.thinkfast.di.databaseModule
+import dev.sadakat.thinkfast.di.repositoryModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -16,8 +17,8 @@ class ThinkFastApplication : Application() {
             androidLogger(Level.ERROR)
             androidContext(this@ThinkFastApplication)
             modules(
-                databaseModule
-                // Add more modules here as we build them
+                databaseModule,
+                repositoryModule
             )
         }
     }

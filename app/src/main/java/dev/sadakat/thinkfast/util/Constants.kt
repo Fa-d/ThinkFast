@@ -53,10 +53,13 @@ object Constants {
     // Event Types
     const val EVENT_APP_OPENED = "app_opened"
     const val EVENT_APP_CLOSED = "app_closed"
+    const val EVENT_SESSION_ENDED = "session_ended"
     const val EVENT_SCREEN_ON = "screen_on"
     const val EVENT_SCREEN_OFF = "screen_off"
     const val EVENT_ALERT_SHOWN = "alert_shown"
+    const val EVENT_REMINDER_SHOWN = "reminder_shown"
     const val EVENT_PROCEED_CLICKED = "proceed_clicked"
+    const val EVENT_TEN_MIN_ALERT = "ten_minute_alert"
     const val EVENT_TIMER_ALERT_SHOWN = "timer_alert_shown"
     const val EVENT_TIMER_ACKNOWLEDGED = "timer_acknowledged"
 
