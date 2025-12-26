@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import dev.sadakat.thinkfast.presentation.home.HomeScreen
+import dev.sadakat.thinkfast.presentation.permission.PermissionRequestScreen
 import dev.sadakat.thinkfast.presentation.settings.SettingsScreen
 import dev.sadakat.thinkfast.presentation.stats.StatsScreen
 
@@ -15,12 +16,17 @@ import dev.sadakat.thinkfast.presentation.stats.StatsScreen
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    startDestination: String = Screen.Home.route
+    startDestination: String = Screen.PermissionRequest.route
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
+        // Permission request screen - onboarding
+        composable(route = Screen.PermissionRequest.route) {
+            PermissionRequestScreen(navController = navController)
+        }
+
         // Home screen - main dashboard
         composable(route = Screen.Home.route) {
             HomeScreen(navController = navController)

@@ -28,7 +28,10 @@ import org.koin.android.ext.android.inject
 
 /**
  * Foreground service that monitors app usage and shows overlays
- * Polls UsageStatsManager every 1.5 seconds to detect target app launches
+ * Polls UsageStatsManager with adaptive intervals based on:
+ * - Screen state (on/off)
+ * - Target app activity
+ * - Power save mode
  */
 class UsageMonitorService : Service() {
 
@@ -41,6 +44,9 @@ class UsageMonitorService : Service() {
     private var monitoringJob: Job? = null
 
     private var isScreenOn = true
+    private var isTargetAppActive = false
+    private var lastTargetAppDetectedTime = 0L
+    private var isPowerSaveMode = false
 
     // Broadcast receiver for screen on/off events
     private val screenStateReceiver = object : BroadcastReceiver() {
@@ -58,6 +64,17 @@ class UsageMonitorService : Service() {
         }
     }
 
+    // Broadcast receiver for power save mode changes
+    private val powerSaveReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> {
+                    updatePowerSaveMode()
+                }
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
 
@@ -69,11 +86,18 @@ class UsageMonitorService : Service() {
         setupSessionCallbacks()
 
         // Register screen state receiver
-        val filter = IntentFilter().apply {
+        val screenFilter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
         }
-        registerReceiver(screenStateReceiver, filter)
+        registerReceiver(screenStateReceiver, screenFilter)
+
+        // Register power save mode receiver
+        val powerFilter = IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+        registerReceiver(powerSaveReceiver, powerFilter)
+
+        // Update power save mode status
+        updatePowerSaveMode()
 
         // Initialize session detector
         serviceScope.launch {
@@ -108,11 +132,12 @@ class UsageMonitorService : Service() {
         // Stop monitoring
         monitoringJob?.cancel()
 
-        // Unregister receiver
+        // Unregister receivers
         try {
             unregisterReceiver(screenStateReceiver)
+            unregisterReceiver(powerSaveReceiver)
         } catch (e: Exception) {
-            // Receiver might not be registered
+            // Receivers might not be registered
         }
 
         // End any active session
@@ -120,7 +145,45 @@ class UsageMonitorService : Service() {
     }
 
     /**
-     * Start the monitoring loop
+     * Update power save mode status
+     */
+    private fun updatePowerSaveMode() {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        isPowerSaveMode = powerManager?.isPowerSaveMode == true
+    }
+
+    /**
+     * Calculate the adaptive polling interval based on current state
+     */
+    private fun calculatePollingInterval(): Long {
+        // In power save mode, always use slower polling
+        if (isPowerSaveMode) {
+            return Constants.POLLING_INTERVAL_POWER_SAVE
+        }
+
+        // Screen off - very slow polling
+        if (!isScreenOn) {
+            return Constants.POLLING_INTERVAL_INACTIVE
+        }
+
+        // Target app is active - fast polling for accurate detection
+        if (isTargetAppActive) {
+            return Constants.POLLING_INTERVAL_ACTIVE
+        }
+
+        // No target app active - check if we've been idle for a while
+        val timeSinceLastDetection = System.currentTimeMillis() - lastTargetAppDetectedTime
+        if (timeSinceLastDetection > Constants.IDLE_THRESHOLD_MS) {
+            // Been idle for more than a minute - use slower polling
+            return Constants.POLLING_INTERVAL_IDLE
+        }
+
+        // Recently had target app active - use active polling
+        return Constants.POLLING_INTERVAL_ACTIVE
+    }
+
+    /**
+     * Start the monitoring loop with adaptive polling
      */
     private fun startMonitoring() {
         monitoringJob = serviceScope.launch {
@@ -130,8 +193,11 @@ class UsageMonitorService : Service() {
                     checkForAppUsage()
                 }
 
+                // Calculate adaptive polling interval
+                val pollingInterval = calculatePollingInterval()
+
                 // Wait for polling interval
-                delay(Constants.POLLING_INTERVAL_ACTIVE)
+                delay(pollingInterval)
             }
         }
     }
@@ -145,9 +211,13 @@ class UsageMonitorService : Service() {
 
         if (launchEvent != null) {
             // Target app detected in foreground
+            lastTargetAppDetectedTime = launchEvent.timestamp
+            isTargetAppActive = true
             onTargetAppDetected(launchEvent)
         } else {
-            // No target app in foreground - check for session timeout
+            // No target app in foreground
+            isTargetAppActive = false
+            // Check for session timeout
             sessionDetector.checkForSessionTimeout(System.currentTimeMillis())
         }
     }
@@ -202,7 +272,7 @@ class UsageMonitorService : Service() {
 
         // Called when session ends
         sessionDetector.onSessionEnd = { sessionState ->
-            // Session ended - no overlay needed
+            isTargetAppActive = false
         }
     }
 
@@ -247,7 +317,7 @@ class UsageMonitorService : Service() {
         sessionDetector.forceEndSession(
             timestamp = System.currentTimeMillis(),
             wasInterrupted = false,
-            interruptionType = "screen_off"
+            interruptionType = Constants.INTERRUPTION_SCREEN_OFF
         )
     }
 

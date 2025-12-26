@@ -5,6 +5,11 @@ package dev.sadakat.thinkfast.presentation.navigation
  */
 sealed class Screen(val route: String) {
     /**
+     * Permission request screen - onboarding for granting permissions
+     */
+    data object PermissionRequest : Screen("permission_request")
+
+    /**
      * Home screen - main dashboard with quick stats and controls
      */
     data object Home : Screen("home")

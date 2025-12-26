@@ -6,9 +6,16 @@ object Constants {
     const val INSTAGRAM_PACKAGE = "com.instagram.android"
 
     // Timing
-    const val POLLING_INTERVAL_ACTIVE = 1500L  // 1.5 seconds when screen is on
-    const val POLLING_INTERVAL_INACTIVE = 3000L  // 3 seconds when inactive
+    // Adaptive polling intervals based on state
+    const val POLLING_INTERVAL_ACTIVE = 1500L  // 1.5 seconds when target app is active
+    const val POLLING_INTERVAL_IDLE = 5000L  // 5 seconds when no target app active (screen on)
+    const val POLLING_INTERVAL_INACTIVE = 30000L  // 30 seconds when screen is off
+    const val POLLING_INTERVAL_POWER_SAVE = 10000L  // 10 seconds in power save mode
+
     const val SESSION_GAP_THRESHOLD = 30000L  // 30 seconds
+
+    // Time before switching to idle polling
+    const val IDLE_THRESHOLD_MS = 60000L  // 1 minute of no target app before slower polling
     const val TEN_MINUTES_MILLIS = 600000L  // 10 minutes
     const val MIN_SESSION_DURATION = 5000L  // 5 seconds
 
