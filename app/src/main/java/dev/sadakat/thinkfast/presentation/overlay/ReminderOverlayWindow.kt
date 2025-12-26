@@ -54,7 +54,8 @@ import org.koin.core.component.inject
  * Uses Compose UI embedded in a system window
  */
 class ReminderOverlayWindow(
-    private val context: Context
+    private val context: Context,
+    private val onDismissCallback: (() -> Unit)? = null
 ) : KoinComponent, LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -259,6 +260,9 @@ class ReminderOverlayWindow(
                 "Overlay dismissed successfully",
                 context = "ReminderOverlayWindow.dismiss"
             )
+
+            // Call the dismiss callback
+            onDismissCallback?.invoke()
         } catch (e: Exception) {
             ErrorLogger.error(
                 e,

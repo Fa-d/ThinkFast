@@ -5,8 +5,11 @@ import dev.sadakat.thinkfast.domain.model.UsageEvent
 import dev.sadakat.thinkfast.domain.model.UsageSession
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
 import dev.sadakat.thinkfast.util.Constants
+import dev.sadakat.thinkfast.util.ErrorLogger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -54,7 +57,7 @@ class SessionDetector(
      * @param targetApp the detected target app
      * @param timestamp the timestamp when the app was detected
      */
-    fun onAppInForeground(targetApp: AppTarget, timestamp: Long) {
+    suspend fun onAppInForeground(targetApp: AppTarget, timestamp: Long) {
         val current = currentSession
 
         if (current == null) {
@@ -86,8 +89,15 @@ class SessionDetector(
 
         val timeSinceLastActive = currentTime - current.lastActiveTimestamp
 
-        // If gap threshold exceeded, end the session
-        if (timeSinceLastActive >= Constants.SESSION_GAP_THRESHOLD) {
+        // Don't end the session if total duration is less than minimum session duration
+        // This handles the case where our overlay covers the app temporarily
+        val totalSessionDuration = currentTime - current.startTimestamp
+
+        // Only end session if BOTH conditions are met:
+        // 1. Gap threshold exceeded (30 seconds of no activity)
+        // 2. Total session duration is at least the minimum (5 seconds)
+        // This prevents ending sessions that were just interrupted by our reminder overlay
+        if (timeSinceLastActive >= Constants.SESSION_GAP_THRESHOLD && totalSessionDuration >= Constants.MIN_SESSION_DURATION) {
             endCurrentSession(current.lastActiveTimestamp + Constants.SESSION_GAP_THRESHOLD, wasInterrupted = false)
         }
     }
@@ -148,9 +158,12 @@ class SessionDetector(
 
     /**
      * Start a new session
+     * NOTE: This is a suspend function that performs database insert non-blockingly
      */
-    private fun startNewSession(targetApp: AppTarget, timestamp: Long) {
-        scope.launch {
+    private suspend fun startNewSession(targetApp: AppTarget, timestamp: Long) {
+        // Create session in database using withContext (non-blocking suspend)
+        // This ensures callbacks have a valid session ID without blocking the thread
+        val sessionId = withContext(Dispatchers.IO) {
             // Create session in database
             val session = UsageSession(
                 targetApp = targetApp.packageName,
@@ -159,20 +172,20 @@ class SessionDetector(
                 duration = 0L,
                 date = dateFormatter.format(Date(timestamp))
             )
+            usageRepository.insertSession(session)
+        }
 
-            val sessionId = usageRepository.insertSession(session)
+        // Create session state with valid session ID
+        val sessionState = SessionState(
+            sessionId = sessionId,
+            targetApp = targetApp,
+            startTimestamp = timestamp,
+            lastActiveTimestamp = timestamp
+        )
+        currentSession = sessionState
 
-            // Create session state
-            val sessionState = SessionState(
-                sessionId = sessionId,
-                targetApp = targetApp,
-                startTimestamp = timestamp,
-                lastActiveTimestamp = timestamp
-            )
-
-            currentSession = sessionState
-
-            // Log session start event
+        // Log session start event asynchronously (non-blocking)
+        scope.launch {
             usageRepository.insertEvent(
                 UsageEvent(
                     sessionId = sessionId,
@@ -181,10 +194,10 @@ class SessionDetector(
                     metadata = "App: ${targetApp.displayName}"
                 )
             )
-
-            // Notify callback
-            onSessionStart?.invoke(sessionState)
         }
+
+        // Notify callback with valid session state
+        onSessionStart?.invoke(sessionState)
     }
 
     /**
@@ -202,7 +215,21 @@ class SessionDetector(
 
         // Check if timer threshold is reached and alert hasn't been shown yet
         val timerDuration = getTimerDurationMillis()
+
+        ErrorLogger.debug(
+            "continueSession: app=${current.targetApp.displayName}, " +
+                    "duration=${duration}ms (${duration / 1000 / 60} minutes), " +
+                    "timerThreshold=${timerDuration}ms (${timerDuration / 1000 / 60} minutes), " +
+                    "hasShownAlert=${current.hasShownTenMinuteAlert}, " +
+                    "shouldTrigger=${!current.hasShownTenMinuteAlert && duration >= timerDuration}",
+            context = "SessionDetector.continueSession"
+        )
+
         if (!current.hasShownTenMinuteAlert && duration >= timerDuration) {
+            ErrorLogger.info(
+                "continueSession: Timer threshold reached! Triggering alert for ${current.targetApp.displayName}",
+                context = "SessionDetector.continueSession"
+            )
             current.hasShownTenMinuteAlert = true
             onTenMinuteAlert?.invoke(current)
         }
@@ -232,6 +259,13 @@ class SessionDetector(
     ) {
         val current = currentSession ?: return
 
+        ErrorLogger.debug(
+            "endCurrentSession: Ending session ${current.sessionId} for ${current.targetApp.displayName}, " +
+                    "duration=${endTimestamp - current.startTimestamp}ms, " +
+                    "interrupted=$wasInterrupted, type=$interruptionType",
+            context = "SessionDetector.endCurrentSession"
+        )
+
         val duration = endTimestamp - current.startTimestamp
 
         // Only save session if it meets minimum duration threshold
@@ -260,6 +294,10 @@ class SessionDetector(
             onSessionEnd?.invoke(current)
         } else {
             // Session too short - delete it
+            ErrorLogger.debug(
+                "endCurrentSession: Session too short (${duration}ms < ${Constants.MIN_SESSION_DURATION}ms), deleting",
+                context = "SessionDetector.endCurrentSession"
+            )
             scope.launch {
                 usageRepository.endSession(
                     sessionId = current.sessionId,
@@ -272,12 +310,21 @@ class SessionDetector(
 
         // Clear current session
         currentSession = null
+
+        ErrorLogger.debug(
+            "endCurrentSession: currentSession set to null",
+            context = "SessionDetector.endCurrentSession"
+        )
     }
 
     /**
      * Reset the detector state
      */
     fun reset() {
+        ErrorLogger.warning(
+            "reset() called - clearing currentSession. Was ${if (currentSession != null) currentSession!!.targetApp.displayName else "null"}",
+            context = "SessionDetector.reset"
+        )
         currentSession = null
     }
 }

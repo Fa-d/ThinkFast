@@ -59,6 +59,10 @@ class UsageMonitorService : Service() {
     private var lastTargetAppDetectedTime = 0L
     private var isPowerSaveMode = false
 
+    // Track when reminder overlay is showing to avoid false session timeouts
+    private var reminderOverlayShowing = false
+    private var reminderOverlayShownTime = 0L  // When the overlay was first shown
+
     // Broadcast receiver for screen on/off events
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -127,7 +131,10 @@ class UsageMonitorService : Service() {
 
         // Initialize WindowManager-based overlays
         // These will be created even without permission, but won't show until granted
-        reminderOverlay = ReminderOverlayWindow(this)
+        reminderOverlay = ReminderOverlayWindow(this) {
+            // Callback when reminder overlay is dismissed
+            onReminderOverlayDismissed()
+        }
         timerOverlay = TimerOverlayWindow(this)
 
         // Set up session detector callbacks
@@ -284,8 +291,22 @@ class UsageMonitorService : Service() {
         } else {
             // No target app in foreground
             isTargetAppActive = false
-            // Check for session timeout
-            sessionDetector.checkForSessionTimeout(System.currentTimeMillis())
+
+            // Check if we should continue the session despite app not being detected
+            // This happens after overlay dismissal when UsageStatsManager hasn't updated yet
+            // We continue until the timer threshold is reached to ensure timer overlay can appear
+            val currentSession = sessionDetector.getCurrentSession()
+            val shouldContinueSession = currentSession != null &&
+                    reminderOverlayShownTime > 0 &&
+                    !currentSession.hasShownTenMinuteAlert
+
+            if (shouldContinueSession) {
+                // Continue the session to update duration and check timer threshold
+                sessionDetector.onAppInForeground(currentSession.targetApp, System.currentTimeMillis())
+            } else {
+                // Check for session timeout
+                sessionDetector.checkForSessionTimeout(System.currentTimeMillis())
+            }
         }
     }
 
@@ -388,16 +409,43 @@ class UsageMonitorService : Service() {
             return
         }
 
-        ErrorLogger.debug(
-            "Showing reminder overlay for ${sessionState.targetApp.displayName}",
-            context = "UsageMonitorService.showReminderOverlay"
-        )
+        // Track that reminder overlay is showing
+        reminderOverlayShowing = true
+        reminderOverlayShownTime = System.currentTimeMillis()
 
         // Show WindowManager-based overlay (appears on top of current app)
         reminderOverlay.show(
             sessionId = sessionState.sessionId,
             targetApp = sessionState.targetApp
         )
+    }
+
+    /**
+     * Called when reminder overlay is dismissed
+     * Resume session tracking by calling onAppInForeground to update timestamps
+     */
+    private fun onReminderOverlayDismissed() {
+        reminderOverlayShowing = false
+
+        // Immediately check if the target app is still in foreground
+        // This resumes session tracking and updates lastActiveTimestamp
+        serviceScope.launch {
+            val currentForegroundApp = appLaunchDetector.isTargetAppInForeground()
+            if (currentForegroundApp != null) {
+                // Resume session tracking - this updates lastActiveTimestamp and checks timer
+                sessionDetector.onAppInForeground(currentForegroundApp, System.currentTimeMillis())
+                isTargetAppActive = true
+            } else {
+                // Even if we can't detect the app immediately, assume it's still active
+                // Update the session's lastActiveTimestamp to keep the session alive
+                val currentSession = sessionDetector.getCurrentSession()
+                if (currentSession != null) {
+                    val currentTime = System.currentTimeMillis()
+                    sessionDetector.onAppInForeground(currentSession.targetApp, currentTime)
+                    isTargetAppActive = true
+                }
+            }
+        }
     }
 
     /**
@@ -412,11 +460,6 @@ class UsageMonitorService : Service() {
             )
             return
         }
-
-        ErrorLogger.debug(
-            "Showing timer overlay for ${sessionState.targetApp.displayName} (duration: ${sessionState.totalDuration}ms)",
-            context = "UsageMonitorService.showTimerOverlay"
-        )
 
         // Show WindowManager-based overlay (appears on top of current app)
         timerOverlay.show(

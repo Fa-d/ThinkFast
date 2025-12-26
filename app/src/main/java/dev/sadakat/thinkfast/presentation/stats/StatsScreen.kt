@@ -43,6 +43,7 @@ import dev.sadakat.thinkfast.domain.model.MonthlyStatistics
 import dev.sadakat.thinkfast.domain.model.UsageTrend
 import dev.sadakat.thinkfast.domain.model.WeeklyStatistics
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.ui.graphics.Color as ComposeColor
 
 /**
  * Statistics screen displaying usage analytics and trends
@@ -115,7 +116,8 @@ fun StatsScreen(
                                 item {
                                     SessionDistributionCard(
                                         sessions = uiState.dailySessions,
-                                        period = "Today"
+                                        periodLabel = "Today",
+                                        chartPeriod = ChartPeriod.DAILY
                                     )
                                 }
                             }
@@ -126,7 +128,8 @@ fun StatsScreen(
                                 item {
                                     SessionDistributionCard(
                                         sessions = uiState.weeklySessions,
-                                        period = "This Week"
+                                        periodLabel = "This Week",
+                                        chartPeriod = ChartPeriod.WEEKLY
                                     )
                                 }
                             }
@@ -137,7 +140,8 @@ fun StatsScreen(
                                 item {
                                     SessionDistributionCard(
                                         sessions = uiState.monthlySessions,
-                                        period = stats.monthName
+                                        periodLabel = stats.monthName,
+                                        chartPeriod = ChartPeriod.MONTHLY
                                     )
                                 }
                             }
@@ -542,10 +546,14 @@ private fun formatDuration(durationMillis: Long): String {
 }
 
 /**
- * Card displaying the normal distribution of session durations
+ * Card displaying the session duration over time for both apps
  */
 @Composable
-private fun SessionDistributionCard(sessions: List<dev.sadakat.thinkfast.domain.model.UsageSession>, period: String) {
+private fun SessionDistributionCard(
+    sessions: List<dev.sadakat.thinkfast.domain.model.UsageSession>,
+    periodLabel: String,
+    chartPeriod: ChartPeriod
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -555,14 +563,14 @@ private fun SessionDistributionCard(sessions: List<dev.sadakat.thinkfast.domain.
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Session Duration Distribution",
+                text = "Session Duration Over Time",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Normal distribution of app usage sessions for $period",
+                text = "Facebook and Instagram session durations for $periodLabel",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -572,7 +580,7 @@ private fun SessionDistributionCard(sessions: List<dev.sadakat.thinkfast.domain.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp),
+                        .height(180.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -582,11 +590,12 @@ private fun SessionDistributionCard(sessions: List<dev.sadakat.thinkfast.domain.
                     )
                 }
             } else {
-                NormalDistributionChart(
+                SessionDurationTimeChart(
                     sessions = sessions,
+                    period = chartPeriod,
                     modifier = Modifier.fillMaxWidth(),
-                    lineColor = MaterialTheme.colorScheme.primary,
-                    fillColor = MaterialTheme.colorScheme.primary
+                    facebookColor = ComposeColor(0xFF1877F2),  // Facebook blue
+                    instagramColor = ComposeColor(0xFFE4405F) // Instagram pink
                 )
             }
         }
