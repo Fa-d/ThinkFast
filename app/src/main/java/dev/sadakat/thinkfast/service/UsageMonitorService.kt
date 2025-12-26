@@ -210,18 +210,33 @@ class UsageMonitorService : Service() {
      * Show reminder overlay when app is first opened
      */
     private fun showReminderOverlay(sessionState: SessionDetector.SessionState) {
-        // TODO: Launch ReminderOverlayActivity in Phase 3
-        // For now, just log it
-        android.util.Log.d("UsageMonitorService", "Should show reminder overlay for ${sessionState.targetApp.displayName}")
+        val intent = Intent(this, dev.sadakat.thinkfast.presentation.overlay.ReminderOverlayActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(Constants.EXTRA_SESSION_ID, sessionState.sessionId)
+            putExtra(Constants.EXTRA_TARGET_APP, sessionState.targetApp.packageName)
+        }
+        startActivity(intent)
     }
 
     /**
      * Show timer overlay after 10 minutes
      */
     private fun showTimerOverlay(sessionState: SessionDetector.SessionState) {
-        // TODO: Launch TimerOverlayActivity in Phase 3
-        // For now, just log it
-        android.util.Log.d("UsageMonitorService", "Should show timer overlay for ${sessionState.targetApp.displayName}")
+        val intent = Intent(this, dev.sadakat.thinkfast.presentation.overlay.TimerOverlayActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(Constants.EXTRA_SESSION_ID, sessionState.sessionId)
+            putExtra(Constants.EXTRA_TARGET_APP, sessionState.targetApp.packageName)
+            putExtra("session_start_time", sessionState.startTimestamp)
+            putExtra("session_duration", sessionState.totalDuration)
+        }
+        startActivity(intent)
+
+        // Force end the session after showing timer alert
+        sessionDetector.forceEndSession(
+            timestamp = System.currentTimeMillis(),
+            wasInterrupted = true,
+            interruptionType = Constants.INTERRUPTION_TEN_MINUTE_ALERT
+        )
     }
 
     /**

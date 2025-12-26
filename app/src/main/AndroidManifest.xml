@@ -34,6 +34,32 @@
             </intent-filter>
         </activity>
 
+        <!-- Reminder Overlay Activity -->
+        <activity
+            android:name=".presentation.overlay.ReminderOverlayActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:screenOrientation="portrait"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.ThinkFast"
+            android:turnScreenOn="true" />
+
+        <!-- Timer Overlay Activity -->
+        <activity
+            android:name=".presentation.overlay.TimerOverlayActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:screenOrientation="portrait"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.ThinkFast"
+            android:turnScreenOn="true" />
+
         <!-- Usage Monitoring Foreground Service -->
         <service
             android:name=".service.UsageMonitorService"
