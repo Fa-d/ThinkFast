@@ -94,7 +94,7 @@ class AppLaunchDetector(private val context: Context) {
      */
     fun getCurrentForegroundApp(): String? {
         val currentTime = System.currentTimeMillis()
-        val queryStartTime = currentTime - 1000L // Look back 1 second
+        val queryStartTime = currentTime - 5000L // Look back 5 seconds (increased from 1s)
 
         val usageEvents = usageStatsManager.queryEvents(queryStartTime, currentTime)
 
@@ -130,11 +130,24 @@ class AppLaunchDetector(private val context: Context) {
     /**
      * Check if a target app is currently in the foreground
      * Returns the AppTarget if a target app is detected, null otherwise
+     *
+     * IMPORTANT: This uses the cached lastForegroundApp to handle continuous usage
+     * where there might not be recent events. It's updated by checkForAppLaunch().
      */
     fun isTargetAppInForeground(): AppTarget? {
+        // First try to get from recent events
         val foregroundApp = getCurrentForegroundApp()
-        return if (foregroundApp != null) {
-            AppTarget.fromPackageName(foregroundApp)
+
+        // If we got a recent event, update our cache and return
+        if (foregroundApp != null) {
+            lastForegroundApp = foregroundApp
+            return AppTarget.fromPackageName(foregroundApp)
+        }
+
+        // No recent events - use cached lastForegroundApp for continuous usage
+        // This handles the case where user is actively using the app but there are no new events
+        return if (lastForegroundApp != null) {
+            AppTarget.fromPackageName(lastForegroundApp!!)
         } else {
             null
         }

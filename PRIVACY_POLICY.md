@@ -9,8 +9,8 @@ ThinkFast is a digital wellbeing application designed to help you build mindful 
 ## Developer Information
 
 **App Name:** ThinkFast
-**Developer:** [Your Name/Company Name]
-**Contact Email:** [Your Email Address]
+**Developer:** MD Sadakat Hussain Fahad
+**Contact Email:** contact@sadakat.dev
 
 ## Our Commitment to Privacy
 
@@ -159,7 +159,7 @@ For transparency, here's how ThinkFast works technically:
 
 If you have questions about this privacy policy or ThinkFast's privacy practices:
 
-**Email:** [Your Email Address]
+**Email:** contact@sadakat.dev
 **Response Time:** Within 48 hours
 
 ## Compliance
