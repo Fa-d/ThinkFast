@@ -370,28 +370,10 @@ class UsageMonitorService : Service() {
     private fun setupSessionCallbacks() {
         // Called when a new session starts
         sessionDetector.onSessionStart = { sessionState ->
-            // Get settings to check reminder behavior
-            val settings = runBlocking {
-                settingsRepository.getSettingsOnce()
-            }
-
-            // Only show reminder here if alwaysShowReminder is false
-            // (If true, it will be shown in onTargetAppDetected instead)
-            if (!settings.alwaysShowReminder) {
-                showReminderOverlay(sessionState)
-
-                // Log event
-                serviceScope.launch {
-                    usageRepository.insertEvent(
-                        UsageEvent(
-                            sessionId = sessionState.sessionId,
-                            eventType = Constants.EVENT_REMINDER_SHOWN,
-                            timestamp = System.currentTimeMillis(),
-                            metadata = "App: ${sessionState.targetApp.displayName} (Session Start)"
-                        )
-                    )
-                }
-            }
+            // Reminder overlay is handled in onTargetAppDetected() based on alwaysShowReminder setting
+            // This callback is triggered BEFORE onTargetAppDetected() completes the reminder check,
+            // so we don't show overlay here to avoid duplicate overlays
+            // The onTargetAppDetected() method is the single source of truth for reminder display
         }
 
         // Called when configured timer threshold is reached

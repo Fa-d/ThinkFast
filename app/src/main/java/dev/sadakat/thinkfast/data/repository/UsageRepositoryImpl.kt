@@ -210,7 +210,7 @@ class UsageRepositoryImpl(
 
         // Find shortest session with a duration > 1 minute (filter out accidental opens)
         val shortestSession = sessions
-            .filter { it.duration != null && it.duration > 60_000 }  // At least 1 minute
+            .filter { it.duration > 60_000 }  // At least 1 minute
             .minByOrNull { it.duration ?: Long.MAX_VALUE }
 
         return ((shortestSession?.duration ?: 300_000) / 1000 / 60).toInt()  // Default 5 minutes
