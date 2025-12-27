@@ -63,6 +63,10 @@ class TimerOverlayViewModel(
         viewModelScope.launch {
             interventionShownTime = System.currentTimeMillis()
 
+            // Get timer alert duration from settings
+            val settings = settingsRepository.getSettingsOnce()
+            val timerAlertMinutes = settings.timerAlertMinutes
+
             // Get context-aware data
             val todayUsage = usageRepository.getTodayUsageForApp(targetApp.packageName)
             val yesterdayUsage = usageRepository.getYesterdayUsageForApp(targetApp.packageName)
@@ -134,6 +138,7 @@ class TimerOverlayViewModel(
                 todaysTotalUsageMs = todayUsage + currentDuration,
                 yesterdaysTotalUsageMs = yesterdayUsage,
                 goalMinutes = goalMinutes,
+                timerAlertMinutes = timerAlertMinutes,
                 frictionLevel = context.userFrictionLevel,
                 interventionContent = interventionContent,
                 interventionContext = context,

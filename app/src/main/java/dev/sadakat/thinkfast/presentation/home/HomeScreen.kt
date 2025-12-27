@@ -18,10 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -65,13 +62,14 @@ fun HomeScreen(
 
     // Load data on first composition and periodically refresh
     LaunchedEffect(Unit) {
-        viewModel.loadTodaySummary()
+        // Initial load
+        viewModel.loadTodaySummary(isRefresh = false)
         viewModel.checkServiceStatus(context)
 
-        // Refresh every 30 seconds
+        // Refresh every 30 seconds without showing loading spinner
         while (true) {
             delay(30000)
-            viewModel.loadTodaySummary()
+            viewModel.loadTodaySummary(isRefresh = true)
             viewModel.checkServiceStatus(context)
             hasAllPermissions = PermissionHelper.hasAllRequiredPermissions(context)
         }
@@ -108,7 +106,8 @@ fun HomeScreen(
                 actions = {
                     IconButton(onClick = {
                         HapticFeedback.light(context)
-                        viewModel.loadTodaySummary()
+                        // Manual refresh - user expects to see loading state
+                        viewModel.loadTodaySummary(isRefresh = false)
                         viewModel.checkServiceStatus(context)
                         hasAllPermissions = PermissionHelper.hasAllRequiredPermissions(context)
                     }) {
@@ -145,21 +144,10 @@ fun HomeScreen(
                         emoji = "🎯",
                         title = "On Track!",
                         message = "You're meeting your daily goal. Keep it up!",
-                        backgroundColor = MaterialTheme.colorScheme.tertiaryContainer
+                        backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        textColor = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                 }
-            }
-
-            // Quick Actions
-            item {
-                QuickActionsRow(
-                    onViewStatsClick = {
-                        navController.navigate(Screen.Statistics.route)
-                    },
-                    onAdjustGoalsClick = {
-                        navController.navigate(Screen.Settings.route)
-                    }
-                )
             }
 
             // Permission warning (if missing)
@@ -428,50 +416,6 @@ private fun TodayAtAGlanceCard(
                     }
                 }
             }
-        }
-    }
-}
-
-/**
- * Quick action buttons
- */
-@Composable
-private fun QuickActionsRow(
-    onViewStatsClick: () -> Unit,
-    onAdjustGoalsClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // View Statistics button
-        OutlinedButton(
-            onClick = onViewStatsClick,
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("Statistics")
-        }
-
-        // Adjust Goals button
-        OutlinedButton(
-            onClick = onAdjustGoalsClick,
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("Settings")
         }
     }
 }

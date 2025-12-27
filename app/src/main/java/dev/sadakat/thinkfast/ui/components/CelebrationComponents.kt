@@ -157,6 +157,7 @@ private fun AnimatedEmoji(emoji: String, size: androidx.compose.ui.unit.TextUnit
 
 /**
  * Compact celebration card for inline achievements
+ * Follows Material 3 color system: each container color has a matching "on" color
  */
 @Composable
 fun CompactCelebrationCard(
@@ -165,6 +166,7 @@ fun CompactCelebrationCard(
     title: String,
     message: String,
     backgroundColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    textColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
     onDismiss: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -186,13 +188,12 @@ fun CompactCelebrationCard(
         exit = fadeOut() + scaleOut()
     ) {
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = backgroundColor
-            )
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -226,12 +227,12 @@ fun CompactCelebrationCard(
                         text = title,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = textColor
                     )
                     Text(
                         text = message,
                         fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        color = textColor.copy(alpha = 0.8f)
                     )
                 }
             }

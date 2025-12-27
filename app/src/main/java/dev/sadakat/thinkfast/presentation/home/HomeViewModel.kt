@@ -27,11 +27,17 @@ class HomeViewModel(
 
     /**
      * Load today's usage summary with goals and streaks
+     * @param isRefresh true for periodic refresh, false for initial load
      */
-    fun loadTodaySummary() {
+    fun loadTodaySummary(isRefresh: Boolean = false) {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                // Only show loading spinner on initial load, not during refresh
+                if (isRefresh) {
+                    _uiState.value = _uiState.value.copy(isRefreshing = true)
+                } else {
+                    _uiState.value = _uiState.value.copy(isLoading = true)
+                }
 
                 // Get usage for both apps
                 val facebookUsageMs = usageRepository.getTodayUsageForApp("com.facebook.katana")
@@ -93,6 +99,7 @@ class HomeViewModel(
 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
+                    isRefreshing = false,
                     totalUsageMinutes = usageMinutes,
                     goalMinutes = combinedGoalMinutes,
                     remainingMinutes = remainingMinutes,
@@ -106,6 +113,7 @@ class HomeViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
+                    isRefreshing = false,
                     errorMessage = "Failed to load summary: ${e.message}"
                 )
             }
@@ -179,7 +187,8 @@ class HomeViewModel(
  * UI state for Home Screen
  */
 data class HomeUiState(
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = true,       // Initial load only
+    val isRefreshing: Boolean = false,   // Periodic refresh (prevents flicker)
     val totalUsageMinutes: Int = 0,
     val goalMinutes: Int? = null,
     val remainingMinutes: Int? = null,

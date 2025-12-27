@@ -298,6 +298,7 @@ fun TimerOverlayScreen(
                             targetApp = uiState.targetApp,
                             sessionDuration = uiState.currentSessionDuration,
                             todaysTotalUsage = uiState.todaysTotalUsage,
+                            timerAlertMinutes = uiState.timerAlertMinutes,
                             frictionLevel = uiState.frictionLevel,
                             onProceed = { viewModel.onProceedClicked() },
                             onGoBack = { viewModel.onGoBackClicked() },
@@ -326,6 +327,7 @@ private fun DynamicInterventionContent(
     targetApp: dev.sadakat.thinkfast.domain.model.AppTarget?,
     sessionDuration: String,
     todaysTotalUsage: String,
+    timerAlertMinutes: Int,
     frictionLevel: dev.sadakat.thinkfast.domain.intervention.FrictionLevel,
     onProceed: () -> Unit,
     onGoBack: () -> Unit,
@@ -354,8 +356,18 @@ private fun DynamicInterventionContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Format timer alert duration dynamically
+            val alertText = when {
+                timerAlertMinutes >= 60 -> {
+                    val hours = timerAlertMinutes / 60
+                    val mins = timerAlertMinutes % 60
+                    if (mins > 0) "$hours-Hour $mins-Minute Alert" else "$hours-Hour Alert"
+                }
+                else -> "$timerAlertMinutes-Minute Alert"
+            }
+
             Text(
-                text = "10-Minute Alert",
+                text = alertText,
                 style = InterventionTypography.InterventionSubtext,
                 color = style.textColor.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center

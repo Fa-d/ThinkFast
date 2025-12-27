@@ -162,9 +162,16 @@ class UsageRepositoryImpl(
     }
 
     override suspend fun getCurrentStreak(): Int {
-        // For now, return a default streak of 3
-        // TODO: Implement proper streak calculation from goals or user preferences
-        return 3
+        // Get streaks from both Facebook and Instagram goals
+        val facebookGoal = goalDao.getGoalByApp("com.facebook.katana")
+        val instagramGoal = goalDao.getGoalByApp("com.instagram.android")
+
+        // Return the maximum streak between the two apps
+        // This shows the user their best current achievement
+        return maxOf(
+            facebookGoal?.currentStreak ?: 0,
+            instagramGoal?.currentStreak ?: 0
+        )
     }
 
     override suspend fun getInstallDate(): Long {

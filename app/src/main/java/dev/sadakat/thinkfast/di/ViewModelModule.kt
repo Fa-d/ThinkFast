@@ -20,7 +20,7 @@ val viewModelModule = module {
     viewModel { HomeViewModel(usageRepository = get(), goalRepository = get()) }
     viewModel { OnboardingViewModel(goalRepository = get()) }
     viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get()) }
-    viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get()) }
+    viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), settingsRepository = get()) }
     viewModel { AnalyticsViewModel(resultRepository = get()) }
     viewModel {
         StatsViewModel(
