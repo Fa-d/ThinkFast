@@ -29,7 +29,7 @@ object InterventionColors {
      * Psychology: Attention-getting without being alarming
      */
     val GentleReminderBackground = Color(0xFFFFF4E6)  // Light warm amber
-    val GentleReminderBackgroundDark = Color(0xFF3E2723)  // Dark warm brown
+    val GentleReminderBackgroundDark = Color(0xFF2D2420)  // Muted warm brown
 
     /**
      * Reflection - Calm blue
@@ -37,7 +37,7 @@ object InterventionColors {
      * Psychology: Promotes calm, thoughtful consideration
      */
     val ReflectionBackground = Color(0xFFE3F2FD)  // Calm light blue
-    val ReflectionBackgroundDark = Color(0xFF1A237E)  // Deep blue
+    val ReflectionBackgroundDark = Color(0xFF1A2538)  // Muted deep blue
 
     /**
      * Breathing - Nature green
@@ -45,7 +45,7 @@ object InterventionColors {
      * Psychology: Associated with nature, calm, restoration
      */
     val BreathingBackground = Color(0xFFE8F5E9)  // Light nature green
-    val BreathingBackgroundDark = Color(0xFF1B5E20)  // Deep forest green
+    val BreathingBackgroundDark = Color(0xFF1A2F22)  // Muted deep forest green
 
     /**
      * Stats - Neutral purple
@@ -53,7 +53,7 @@ object InterventionColors {
      * Psychology: Neutral, informative
      */
     val StatsBackground = Color(0xFFF3E5F5)  // Light purple
-    val StatsBackgroundDark = Color(0xFF4A148C)  // Deep purple
+    val StatsBackgroundDark = Color(0xFF2D1F3D)  // Muted deep purple
 
     /**
      * Timer alert - Soft red
@@ -61,7 +61,7 @@ object InterventionColors {
      * Psychology: Urgency without panic
      */
     val TimerAlertBackground = Color(0xFFFFEBEE)  // Soft red/pink
-    val TimerAlertBackgroundDark = Color(0xFFB71C1C)  // Deep red
+    val TimerAlertBackgroundDark = Color(0xFF3D2028)  // Muted deep red
 
     /**
      * Urgent alert - Deep red
@@ -69,7 +69,7 @@ object InterventionColors {
      * Psychology: Strong urgency, action required
      */
     val UrgentAlertBackground = Color(0xFFFFCDD2)  // Deeper pink/red
-    val UrgentAlertBackgroundDark = Color(0xFF8B0000)  // Dark red
+    val UrgentAlertBackgroundDark = Color(0xFF4A1F24)  // Muted dark red
 
     /**
      * Emotional appeal - Deep amber
@@ -77,7 +77,7 @@ object InterventionColors {
      * Psychology: Serious but supportive
      */
     val EmotionalAppealBackground = Color(0xFFFFE0B2)  // Deep amber
-    val EmotionalAppealBackgroundDark = Color(0xFFE65100)  // Deep orange
+    val EmotionalAppealBackgroundDark = Color(0xFF3D2818)  // Muted deep amber
 
     /**
      * Quote - Soft purple
@@ -85,7 +85,7 @@ object InterventionColors {
      * Psychology: Wisdom, contemplation
      */
     val QuoteBackground = Color(0xFFEDE7F6)  // Soft purple
-    val QuoteBackgroundDark = Color(0xFF311B92)  // Deep purple
+    val QuoteBackgroundDark = Color(0xFF251A42)  // Muted deep purple
 
     /**
      * Gamification - Vibrant blue
@@ -93,7 +93,7 @@ object InterventionColors {
      * Psychology: Excitement, achievement
      */
     val GamificationBackground = Color(0xFFE1F5FE)  // Bright light blue
-    val GamificationBackgroundDark = Color(0xFF01579B)  // Deep ocean blue
+    val GamificationBackgroundDark = Color(0xFF0A2A3D)  // Muted deep ocean blue
 
     // BUTTON COLORS
 
@@ -102,28 +102,29 @@ object InterventionColors {
      * Psychology: Positive reinforcement for healthy choice
      */
     val GoBackButton = Color(0xFF4CAF50)  // Material Green 500
-    val GoBackButtonDark = Color(0xFF81C784)  // Material Green 300
+    val GoBackButtonDark = Color(0xFF66BB6A)  // Material Green 400 - better contrast
 
     /**
      * Proceed button - Neutral gray
      * Psychology: Less prominent, discourages clicking
      */
     val ProceedButton = Color(0xFF757575)  // Material Gray 600
-    val ProceedButtonDark = Color(0xFF9E9E9E)  // Material Gray 500
+    val ProceedButtonDark = Color(0xFFBDBDBD)  // Material Gray 400 - better contrast
 
     // TEXT COLORS
 
     /**
      * Primary text on intervention overlays
+     * Dark colors optimized for better contrast on dark backgrounds
      */
     val InterventionTextPrimary = Color(0xFF212121)  // Near black
-    val InterventionTextPrimaryDark = Color(0xFFE0E0E0)  // Light gray
+    val InterventionTextPrimaryDark = Color(0xFFF5F5F5)  // Off-white for better contrast
 
     /**
      * Secondary text (subtexts, explanations)
      */
     val InterventionTextSecondary = Color(0xFF616161)  // Medium gray
-    val InterventionTextSecondaryDark = Color(0xFFBDBDBD)  // Light gray
+    val InterventionTextSecondaryDark = Color(0xFFB0BEC5)  // Light blue-gray for softer contrast
 
     // BRAND COLORS (for app identification)
 

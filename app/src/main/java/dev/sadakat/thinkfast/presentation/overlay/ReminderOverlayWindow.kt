@@ -13,6 +13,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,6 +60,7 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.InterventionContent
+import dev.sadakat.thinkfast.ui.theme.InterventionColors
 import dev.sadakat.thinkfast.ui.theme.ThinkFastTheme
 import dev.sadakat.thinkfast.util.ErrorLogger
 import android.os.Handler
@@ -304,14 +306,57 @@ class ReminderOverlayWindow(
 
 /**
  * Background colors for different intervention types
+ * Dark theme aware
  */
-private object InterventionColors {
-    val reflectionBlue = Color(0xFFE3F2FD)
-    val timeAlternativeAmber = Color(0xFFFFF4E6)
-    val breathingGreen = Color(0xFFE8F5E9)
-    val statsPurple = Color(0xFFF3E5F5)
-    val emotionalGray = Color(0xFFECEFF1)
-    val defaultSurface = Color(0xFFFFFBFE)
+private fun getBackgroundColor(content: InterventionContent?, isDarkTheme: Boolean): Color {
+    return when (content) {
+        is InterventionContent.ReflectionQuestion -> if (isDarkTheme)
+            InterventionColors.ReflectionBackgroundDark
+        else
+            InterventionColors.ReflectionBackground
+        is InterventionContent.TimeAlternative -> if (isDarkTheme)
+            InterventionColors.TimerAlertBackgroundDark
+        else
+            InterventionColors.TimerAlertBackground
+        is InterventionContent.BreathingExercise -> if (isDarkTheme)
+            InterventionColors.BreathingBackgroundDark
+        else
+            InterventionColors.BreathingBackground
+        is InterventionContent.UsageStats -> if (isDarkTheme)
+            InterventionColors.StatsBackgroundDark
+        else
+            InterventionColors.StatsBackground
+        is InterventionContent.EmotionalAppeal -> if (isDarkTheme)
+            InterventionColors.EmotionalAppealBackgroundDark
+        else
+            InterventionColors.EmotionalAppealBackground
+        is InterventionContent.Quote -> if (isDarkTheme)
+            InterventionColors.QuoteBackgroundDark
+        else
+            InterventionColors.QuoteBackground
+        is InterventionContent.Gamification -> if (isDarkTheme)
+            InterventionColors.GamificationBackgroundDark
+        else
+            InterventionColors.GamificationBackground
+        null -> if (isDarkTheme)
+            InterventionColors.GentleReminderBackgroundDark
+        else
+            InterventionColors.GentleReminderBackground
+    }
+}
+
+private fun getTextColor(isDarkTheme: Boolean): Color {
+    return if (isDarkTheme)
+        InterventionColors.InterventionTextPrimaryDark
+    else
+        InterventionColors.InterventionTextPrimary
+}
+
+private fun getSecondaryTextColor(isDarkTheme: Boolean): Color {
+    return if (isDarkTheme)
+        InterventionColors.InterventionTextSecondaryDark
+    else
+        InterventionColors.InterventionTextSecondary
 }
 
 @Composable
@@ -322,6 +367,8 @@ private fun ReminderOverlayContent(
     onGoBackClick: () -> Unit,
     onProceedClick: () -> Unit
 ) {
+    val isDarkTheme = isSystemInDarkTheme()
+
     // Animation states
     var visible by remember { mutableStateOf(false) }
     val alpha by animateFloatAsState(
@@ -338,19 +385,16 @@ private fun ReminderOverlayContent(
         label = "scale"
     )
 
-    // Background color based on content type
+    // Background color based on content type (dark theme aware)
     val backgroundColor by animateColorAsState(
-        targetValue = when (interventionContent) {
-            is InterventionContent.ReflectionQuestion -> InterventionColors.reflectionBlue
-            is InterventionContent.TimeAlternative -> InterventionColors.timeAlternativeAmber
-            is InterventionContent.BreathingExercise -> InterventionColors.breathingGreen
-            is InterventionContent.UsageStats -> InterventionColors.statsPurple
-            is InterventionContent.EmotionalAppeal -> InterventionColors.emotionalGray
-            else -> InterventionColors.defaultSurface
-        },
+        targetValue = getBackgroundColor(interventionContent, isDarkTheme),
         animationSpec = tween(300),
         label = "backgroundColor"
     )
+
+    // Text colors (dark theme aware)
+    val textColor = getTextColor(isDarkTheme)
+    val secondaryTextColor = getSecondaryTextColor(isDarkTheme)
 
     LaunchedEffect(interventionContent) {
         visible = true
@@ -371,7 +415,7 @@ private fun ReminderOverlayContent(
             text = targetApp.displayName,
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = textColor,
             textAlign = TextAlign.Center
         )
 
@@ -379,7 +423,11 @@ private fun ReminderOverlayContent(
 
         // Dynamic content based on intervention type
         interventionContent?.let { content ->
-            InterventionContentRenderer(content = content)
+            InterventionContentRenderer(
+                content = content,
+                textColor = textColor,
+                secondaryTextColor = secondaryTextColor
+            )
         }
 
         Spacer(modifier = Modifier.height(64.dp))
@@ -389,7 +437,10 @@ private fun ReminderOverlayContent(
             contentType = interventionContent?.javaClass?.simpleName,
             frictionLevel = frictionLevel,
             onGoBackClick = onGoBackClick,
-            onProceedClick = onProceedClick
+            onProceedClick = onProceedClick,
+            textColor = textColor,
+            secondaryTextColor = secondaryTextColor,
+            isDarkTheme = isDarkTheme
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -398,7 +449,7 @@ private fun ReminderOverlayContent(
         Text(
             text = "This overlay helps you build mindful usage habits",
             fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            color = secondaryTextColor.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
         )
     }
@@ -408,15 +459,19 @@ private fun ReminderOverlayContent(
  * Renders different types of intervention content
  */
 @Composable
-private fun InterventionContentRenderer(content: InterventionContent) {
+private fun InterventionContentRenderer(
+    content: InterventionContent,
+    textColor: Color,
+    secondaryTextColor: Color
+) {
     when (content) {
-        is InterventionContent.ReflectionQuestion -> ReflectionQuestionContent(content)
-        is InterventionContent.TimeAlternative -> TimeAlternativeContent(content)
-        is InterventionContent.BreathingExercise -> BreathingExerciseContent(content)
-        is InterventionContent.UsageStats -> UsageStatsContent(content)
-        is InterventionContent.EmotionalAppeal -> EmotionalAppealContent(content)
-        is InterventionContent.Quote -> QuoteContent(content)
-        is InterventionContent.Gamification -> GamificationContent(content)
+        is InterventionContent.ReflectionQuestion -> ReflectionQuestionContent(content, textColor, secondaryTextColor)
+        is InterventionContent.TimeAlternative -> TimeAlternativeContent(content, textColor, secondaryTextColor)
+        is InterventionContent.BreathingExercise -> BreathingExerciseContent(content, textColor)
+        is InterventionContent.UsageStats -> UsageStatsContent(content, textColor, secondaryTextColor)
+        is InterventionContent.EmotionalAppeal -> EmotionalAppealContent(content, textColor, secondaryTextColor)
+        is InterventionContent.Quote -> QuoteContent(content, textColor, secondaryTextColor)
+        is InterventionContent.Gamification -> GamificationContent(content, textColor, secondaryTextColor)
     }
 }
 
@@ -424,13 +479,17 @@ private fun InterventionContentRenderer(content: InterventionContent) {
  * Reflection question content
  */
 @Composable
-private fun ReflectionQuestionContent(content: InterventionContent.ReflectionQuestion) {
+private fun ReflectionQuestionContent(
+    content: InterventionContent.ReflectionQuestion,
+    textColor: Color,
+    secondaryTextColor: Color
+) {
     Text(
         text = content.question,
         fontSize = 26.sp,
         fontWeight = FontWeight.Medium,
         fontFamily = FontFamily.Serif,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = textColor,
         textAlign = TextAlign.Center,
         lineHeight = 36.sp
     )
@@ -440,7 +499,7 @@ private fun ReflectionQuestionContent(content: InterventionContent.ReflectionQue
     Text(
         text = content.subtext,
         fontSize = 16.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = secondaryTextColor,
         textAlign = TextAlign.Center,
         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
     )
@@ -450,12 +509,16 @@ private fun ReflectionQuestionContent(content: InterventionContent.ReflectionQue
  * Time alternative content (loss framing)
  */
 @Composable
-private fun TimeAlternativeContent(content: InterventionContent.TimeAlternative) {
+private fun TimeAlternativeContent(
+    content: InterventionContent.TimeAlternative,
+    textColor: Color,
+    secondaryTextColor: Color
+) {
     Text(
         text = "${content.prefix}...",
         fontSize = 20.sp,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = secondaryTextColor,
         textAlign = TextAlign.Center
     )
 
@@ -465,7 +528,7 @@ private fun TimeAlternativeContent(content: InterventionContent.TimeAlternative)
         text = "${content.alternative.emoji} ${content.alternative.activity}",
         fontSize = 28.sp,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
+        color = textColor,
         textAlign = TextAlign.Center,
         lineHeight = 36.sp
     )
@@ -475,12 +538,15 @@ private fun TimeAlternativeContent(content: InterventionContent.TimeAlternative)
  * Breathing exercise content
  */
 @Composable
-private fun BreathingExerciseContent(content: InterventionContent.BreathingExercise) {
+private fun BreathingExerciseContent(
+    content: InterventionContent.BreathingExercise,
+    textColor: Color
+) {
     Text(
         text = content.instruction,
         fontSize = 18.sp,
         fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = textColor,
         textAlign = TextAlign.Center
     )
 
@@ -510,7 +576,7 @@ private fun BreathingExerciseContent(content: InterventionContent.BreathingExerc
         modifier = Modifier
             .size(circleSize.dp)
             .background(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                color = textColor.copy(alpha = 0.3f),
                 shape = androidx.compose.foundation.shape.CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -523,7 +589,7 @@ private fun BreathingExerciseContent(content: InterventionContent.BreathingExerc
             },
             fontSize = 20.sp,
             fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.primary
+            color = textColor
         )
     }
 
@@ -546,12 +612,16 @@ private fun BreathingExerciseContent(content: InterventionContent.BreathingExerc
  * Usage stats content
  */
 @Composable
-private fun UsageStatsContent(content: InterventionContent.UsageStats) {
+private fun UsageStatsContent(
+    content: InterventionContent.UsageStats,
+    textColor: Color,
+    secondaryTextColor: Color
+) {
     Text(
         text = content.message,
         fontSize = 18.sp,
         fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = textColor,
         textAlign = TextAlign.Center,
         lineHeight = 26.sp
     )
@@ -562,14 +632,14 @@ private fun UsageStatsContent(content: InterventionContent.UsageStats) {
         horizontalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier.fillMaxWidth()
     ) {
-        StatItem("Today", "${content.todayMinutes}m")
-        content.yesterdayMinutes.let { StatItem("Yesterday", "${it}m") }
-        content.weekAverage.let { StatItem("Week Avg", "${it}m") }
+        StatItem("Today", "${content.todayMinutes}m", textColor, secondaryTextColor)
+        content.yesterdayMinutes.let { StatItem("Yesterday", "${it}m", textColor, secondaryTextColor) }
+        content.weekAverage.let { StatItem("Week Avg", "${it}m", textColor, secondaryTextColor) }
     }
 }
 
 @Composable
-private fun StatItem(label: String, value: String) {
+private fun StatItem(label: String, value: String, textColor: Color, secondaryTextColor: Color) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -578,12 +648,12 @@ private fun StatItem(label: String, value: String) {
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.primary
+            color = textColor
         )
         Text(
             text = label,
             fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = secondaryTextColor
         )
     }
 }
@@ -592,12 +662,16 @@ private fun StatItem(label: String, value: String) {
  * Emotional appeal content
  */
 @Composable
-private fun EmotionalAppealContent(content: InterventionContent.EmotionalAppeal) {
+private fun EmotionalAppealContent(
+    content: InterventionContent.EmotionalAppeal,
+    textColor: Color,
+    secondaryTextColor: Color
+) {
     Text(
         text = content.message,
         fontSize = 24.sp,
         fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = textColor,
         textAlign = TextAlign.Center,
         lineHeight = 32.sp
     )
@@ -607,7 +681,7 @@ private fun EmotionalAppealContent(content: InterventionContent.EmotionalAppeal)
     Text(
         text = content.subtext,
         fontSize = 16.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = secondaryTextColor,
         textAlign = TextAlign.Center
     )
 }
@@ -616,13 +690,17 @@ private fun EmotionalAppealContent(content: InterventionContent.EmotionalAppeal)
  * Quote content
  */
 @Composable
-private fun QuoteContent(content: InterventionContent.Quote) {
+private fun QuoteContent(
+    content: InterventionContent.Quote,
+    textColor: Color,
+    secondaryTextColor: Color
+) {
     Text(
         text = """"${content.quote}"""",
         fontSize = 22.sp,
         fontWeight = FontWeight.Medium,
         fontFamily = FontFamily.Serif,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = textColor,
         textAlign = TextAlign.Center,
         lineHeight = 32.sp
     )
@@ -632,7 +710,7 @@ private fun QuoteContent(content: InterventionContent.Quote) {
     Text(
         text = "— ${content.author}",
         fontSize = 16.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = secondaryTextColor,
         textAlign = TextAlign.Center,
         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
     )
@@ -642,12 +720,16 @@ private fun QuoteContent(content: InterventionContent.Quote) {
  * Gamification content
  */
 @Composable
-private fun GamificationContent(content: InterventionContent.Gamification) {
+private fun GamificationContent(
+    content: InterventionContent.Gamification,
+    textColor: Color,
+    secondaryTextColor: Color
+) {
     Text(
         text = "🏆 ${content.challenge}",
         fontSize = 24.sp,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
+        color = textColor,
         textAlign = TextAlign.Center
     )
 
@@ -657,7 +739,7 @@ private fun GamificationContent(content: InterventionContent.Gamification) {
         text = content.reward,
         fontSize = 20.sp,
         fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = secondaryTextColor,
         textAlign = TextAlign.Center
     )
 }
@@ -671,8 +753,18 @@ private fun InterventionActionButtons(
     contentType: String?,
     frictionLevel: dev.sadakat.thinkfast.domain.intervention.FrictionLevel,
     onGoBackClick: () -> Unit,
-    onProceedClick: () -> Unit
+    onProceedClick: () -> Unit,
+    textColor: Color,
+    secondaryTextColor: Color,
+    isDarkTheme: Boolean
 ) {
+    // Get theme-aware button colors
+    val (goBackColor, proceedColor) = if (isDarkTheme) {
+        Pair(InterventionColors.GoBackButtonDark, InterventionColors.ProceedButtonDark)
+    } else {
+        Pair(InterventionColors.GoBackButton, InterventionColors.ProceedButton)
+    }
+
     var showButtons by remember { mutableStateOf(frictionLevel.delayMs == 0L) }
     var countdown by remember { mutableStateOf((frictionLevel.delayMs / 1000).toInt()) }
 
@@ -704,7 +796,7 @@ private fun InterventionActionButtons(
                     else -> "Please wait..."
                 },
                 fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                color = secondaryTextColor.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center
             )
 
@@ -717,7 +809,7 @@ private fun InterventionActionButtons(
             ) {
                 androidx.compose.material3.CircularProgressIndicator(
                     modifier = Modifier.size(64.dp),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = proceedColor,
                     strokeWidth = 6.dp
                 )
 
@@ -725,7 +817,7 @@ private fun InterventionActionButtons(
                     text = "${countdown}s",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = textColor
                 )
             }
 
@@ -739,7 +831,7 @@ private fun InterventionActionButtons(
                         "This brief pause helps you make a conscious choice"
                 },
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                color = secondaryTextColor.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
         }
@@ -756,13 +848,14 @@ private fun InterventionActionButtons(
                     .weight(1f)
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4CAF50)  // Green for positive action
+                    containerColor = goBackColor
                 )
             ) {
                 Text(
                     text = "Go Back",
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
                 )
             }
 
@@ -773,13 +866,14 @@ private fun InterventionActionButtons(
                     .weight(1f)
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF757575)  // Gray for proceed
+                    containerColor = proceedColor
                 )
             ) {
                 Text(
                     text = "Proceed",
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
                 )
             }
         }

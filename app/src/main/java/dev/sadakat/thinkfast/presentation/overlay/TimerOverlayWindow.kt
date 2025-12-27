@@ -673,7 +673,7 @@ private fun InterventionButtons(
                 Text(
                     text = "Take a moment to consider...",
                     style = InterventionTypography.ButtonTextSmall,
-                    color = if (isDarkTheme) Color.White.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.7f),
+                    color = if (isDarkTheme) InterventionColors.InterventionTextPrimaryDark.copy(alpha = 0.7f) else InterventionColors.InterventionTextPrimary.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
                 )
 
@@ -689,7 +689,7 @@ private fun InterventionButtons(
                 Text(
                     text = "${countdown}s",
                     style = InterventionTypography.ButtonText,
-                    color = if (isDarkTheme) Color.White else Color.Black
+                    color = if (isDarkTheme) InterventionColors.InterventionTextPrimaryDark else InterventionColors.InterventionTextPrimary
                 )
             }
         } else {
