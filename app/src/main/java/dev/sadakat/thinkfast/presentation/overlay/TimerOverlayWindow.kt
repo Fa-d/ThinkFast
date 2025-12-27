@@ -210,7 +210,7 @@ class TimerOverlayWindow(
      */
     private fun handleAcknowledgeClick() {
         CoroutineScope(Dispatchers.IO).launch {
-            viewModel.onAcknowledgeClicked()
+            viewModel.onProceedClicked()
             // Dismiss overlay
             dismiss()
         }
