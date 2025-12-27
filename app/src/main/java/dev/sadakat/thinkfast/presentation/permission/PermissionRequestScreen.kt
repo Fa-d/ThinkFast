@@ -70,8 +70,8 @@ fun PermissionRequestScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(contentPadding)
-                .padding(24.dp),
+                .padding(contentPadding),
+            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {

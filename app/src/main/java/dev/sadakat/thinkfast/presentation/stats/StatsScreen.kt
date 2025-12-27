@@ -81,13 +81,13 @@ fun StatsScreen(
             }
         } else {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(contentPadding)
+                modifier = Modifier.fillMaxSize()
             ) {
-                // Period selector tabs
-                TabRow(selectedTabIndex = uiState.selectedPeriod.ordinal) {
+                // Period selector tabs - directly below TopAppBar
+                TabRow(
+                    selectedTabIndex = uiState.selectedPeriod.ordinal,
+                    modifier = Modifier.padding(top = paddingValues.calculateTopPadding())
+                ) {
                     Tab(
                         selected = uiState.selectedPeriod == StatsPeriod.DAILY,
                         onClick = { viewModel.selectPeriod(StatsPeriod.DAILY) },
@@ -107,9 +107,13 @@ fun StatsScreen(
 
                 // Statistics content
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 16.dp,
+                        bottom = contentPadding.calculateBottomPadding() + 16.dp
+                    ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     when (uiState.selectedPeriod) {
