@@ -42,6 +42,9 @@ import dev.sadakat.thinkfast.domain.model.DailyStatistics
 import dev.sadakat.thinkfast.domain.model.MonthlyStatistics
 import dev.sadakat.thinkfast.domain.model.UsageTrend
 import dev.sadakat.thinkfast.domain.model.WeeklyStatistics
+import dev.sadakat.thinkfast.presentation.stats.charts.StackedBarUsageChart
+import dev.sadakat.thinkfast.presentation.stats.charts.HorizontalTimePatternChart
+import dev.sadakat.thinkfast.presentation.stats.charts.GoalProgressChart
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.graphics.Color as ComposeColor
 
@@ -113,36 +116,132 @@ fun StatsScreen(
                         StatsPeriod.DAILY -> {
                             uiState.dailyStats?.let { stats ->
                                 item { DailyStatsContent(stats, uiState.dailyTrend) }
+
+                                // Stacked Bar Chart - Primary usage visualization
                                 item {
-                                    SessionDistributionCard(
-                                        sessions = uiState.dailySessions,
-                                        periodLabel = "Today",
-                                        chartPeriod = ChartPeriod.DAILY
-                                    )
+                                    ChartCard(
+                                        title = "Usage Breakdown",
+                                        description = "Your hourly usage today for Facebook and Instagram"
+                                    ) {
+                                        StackedBarUsageChart(
+                                            sessions = uiState.dailySessions,
+                                            period = ChartPeriod.DAILY
+                                        )
+                                    }
+                                }
+
+                                // Time Pattern Chart - Behavioral insights
+                                item {
+                                    ChartCard(
+                                        title = "Peak Usage Times",
+                                        description = "Which parts of the day you use apps most"
+                                    ) {
+                                        HorizontalTimePatternChart(
+                                            sessions = uiState.dailySessions
+                                        )
+                                    }
+                                }
+
+                                // Goal Progress Chart - Motivational tracking
+                                item {
+                                    ChartCard(
+                                        title = "Goal Progress",
+                                        description = "Tracking your daily usage goal"
+                                    ) {
+                                        GoalProgressChart(
+                                            sessions = uiState.dailySessions,
+                                            period = ChartPeriod.DAILY,
+                                            dailyGoalMinutes = null // TODO: Add goal data to ViewModel
+                                        )
+                                    }
                                 }
                             }
                         }
                         StatsPeriod.WEEKLY -> {
                             uiState.weeklyStats?.let { stats ->
                                 item { WeeklyStatsContent(stats, uiState.weeklyTrend) }
+
+                                // Stacked Bar Chart
                                 item {
-                                    SessionDistributionCard(
-                                        sessions = uiState.weeklySessions,
-                                        periodLabel = "This Week",
-                                        chartPeriod = ChartPeriod.WEEKLY
-                                    )
+                                    ChartCard(
+                                        title = "Usage Breakdown",
+                                        description = "Daily usage this week"
+                                    ) {
+                                        StackedBarUsageChart(
+                                            sessions = uiState.weeklySessions,
+                                            period = ChartPeriod.WEEKLY
+                                        )
+                                    }
+                                }
+
+                                // Time Pattern Chart
+                                item {
+                                    ChartCard(
+                                        title = "Peak Usage Times",
+                                        description = "Your average usage patterns this week"
+                                    ) {
+                                        HorizontalTimePatternChart(
+                                            sessions = uiState.weeklySessions
+                                        )
+                                    }
+                                }
+
+                                // Goal Progress Chart
+                                item {
+                                    ChartCard(
+                                        title = "Goal Progress",
+                                        description = "Daily progress against your goal"
+                                    ) {
+                                        GoalProgressChart(
+                                            sessions = uiState.weeklySessions,
+                                            period = ChartPeriod.WEEKLY,
+                                            dailyGoalMinutes = null // TODO: Add goal data to ViewModel
+                                        )
+                                    }
                                 }
                             }
                         }
                         StatsPeriod.MONTHLY -> {
                             uiState.monthlyStats?.let { stats ->
                                 item { MonthlyStatsContent(stats, uiState.monthlyTrend) }
+
+                                // Stacked Bar Chart
                                 item {
-                                    SessionDistributionCard(
-                                        sessions = uiState.monthlySessions,
-                                        periodLabel = stats.monthName,
-                                        chartPeriod = ChartPeriod.MONTHLY
-                                    )
+                                    ChartCard(
+                                        title = "Usage Breakdown",
+                                        description = "Daily usage this month"
+                                    ) {
+                                        StackedBarUsageChart(
+                                            sessions = uiState.monthlySessions,
+                                            period = ChartPeriod.MONTHLY
+                                        )
+                                    }
+                                }
+
+                                // Time Pattern Chart
+                                item {
+                                    ChartCard(
+                                        title = "Peak Usage Times",
+                                        description = "Weekly usage patterns"
+                                    ) {
+                                        HorizontalTimePatternChart(
+                                            sessions = uiState.monthlySessions
+                                        )
+                                    }
+                                }
+
+                                // Goal Progress Chart
+                                item {
+                                    ChartCard(
+                                        title = "Goal Progress",
+                                        description = "Monthly progress tracking"
+                                    ) {
+                                        GoalProgressChart(
+                                            sessions = uiState.monthlySessions,
+                                            period = ChartPeriod.MONTHLY,
+                                            dailyGoalMinutes = null // TODO: Add goal data to ViewModel
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -546,13 +645,13 @@ private fun formatDuration(durationMillis: Long): String {
 }
 
 /**
- * Card displaying the session duration over time for both apps
+ * Reusable card for displaying charts
  */
 @Composable
-private fun SessionDistributionCard(
-    sessions: List<dev.sadakat.thinkfast.domain.model.UsageSession>,
-    periodLabel: String,
-    chartPeriod: ChartPeriod
+private fun ChartCard(
+    title: String,
+    description: String,
+    content: @Composable () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -563,41 +662,20 @@ private fun SessionDistributionCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Session Duration Over Time",
+                text = title,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Facebook and Instagram session durations for $periodLabel",
+                text = description,
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (sessions.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No sessions recorded yet",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                SessionDurationTimeChart(
-                    sessions = sessions,
-                    period = chartPeriod,
-                    modifier = Modifier.fillMaxWidth(),
-                    facebookColor = ComposeColor(0xFF1877F2),  // Facebook blue
-                    instagramColor = ComposeColor(0xFFE4405F) // Instagram pink
-                )
-            }
+            content()
         }
     }
 }
