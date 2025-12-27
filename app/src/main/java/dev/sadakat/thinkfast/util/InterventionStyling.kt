@@ -184,8 +184,8 @@ object InterventionStyling {
         else
             InterventionColors.InterventionTextPrimary,
         accentColor = InterventionColors.Success,
-        primaryTextStyle = InterventionTypography.ActivitySuggestionText,
-        secondaryTextStyle = InterventionTypography.ActivitySuggestionHeader
+        primaryTextStyle = InterventionTypography.InterventionMessage,
+        secondaryTextStyle = InterventionTypography.InterventionTitle
     )
 
     /**

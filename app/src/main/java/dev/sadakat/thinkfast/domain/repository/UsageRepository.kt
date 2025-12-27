@@ -179,4 +179,16 @@ interface UsageRepository {
      * Returns the user's override if set, otherwise calculates from install date
      */
     suspend fun getEffectiveFrictionLevel(): dev.sadakat.thinkfast.domain.intervention.FrictionLevel
+
+    /**
+     * Set a friction level override
+     * Pass null to clear the override and use automatic calculation
+     */
+    suspend fun setFrictionLevelOverride(level: dev.sadakat.thinkfast.domain.intervention.FrictionLevel?)
+
+    /**
+     * Get the user's friction level override
+     * Returns null if using automatic calculation
+     */
+    suspend fun getFrictionLevelOverride(): dev.sadakat.thinkfast.domain.intervention.FrictionLevel?
 }

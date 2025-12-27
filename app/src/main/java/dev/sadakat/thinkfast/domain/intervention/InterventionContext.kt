@@ -145,7 +145,9 @@ enum class FrictionLevel(
     val delayMs: Long,
     val requiresInteraction: Boolean,
     val showGoBackButton: Boolean,
-    val allowBackButton: Boolean
+    val allowBackButton: Boolean,
+    val displayName: String,
+    val description: String
 ) {
     /**
      * Week 1-2: No delay, easy to proceed.
@@ -155,7 +157,9 @@ enum class FrictionLevel(
         delayMs = 0,
         requiresInteraction = false,
         showGoBackButton = true,
-        allowBackButton = false
+        allowBackButton = false,
+        displayName = "Gentle",
+        description = "Simple message, no delay"
     ),
 
     /**
@@ -166,7 +170,9 @@ enum class FrictionLevel(
         delayMs = 3000,
         requiresInteraction = true,
         showGoBackButton = true,
-        allowBackButton = false
+        allowBackButton = false,
+        displayName = "Moderate",
+        description = "3-second pause before proceeding"
     ),
 
     /**
@@ -177,7 +183,9 @@ enum class FrictionLevel(
         delayMs = 5000,
         requiresInteraction = true,
         showGoBackButton = true,
-        allowBackButton = false
+        allowBackButton = false,
+        displayName = "Firm",
+        description = "5-second pause with reflection prompts"
     ),
 
     /**
@@ -188,7 +196,9 @@ enum class FrictionLevel(
         delayMs = 10000,
         requiresInteraction = true,
         showGoBackButton = true,
-        allowBackButton = false
+        allowBackButton = false,
+        displayName = "Locked",
+        description = "10-second pause, maximum friction"
     );
 
     companion object {

@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    // google-services plugin applied conditionally below
 }
 
 android {
@@ -118,6 +119,11 @@ dependencies {
     // Charts (MPAndroidChart)
     implementation(libs.mpandroidchart)
 
+    // Firebase Analytics
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics.ktx)
+    implementation(libs.firebase.crashlytics.ktx)
+
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
@@ -140,4 +146,11 @@ tasks.withType<Test> {
     testLogging {
         events("passed", "skipped", "failed")
     }
+}
+
+// Apply google-services plugin only if google-services.json exists
+val googleServicesFile = file("google-services.json")
+if (googleServicesFile.exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
 }

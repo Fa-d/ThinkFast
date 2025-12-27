@@ -15,6 +15,7 @@ import dev.sadakat.thinkfast.domain.model.UserChoice
 import dev.sadakat.thinkfast.domain.repository.InterventionResultRepository
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
 import dev.sadakat.thinkfast.util.Constants
+import dev.sadakat.thinkfast.analytics.AnalyticsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +33,8 @@ import java.util.concurrent.TimeUnit
  */
 class TimerOverlayViewModel(
     private val usageRepository: UsageRepository,
-    private val resultRepository: InterventionResultRepository
+    private val resultRepository: InterventionResultRepository,
+    private val analyticsManager: AnalyticsManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerOverlayState())
@@ -283,6 +285,9 @@ class TimerOverlayViewModel(
         )
 
         resultRepository.recordResult(result)
+
+        // Track to analytics (privacy-safe, aggregated only)
+        analyticsManager.trackIntervention(result)
     }
 
     /**

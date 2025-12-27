@@ -5,6 +5,10 @@ import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.google.firebase.crashlytics.ktx.crashlytics
+import com.google.firebase.ktx.Firebase
+import dev.sadakat.thinkfast.di.analyticsModule
 import dev.sadakat.thinkfast.di.databaseModule
 import dev.sadakat.thinkfast.di.repositoryModule
 import dev.sadakat.thinkfast.di.useCaseModule
@@ -14,13 +18,18 @@ import dev.sadakat.thinkfast.worker.AchievementWorker
 import dev.sadakat.thinkfast.worker.DailyStatsAggregatorWorker
 import dev.sadakat.thinkfast.worker.DataCleanupWorker
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
-class ThinkFastApplication : Application() {
+class ThinkFastApplication : Application(), KoinComponent {
+    // Inject AnalyticsManager to schedule daily uploads
+    private val analyticsManager: dev.sadakat.thinkfast.analytics.AnalyticsManager by inject()
+
     override fun onCreate() {
         super.onCreate()
 
@@ -32,15 +41,62 @@ class ThinkFastApplication : Application() {
                 databaseModule,
                 repositoryModule,
                 useCaseModule,
-                viewModelModule
+                viewModelModule,
+                analyticsModule
             )
         }
+
+        // Initialize Firebase Crashlytics
+        // Note: This will only work if google-services.json is present
+        // Otherwise it will safely do nothing
+        initializeCrashlytics()
 
         // Initialize notification channels (must be done before scheduling workers)
         NotificationHelper.createNotificationChannels(this)
 
+        // Set up global exception handler for crash reporting
+        setupCrashHandler()
+
         // Schedule background workers
         scheduleWorkers()
+    }
+
+    /**
+     * Initialize Firebase Crashlytics
+     * Configures crash reporting with privacy settings
+     */
+    private fun initializeCrashlytics() {
+        try {
+            val crashlytics = Firebase.crashlytics
+
+            // Enable crash collection (can be controlled by user preference later)
+            crashlytics.setCrashlyticsCollectionEnabled(true)
+
+            // Set user identifier (anonymous - no personal info)
+            // We use a random identifier that doesn't persist across installs
+            // This helps track unique crash sessions without PII
+            crashlytics.setUserId(java.util.UUID.randomUUID().toString())
+
+            // Set custom keys for additional context
+            crashlytics.setCustomKey("app_version", getAppVersion())
+            crashlytics.setCustomKey("build_type", getBuildType())
+
+        } catch (e: Exception) {
+            // Crashlytics not available (google-services.json missing)
+            // Silently ignore - app should work fine without it
+        }
+    }
+
+    private fun getAppVersion(): String {
+        return try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown"
+        } catch (e: Exception) {
+            "unknown"
+        }
+    }
+
+    private fun getBuildType(): String {
+        return if (BuildConfig.DEBUG) "debug" else "release"
     }
 
     private fun scheduleWorkers() {
@@ -90,6 +146,9 @@ class ThinkFastApplication : Application() {
             ExistingPeriodicWorkPolicy.KEEP,
             achievementRequest
         )
+
+        // Schedule daily analytics upload (runs every 24 hours when connected to WiFi and charging)
+        analyticsManager.scheduleDailyUpload()
     }
 
     /**
@@ -106,5 +165,38 @@ class ThinkFastApplication : Application() {
         }
 
         return midnight.timeInMillis - currentTime.timeInMillis
+    }
+
+    /**
+     * Set up global exception handler for crash reporting
+     * Reports crashes to both Crashlytics and AnalyticsManager
+     */
+    private fun setupCrashHandler() {
+        // Store the default handler to call it after our reporting
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            // Report to AnalyticsManager (privacy-safe, aggregated only)
+            try {
+                val crashType = throwable::class.simpleName ?: "UnknownCrash"
+                analyticsManager.reportAppQualityIssue(
+                    crashType = crashType,
+                    anrOccurred = false,
+                    slowRender = false
+                )
+            } catch (e: Exception) {
+                // Ignore reporting failures
+            }
+
+            // Also report to Crashlytics (if available)
+            try {
+                Firebase.crashlytics.recordException(throwable)
+            } catch (e: Exception) {
+                // Crashlytics not available
+            }
+
+            // Let the default handler handle the crash
+            defaultHandler?.uncaughtException(thread, throwable)
+        }
     }
 }

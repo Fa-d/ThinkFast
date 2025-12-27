@@ -189,6 +189,14 @@ class UsageRepositoryImpl(
         return interventionPreferences.getEffectiveFrictionLevel(calculatedLevel)
     }
 
+    override suspend fun setFrictionLevelOverride(level: FrictionLevel?) {
+        interventionPreferences.setFrictionLevelOverride(level)
+    }
+
+    override suspend fun getFrictionLevelOverride(): FrictionLevel? {
+        return interventionPreferences.getFrictionLevelOverride()
+    }
+
     override suspend fun getBestSessionMinutes(packageName: String): Int {
         val today = DATE_FORMAT.format(Calendar.getInstance().time)
         val sessions = sessionDao.getSessionsByDateAndApp(today, packageName)

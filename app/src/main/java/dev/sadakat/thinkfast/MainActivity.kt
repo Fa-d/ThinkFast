@@ -72,12 +72,12 @@ fun MainScreen() {
     val startDestination = if (!isOnboardingCompleted(context)) {
         // First time user - show onboarding
         Screen.Onboarding.route
-    } else if (PermissionHelper.hasAllRequiredPermissions(context)) {
-        // Onboarding done, permissions granted - go to home
-        Screen.Home.route
-    } else {
+    } else if (!PermissionHelper.hasAllRequiredPermissions(context)) {
         // Onboarding done, but need permissions
         Screen.PermissionRequest.route
+    } else {
+        // All setup complete - go to home
+        Screen.Home.route
     }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()

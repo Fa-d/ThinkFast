@@ -30,3 +30,4 @@ keystore.properties
 /.idea/gradle.xml
 /.idea/markdown.xml
 /app/release/app-release.aab
+/app/google-services.json

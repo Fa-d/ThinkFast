@@ -224,6 +224,9 @@ class ContentSelector {
             context.sessionCount > 5 ->
                 ReflectionCategory.PATTERN_RECOGNITION to InterventionContentPools.patternRecognitionQuestions
 
+            context.currentSessionMinutes > 10 ->
+                ReflectionCategory.TIME_AWARENESS to InterventionContentPools.timeAwarenessQuestions
+
             Random.nextBoolean() ->
                 ReflectionCategory.PRIORITY_CHECK to InterventionContentPools.priorityCheckQuestions
 
@@ -318,6 +321,7 @@ class ContentSelector {
             context.isWeekendMorning -> InterventionContentPools.weekendMorningAppeals
             context.quickReopenAttempt -> InterventionContentPools.rapidReopenAppeals
             context.isExtendedSession -> InterventionContentPools.extendedSessionAppeals
+            context.sessionCount >= 10 -> InterventionContentPools.highFrequencyAppeals
             else -> InterventionContentPools.lateNightAppeals  // Fallback
         }
 

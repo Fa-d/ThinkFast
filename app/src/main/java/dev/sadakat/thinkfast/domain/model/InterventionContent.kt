@@ -97,6 +97,7 @@ enum class ReflectionCategory {
     PRIORITY_CHECK,        // "Is this the most important thing?"
     EMOTIONAL_AWARENESS,   // "How are you feeling?"
     PATTERN_RECOGNITION,   // "What pattern keeps bringing you back?"
+    TIME_AWARENESS,        // "What's the opportunity cost?"
     LATE_NIGHT,           // Special late-night questions
     QUICK_REOPEN          // For rapid reopens
 }
@@ -117,7 +118,8 @@ enum class EmotionalContext {
     LATE_NIGHT,           // 22:00-05:00
     WEEKEND_MORNING,      // Saturday/Sunday 06:00-11:00
     RAPID_REOPEN,         // Opened within 2 min
-    EXTENDED_SESSION      // 15+ minutes
+    EXTENDED_SESSION,     // 15+ minutes
+    HIGH_FREQUENCY        // 10+ sessions today
 }
 
 /**
@@ -156,13 +158,18 @@ enum class AlternativeCategory {
  */
 object InterventionContentPools {
 
-    // REFLECTION QUESTIONS (20+ unique questions)
+    // REFLECTION QUESTIONS (43 unique questions across 7 categories)
 
     val triggerAwarenessQuestions = listOf(
         "What was happening before you felt the urge to open this?",
         "What are you trying to avoid or escape from?",
         "What pattern keeps bringing you back here?",
-        "What triggered this impulse to scroll?"
+        "What triggered this impulse to scroll?",
+        "What specific thought made you reach for this app?",
+        "What would happen if you waited 5 minutes before opening this?",
+        "Is this a habit or a conscious choice?",
+        "When did you decide to open this app?",
+        "What were you doing just before you felt this urge?"
     )
 
     val priorityCheckQuestions = listOf(
@@ -170,7 +177,12 @@ object InterventionContentPools {
         "What could you do instead that future-you would thank you for?",
         "Are you here for something specific, or just browsing?",
         "Would you do this if someone was watching?",
-        "What's the best use of the next 10 minutes?"
+        "What's the best use of the next 10 minutes?",
+        "If you had only 30 minutes of free time today, would you spend it here?",
+        "What's waiting for you that matters more than this?",
+        "What would your best self choose to do right now?",
+        "Is scrolling your top priority at this moment?",
+        "What did you intend to do before picking up your phone?"
     )
 
     val emotionalAwarenessQuestions = listOf(
@@ -178,7 +190,12 @@ object InterventionContentPools {
         "Will scrolling actually make you feel better?",
         "When was the last time scrolling made you genuinely happy?",
         "What emotion are you trying to satisfy?",
-        "How will you feel after 20 minutes of scrolling?"
+        "How will you feel after 20 minutes of scrolling?",
+        "Are you running toward something or away from something?",
+        "What feeling are you trying to escape right now?",
+        "Will scrolling fix the real issue?",
+        "What would help you feel better than scrolling?",
+        "Are you trying to fill a void or avoid discomfort?"
     )
 
     val patternRecognitionQuestions = listOf(
@@ -186,6 +203,14 @@ object InterventionContentPools {
         "Is this becoming a habit you want to keep?",
         "What would break this cycle?",
         "How many times this week have you opened this?"
+    )
+
+    val timeAwarenessQuestions = listOf(
+        "How many times have you chosen scrolling over this recently?",
+        "What will you remember about today when you look back?",
+        "Is this moment worth trading for endless scrolling?",
+        "How do you want to feel at the end of today?",
+        "What's the opportunity cost of the next 10 minutes here?"
     )
 
     val lateNightQuestions = listOf(
@@ -208,7 +233,11 @@ object InterventionContentPools {
         Alternative("Drink a glass of water and feel refreshed", "☕", 2, AlternativeCategory.PHYSICAL),
         Alternative("Do 20 push-ups", "💪", 2, AlternativeCategory.PHYSICAL),
         Alternative("Text someone you care about", "💬", 2, AlternativeCategory.SOCIAL),
-        Alternative("Listen to your favorite song", "🎵", 2, AlternativeCategory.MINDFUL)
+        Alternative("Listen to your favorite song", "🎵", 2, AlternativeCategory.MINDFUL),
+        Alternative("Do 30 jumping jacks", "🤾", 2, AlternativeCategory.PHYSICAL),
+        Alternative("Practice box breathing", "🧘", 2, AlternativeCategory.MINDFUL),
+        Alternative("Write down 3 things you're grateful for", "📝", 2, AlternativeCategory.MINDFUL),
+        Alternative("Doodle something creative", "🎨", 2, AlternativeCategory.CREATIVE)
     )
 
     val fiveMinuteAlternatives = listOf(
@@ -216,7 +245,12 @@ object InterventionContentPools {
         Alternative("Read 2-3 pages of a book", "📖", 5, AlternativeCategory.PRODUCTIVE),
         Alternative("Walk around the block", "🚶", 5, AlternativeCategory.PHYSICAL),
         Alternative("Sketch something creative", "🎨", 5, AlternativeCategory.CREATIVE),
-        Alternative("Do a quick stretching routine", "🤸", 5, AlternativeCategory.PHYSICAL)
+        Alternative("Do a quick stretching routine", "🤸", 5, AlternativeCategory.PHYSICAL),
+        Alternative("Water your plants", "🌱", 5, AlternativeCategory.PRODUCTIVE),
+        Alternative("Clear 10 emails from inbox", "📧", 5, AlternativeCategory.PRODUCTIVE),
+        Alternative("Plan your next hour", "🎯", 5, AlternativeCategory.PRODUCTIVE),
+        Alternative("Tidy one area of your space", "🧹", 5, AlternativeCategory.PRODUCTIVE),
+        Alternative("Learn one new thing online", "💡", 5, AlternativeCategory.PRODUCTIVE)
     )
 
     val tenMinuteAlternatives = listOf(
@@ -225,7 +259,12 @@ object InterventionContentPools {
         Alternative("A meaningful phone call", "☎️", 10, AlternativeCategory.SOCIAL),
         Alternative("Tidy up your space", "🧹", 10, AlternativeCategory.PRODUCTIVE),
         Alternative("Practice an instrument", "🎸", 10, AlternativeCategory.CREATIVE),
-        Alternative("Cook a healthy snack", "🍳", 10, AlternativeCategory.PRODUCTIVE)
+        Alternative("Cook a healthy snack", "🍳", 10, AlternativeCategory.PRODUCTIVE),
+        Alternative("Watch an educational video", "🎓", 10, AlternativeCategory.PRODUCTIVE),
+        Alternative("Do a quick bodyweight workout", "🏋️", 10, AlternativeCategory.PHYSICAL),
+        Alternative("Write in your journal", "📓", 10, AlternativeCategory.MINDFUL),
+        Alternative("Work on a creative project", "✏️", 10, AlternativeCategory.CREATIVE),
+        Alternative("Prep food for later", "🥘", 10, AlternativeCategory.PRODUCTIVE)
     )
 
     val twentyMinuteAlternatives = listOf(
@@ -233,7 +272,12 @@ object InterventionContentPools {
         Alternative("A full chapter of a book", "📖", 20, AlternativeCategory.PRODUCTIVE),
         Alternative("Write in your journal", "✍️", 20, AlternativeCategory.MINDFUL),
         Alternative("Learn something new online", "💡", 20, AlternativeCategory.PRODUCTIVE),
-        Alternative("Prepare a healthy meal", "🍲", 20, AlternativeCategory.PRODUCTIVE)
+        Alternative("Prepare a healthy meal", "🍲", 20, AlternativeCategory.PRODUCTIVE),
+        Alternative("Go for a bike ride", "🚴", 20, AlternativeCategory.PHYSICAL),
+        Alternative("Cook a full meal from scratch", "🍳", 20, AlternativeCategory.PRODUCTIVE),
+        Alternative("Practice an instrument", "🎹", 20, AlternativeCategory.CREATIVE),
+        Alternative("Deep dive into a topic you're curious about", "📚", 20, AlternativeCategory.PRODUCTIVE),
+        Alternative("Do a full yoga session", "🧘", 20, AlternativeCategory.PHYSICAL)
     )
 
     // BREATHING EXERCISE MESSAGES
@@ -284,6 +328,11 @@ object InterventionContentPools {
             message = "You know you'll regret staying up.",
             subtext = "Your body needs rest more than your mind needs scrolling",
             context = EmotionalContext.LATE_NIGHT
+        ),
+        InterventionContent.EmotionalAppeal(
+            message = "Your brain needs rest more than your feed needs scrolling.",
+            subtext = "Tomorrow's energy depends on tonight's choices",
+            context = EmotionalContext.LATE_NIGHT
         )
     )
 
@@ -297,6 +346,16 @@ object InterventionContentPools {
             message = "Weekend mornings are precious.",
             subtext = "Use this time for something that matters",
             context = EmotionalContext.WEEKEND_MORNING
+        ),
+        InterventionContent.EmotionalAppeal(
+            message = "It's your weekend. Scrolling won't give you that time back.",
+            subtext = "Make this time count",
+            context = EmotionalContext.WEEKEND_MORNING
+        ),
+        InterventionContent.EmotionalAppeal(
+            message = "How many weekends do you have left this year?",
+            subtext = "Make them count",
+            context = EmotionalContext.WEEKEND_MORNING
         )
     )
 
@@ -304,6 +363,16 @@ object InterventionContentPools {
         InterventionContent.EmotionalAppeal(
             message = "This is becoming compulsive.",
             subtext = "You're in control. You can stop.",
+            context = EmotionalContext.RAPID_REOPEN
+        ),
+        InterventionContent.EmotionalAppeal(
+            message = "Third time in 5 minutes.",
+            subtext = "This isn't bringing you joy",
+            context = EmotionalContext.RAPID_REOPEN
+        ),
+        InterventionContent.EmotionalAppeal(
+            message = "You keep coming back but you know it's not helping.",
+            subtext = "Break the cycle now",
             context = EmotionalContext.RAPID_REOPEN
         )
     )
@@ -318,6 +387,29 @@ object InterventionContentPools {
             message = "This session is getting long.",
             subtext = "The longer you stay, the harder it is to leave",
             context = EmotionalContext.EXTENDED_SESSION
+        ),
+        InterventionContent.EmotionalAppeal(
+            message = "Half an hour. What did you gain that you'll remember tomorrow?",
+            subtext = "This time is gone forever",
+            context = EmotionalContext.EXTENDED_SESSION
+        ),
+        InterventionContent.EmotionalAppeal(
+            message = "This session is longer than it takes to learn something new.",
+            subtext = "Choose wisely how you spend your time",
+            context = EmotionalContext.EXTENDED_SESSION
+        )
+    )
+
+    val highFrequencyAppeals = listOf(
+        InterventionContent.EmotionalAppeal(
+            message = "This is your 12th session today.",
+            subtext = "Notice the pattern?",
+            context = EmotionalContext.HIGH_FREQUENCY
+        ),
+        InterventionContent.EmotionalAppeal(
+            message = "You're caught in a loop.",
+            subtext = "Break it now",
+            context = EmotionalContext.HIGH_FREQUENCY
         )
     )
 

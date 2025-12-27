@@ -19,8 +19,8 @@ import org.koin.dsl.module
 val viewModelModule = module {
     viewModel { HomeViewModel(usageRepository = get(), goalRepository = get()) }
     viewModel { OnboardingViewModel(goalRepository = get()) }
-    viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get()) }
-    viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get()) }
+    viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get()) }
+    viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get()) }
     viewModel { AnalyticsViewModel(resultRepository = get()) }
     viewModel {
         StatsViewModel(
