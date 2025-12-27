@@ -219,7 +219,7 @@ fun SettingsScreen(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (uiState.appSettings.lockedMode) {
-                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                            MaterialTheme.colorScheme.errorContainer
                         } else {
                             MaterialTheme.colorScheme.surface
                         }
@@ -281,7 +281,7 @@ fun SettingsScreen(
                             onCheckedChange = { viewModel.setLockedMode(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.error,
-                                checkedTrackColor = MaterialTheme.colorScheme.errorContainer,
+                                checkedTrackColor = MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
                                 uncheckedThumbColor = MaterialTheme.colorScheme.surfaceVariant,
                                 uncheckedTrackColor = MaterialTheme.colorScheme.surface
                             )
