@@ -60,6 +60,7 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.InterventionContent
+import dev.sadakat.thinkfast.presentation.overlay.components.CompactBreathingExercise
 import dev.sadakat.thinkfast.ui.theme.InterventionColors
 import dev.sadakat.thinkfast.ui.theme.ThinkFastTheme
 import dev.sadakat.thinkfast.util.ErrorLogger
@@ -536,75 +537,34 @@ private fun TimeAlternativeContent(
 
 /**
  * Breathing exercise content
+ * Uses the shared CompactBreathingExercise component with improved animation
  */
 @Composable
 private fun BreathingExerciseContent(
     content: InterventionContent.BreathingExercise,
     textColor: Color
 ) {
-    Text(
-        text = content.instruction,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Medium,
-        color = textColor,
-        textAlign = TextAlign.Center
-    )
-
-    Spacer(modifier = Modifier.height(48.dp))
-
-    // Animated breathing circle
-    var breatheState by remember { mutableStateOf(0) } // 0 = inhale, 1 = hold, 2 = exhale
-    val circleSize by animateFloatAsState(
-        targetValue = when (breatheState) {
-            0 -> 200f  // Expanded
-            1 -> 200f  // Hold
-            else -> 120f // Contracted
-        },
-        animationSpec = tween(
-            durationMillis = when (breatheState) {
-                0 -> 4000  // 4s inhale
-                1 -> 7000  // 7s hold
-                else -> 8000 // 8s exhale
-            },
-            easing = androidx.compose.animation.core.LinearEasing
-        ),
-        label = "circleSize"
-    )
-
-    // Simple breathing animation (placeholder)
-    androidx.compose.foundation.layout.Box(
-        modifier = Modifier
-            .size(circleSize.dp)
-            .background(
-                color = textColor.copy(alpha = 0.3f),
-                shape = androidx.compose.foundation.shape.CircleShape
-            ),
-        contentAlignment = Alignment.Center
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Instruction text above the breathing exercise
         Text(
-            text = when (breatheState) {
-                0 -> "Breathe In"
-                1 -> "Hold"
-                else -> "Breathe Out"
-            },
-            fontSize = 20.sp,
+            text = content.instruction,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
-            color = textColor
+            color = textColor,
+            textAlign = TextAlign.Center
         )
-    }
 
-    LaunchedEffect(Unit) {
-        // Simplified breathing state cycling
-        while (true) {
-            breatheState = 0
-            kotlinx.coroutines.delay(4000)
-            breatheState = 1
-            kotlinx.coroutines.delay(7000)
-            breatheState = 2
-            kotlinx.coroutines.delay(8000)
-            // Break after one cycle for overlay flow
-            break
-        }
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Use the shared CompactBreathingExercise component with improved animation
+        // It uses the same natural EaseInOutCubic easing and smooth transitions
+        CompactBreathingExercise(
+            variant = content.variant,
+            isDarkTheme = isSystemInDarkTheme(),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

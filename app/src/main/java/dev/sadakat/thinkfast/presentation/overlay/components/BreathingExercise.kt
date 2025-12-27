@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,6 +24,7 @@ import dev.sadakat.thinkfast.domain.model.BreathingVariant
 import dev.sadakat.thinkfast.ui.theme.InterventionColors
 import dev.sadakat.thinkfast.ui.theme.InterventionTypography
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 
 /**
  * Breathing phase states for the exercise
@@ -40,11 +42,15 @@ enum class BreathPhase {
         HOLD_AFTER_EXHALE -> "Hold"
     }
 
-    fun getInstructionEmoji(): String = when (this) {
-        INHALE -> "↑"
-        HOLD_AFTER_INHALE -> "⏸"
-        EXHALE -> "↓"
-        HOLD_AFTER_EXHALE -> "⏸"
+    /**
+     * Short text to display in the center of the breathing circle
+     * Clean, minimal text without emoji
+     */
+    fun getCenterText(): String = when (this) {
+        INHALE -> "In"
+        HOLD_AFTER_INHALE -> "Hold"
+        EXHALE -> "Out"
+        HOLD_AFTER_EXHALE -> "Hold"
     }
 }
 
@@ -103,6 +109,12 @@ data class BreathPhaseConfig(
  * Research shows breathing exercises create temporal friction and
  * provide immediate mindfulness benefits.
  *
+ * Features improved animation with:
+ * - Single continuous animation for smooth breathing motion
+ * - Natural easing curves (EaseInOutCubic) for realistic breathing feel
+ * - Countdown timer showing time remaining in current phase
+ * - Accurate time representation users can follow naturally
+ *
  * @param variant The breathing pattern to use
  * @param instruction Initial instruction text
  * @param onComplete Callback when exercise completes (after 3 full cycles)
@@ -121,6 +133,8 @@ fun BreathingExercise(
     var currentPhaseIndex by remember { mutableIntStateOf(0) }
     var cycleCount by remember { mutableIntStateOf(0) }
     var isCompleted by remember { mutableStateOf(false) }
+    var phaseStartTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var phaseProgress by remember { mutableFloatStateOf(0f) }
 
     val currentPhaseConfig = config.phases[currentPhaseIndex]
     val totalCycles = 3  // Complete 3 full breathing cycles
@@ -128,27 +142,31 @@ fun BreathingExercise(
     // Calculate total progress
     val totalPhases = config.phases.size * totalCycles
     val currentPhaseNumber = cycleCount * config.phases.size + currentPhaseIndex + 1
-    val progress = currentPhaseNumber.toFloat() / totalPhases
+    val overallProgress = currentPhaseNumber.toFloat() / totalPhases
 
-    // Animated scale for the breathing circle
+    // Calculate time remaining in current phase for countdown display
+    val timeElapsedInPhase = System.currentTimeMillis() - phaseStartTime
+    val timeRemainingInPhase = maxOf(0, currentPhaseConfig.durationMs - timeElapsedInPhase)
+    val secondsRemaining = (timeRemainingInPhase / 1000f).toInt()
+
+    // Update phase progress continuously
+    LaunchedEffect(currentPhaseIndex, cycleCount) {
+        phaseStartTime = System.currentTimeMillis()
+        while (!isCompleted && currentPhaseIndex == config.phases.indexOf(currentPhaseConfig)) {
+            val elapsed = System.currentTimeMillis() - phaseStartTime
+            phaseProgress = (elapsed.toFloat() / currentPhaseConfig.durationMs).coerceIn(0f, 1f)
+            delay(16) // Update at ~60fps
+        }
+    }
+
+    // Animated scale for the breathing circle - uses smooth, continuous animation
     val circleScale by animateFloatAsState(
         targetValue = currentPhaseConfig.targetScale,
         animationSpec = tween(
             durationMillis = currentPhaseConfig.durationMs.toInt(),
-            easing = LinearEasing
+            easing = EaseInOutCubic // Natural breathing curve
         ),
         label = "circle_scale"
-    )
-
-    // Animated opacity for pulsing effect
-    val pulseAlpha by rememberInfiniteTransition(label = "pulse").animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_alpha"
     )
 
     // Phase progression logic
@@ -169,9 +187,11 @@ fun BreathingExercise(
                 } else {
                     cycleCount = nextCycle
                     currentPhaseIndex = nextPhaseIndex
+                    phaseProgress = 0f
                 }
             } else {
                 currentPhaseIndex = nextPhaseIndex
+                phaseProgress = 0f
             }
         }
     }
@@ -181,11 +201,6 @@ fun BreathingExercise(
         InterventionColors.BreathingBackgroundDark
     else
         InterventionColors.BreathingBackground
-
-    val circleColor = if (isDarkTheme)
-        InterventionColors.Success.copy(alpha = 0.4f)
-    else
-        InterventionColors.Success.copy(alpha = 0.3f)
 
     val textColor = if (isDarkTheme)
         InterventionColors.InterventionTextPrimaryDark
@@ -203,145 +218,217 @@ fun BreathingExercise(
         verticalArrangement = Arrangement.Center
     ) {
         // Instruction text
-        Text(
-            text = instruction,
-            style = InterventionTypography.BreathingInstruction,
-            color = textColor,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 48.dp)
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Breathing circle container
-        Box(
-            modifier = Modifier
-                .size(300.dp)
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            // Outer pulsing circle (subtle guide)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .scale(1.0f)
-                    .alpha(pulseAlpha * 0.3f)
-                    .background(
-                        color = circleColor,
-                        shape = CircleShape
-                    )
-            )
-
-            // Main breathing circle
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .scale(circleScale)
-                    .background(
-                        color = accentColor.copy(alpha = 0.5f),
-                        shape = CircleShape
-                    )
-            )
-
-            // Inner circle (visual center)
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .background(
-                        color = accentColor.copy(alpha = 0.8f),
-                        shape = CircleShape
-                    )
-            )
-
-            // Phase emoji in center
-            AnimatedContent(
-                targetState = currentPhaseConfig.phase,
-                transitionSpec = {
-                    fadeIn(tween(300)) togetherWith fadeOut(tween(300))
-                },
-                label = "phase_emoji"
-            ) { phase ->
-                Text(
-                    text = phase.getInstructionEmoji(),
-                    style = InterventionTypography.InterventionTitle.copy(fontSize = 48.sp),
-                    color = Color.White,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        // Phase label with smooth transition
         AnimatedContent(
-            targetState = currentPhaseConfig.phase,
+            targetState = if (isCompleted) "completed" else "instruction",
             transitionSpec = {
                 fadeIn(tween(300)) togetherWith fadeOut(tween(300))
             },
-            label = "phase_label"
-        ) { phase ->
+            label = "instruction_content"
+        ) { state ->
             Text(
-                text = phase.getDisplayText(),
-                style = InterventionTypography.BreathingPhase,
-                color = textColor,
-                textAlign = TextAlign.Center
+                text = if (state == "completed") {
+                    "Well done! Take a moment to notice how you feel."
+                } else {
+                    instruction
+                },
+                style = InterventionTypography.BreathingInstruction,
+                color = if (state == "completed") accentColor else textColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = if (state == "completed") 0.dp else 48.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        if (!isCompleted) {
+            Spacer(modifier = Modifier.height(24.dp))
 
-        // Breathing pattern name
-        Text(
-            text = when (variant) {
-                BreathingVariant.FOUR_SEVEN_EIGHT -> "4-7-8 Breathing"
-                BreathingVariant.BOX_BREATHING -> "Box Breathing"
-                BreathingVariant.CALM_BREATHING -> "Calm Breathing"
-            },
-            style = InterventionTypography.InterventionSubtext,
-            color = textColor.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        // Progress indicator
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = "Cycle ${cycleCount + 1} of $totalCycles",
-                style = InterventionTypography.ButtonTextSmall,
-                color = textColor.copy(alpha = 0.6f),
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            LinearProgressIndicator(
-                progress = { progress },
+            // Breathing circle container (larger size for better visibility)
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp),
-                color = accentColor,
-                trackColor = accentColor.copy(alpha = 0.2f),
-            )
-        }
+                    .size(320.dp)
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                // Outer guide rings (subtle visual cue)
+                config.phases.forEachIndexed { index, phase ->
+                    val targetScale = phase.targetScale
+                    val isCurrentPhase = index == currentPhaseIndex
+                    val isPreviousPhase = index == (currentPhaseIndex - 1 + config.phases.size) % config.phases.size
 
-        // Completion message
-        if (isCompleted) {
-            Spacer(modifier = Modifier.height(32.dp))
+                    // Show subtle guide for target scales
+                    if (targetScale > 1.0f) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .scale(targetScale)
+                                .alpha(
+                                    when {
+                                        isCurrentPhase -> 0.15f
+                                        isPreviousPhase -> 0.1f
+                                        else -> 0.05f
+                                    }
+                                )
+                                .background(
+                                    color = accentColor.copy(alpha = 0.2f),
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                }
+
+                // Breathing ripple effect during phase transitions
+                if (phaseProgress < 0.1f) {
+                    val rippleScale = 1f + (phaseProgress * 0.3f)
+                    val rippleAlpha = 1f - (phaseProgress * 10f)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .scale(rippleScale * currentPhaseConfig.targetScale)
+                            .alpha(rippleAlpha * 0.3f)
+                            .background(
+                                color = accentColor,
+                                shape = CircleShape
+                            )
+                    )
+                }
+
+                // Main breathing circle - smooth animation
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .scale(circleScale)
+                        .background(
+                            color = accentColor.copy(
+                                alpha = 0.5f + (phaseProgress * 0.1f)
+                            ),
+                            shape = CircleShape
+                        )
+                )
+
+                // Inner glow circle
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .scale(1f + (abs(phaseProgress - 0.5f) * 0.1f))
+                        .background(
+                            color = accentColor.copy(alpha = 0.3f),
+                            shape = CircleShape
+                        )
+                )
+
+                // Center circle with phase text (clean, no emoji)
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .background(
+                            color = accentColor.copy(alpha = 0.95f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedContent(
+                        targetState = currentPhaseConfig.phase,
+                        transitionSpec = {
+                            fadeIn(tween(300, easing = FastOutSlowInEasing)) togetherWith
+                                    fadeOut(tween(300, easing = FastOutSlowInEasing))
+                        },
+                        label = "phase_text"
+                    ) { phase ->
+                        Text(
+                            text = phase.getCenterText(),
+                            style = InterventionTypography.InterventionTitle.copy(
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // Phase label with countdown
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AnimatedContent(
+                    targetState = currentPhaseConfig.phase,
+                    transitionSpec = {
+                        fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                    },
+                    label = "phase_label"
+                ) { phase ->
+                    Text(
+                        text = phase.getDisplayText(),
+                        style = InterventionTypography.BreathingPhase,
+                        color = textColor,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Countdown timer
+                Text(
+                    text = "(${secondsRemaining + 1}s)",
+                    style = InterventionTypography.InterventionSubtext.copy(fontSize = 18.sp),
+                    color = textColor.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Breathing pattern name
             Text(
-                text = "Well done! Take a moment to notice how you feel.",
+                text = when (variant) {
+                    BreathingVariant.FOUR_SEVEN_EIGHT -> "4-7-8 Breathing"
+                    BreathingVariant.BOX_BREATHING -> "Box Breathing"
+                    BreathingVariant.CALM_BREATHING -> "Calm Breathing"
+                },
                 style = InterventionTypography.InterventionSubtext,
-                color = accentColor,
+                color = textColor.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // Progress indicator
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Cycle ${cycleCount + 1} of $totalCycles",
+                    style = InterventionTypography.ButtonTextSmall,
+                    color = textColor.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                LinearProgressIndicator(
+                    progress = { overallProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp),
+                    color = accentColor,
+                    trackColor = accentColor.copy(alpha = 0.2f),
+                )
+            }
         }
     }
 }
 
 /**
  * Compact breathing exercise for smaller spaces
- * (e.g., when shown as one option among multiple interventions)
+ * (e.g., when shown in reminder overlay)
+ *
+ * Uses the same improved animation as the full breathing exercise:
+ * - Natural EaseInOutCubic easing
+ * - Smooth continuous animation
+ * - Accurate timing representation
+ * - Column layout for better vertical space utilization
  */
 @Composable
 fun CompactBreathingExercise(
@@ -353,13 +440,25 @@ fun CompactBreathingExercise(
     val config = remember(variant) { BreathingConfig.from(variant) }
 
     var currentPhaseIndex by remember { mutableIntStateOf(0) }
+    var phaseStartTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val currentPhaseConfig = config.phases[currentPhaseIndex]
 
+    // Calculate time remaining for countdown
+    val timeElapsedInPhase = System.currentTimeMillis() - phaseStartTime
+    val timeRemainingInPhase = maxOf(0, currentPhaseConfig.durationMs - timeElapsedInPhase)
+    val secondsRemaining = (timeRemainingInPhase / 1000f).toInt()
+
+    // Update phase start time when phase changes
+    LaunchedEffect(currentPhaseIndex) {
+        phaseStartTime = System.currentTimeMillis()
+    }
+
+    // Smooth animation with natural easing
     val circleScale by animateFloatAsState(
         targetValue = currentPhaseConfig.targetScale,
         animationSpec = tween(
             durationMillis = currentPhaseConfig.durationMs.toInt(),
-            easing = LinearEasing
+            easing = EaseInOutCubic
         ),
         label = "compact_circle_scale"
     )
@@ -379,58 +478,134 @@ fun CompactBreathingExercise(
     else
         InterventionColors.InterventionTextPrimary
 
-    Row(
+    // Column layout for better vertical presentation
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 32.dp, horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Compact breathing circle
+        // Breathing circle container (larger for better visibility)
         Box(
             modifier = Modifier
-                .size(100.dp)
-                .scale(circleScale)
-                .background(
-                    color = accentColor.copy(alpha = 0.5f),
-                    shape = CircleShape
-                ),
+                .size(200.dp)
+                .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = currentPhaseConfig.phase.getInstructionEmoji(),
-                style = InterventionTypography.InterventionMessage,
-                color = Color.White
-            )
+            // Outer guide rings (subtle visual cue for target sizes)
+            config.phases.forEachIndexed { index, phase ->
+                val targetScale = phase.targetScale
+                val isCurrentPhase = index == currentPhaseIndex
+
+                // Show subtle guide for target scales
+                if (targetScale > 1.0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .scale(targetScale)
+                            .alpha(if (isCurrentPhase) 0.12f else 0.06f)
+                            .background(
+                                color = accentColor.copy(alpha = 0.15f),
+                                shape = CircleShape
+                            )
+                    )
+                }
+            }
+
+            // Main breathing circle
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .scale(circleScale)
+                    .background(
+                        color = accentColor.copy(alpha = 0.5f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                // Inner glow circle
+                Box(
+                    modifier = Modifier
+                        .size(70.dp)
+                        .background(
+                            color = accentColor.copy(alpha = 0.3f),
+                            shape = CircleShape
+                        )
+                )
+
+                // Center circle with phase text (clean, no emoji)
+                Box(
+                    modifier = Modifier
+                        .size(70.dp)
+                        .background(
+                            color = accentColor.copy(alpha = 0.95f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedContent(
+                        targetState = currentPhaseConfig.phase,
+                        transitionSpec = {
+                            fadeIn(tween(200, easing = FastOutSlowInEasing)) togetherWith
+                                    fadeOut(tween(200, easing = FastOutSlowInEasing))
+                        },
+                        label = "compact_phase_text"
+                    ) { phase ->
+                        Text(
+                            text = phase.getCenterText(),
+                            style = InterventionTypography.InterventionMessage.copy(
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = Color.White
+                        )
+                    }
+                }
+            }
         }
 
-        Spacer(modifier = Modifier.width(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Phase text
-        Column {
+        // Phase label with countdown
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             AnimatedContent(
                 targetState = currentPhaseConfig.phase,
                 transitionSpec = {
-                    fadeIn() togetherWith fadeOut()
+                    fadeIn(tween(200)) togetherWith fadeOut(tween(200))
                 },
                 label = "compact_phase"
             ) { phase ->
                 Text(
                     text = phase.getDisplayText(),
-                    style = InterventionTypography.BreathingPhase,
+                    style = InterventionTypography.BreathingPhase.copy(fontSize = 22.sp),
                     color = textColor
                 )
             }
 
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Countdown timer
             Text(
-                text = when (variant) {
-                    BreathingVariant.FOUR_SEVEN_EIGHT -> "4-7-8"
-                    BreathingVariant.BOX_BREATHING -> "Box"
-                    BreathingVariant.CALM_BREATHING -> "Calm"
-                },
-                style = InterventionTypography.ButtonTextSmall,
+                text = "(${secondsRemaining + 1}s)",
+                style = InterventionTypography.InterventionSubtext.copy(fontSize = 16.sp),
                 color = textColor.copy(alpha = 0.6f)
             )
         }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Breathing pattern name
+        Text(
+            text = when (variant) {
+                BreathingVariant.FOUR_SEVEN_EIGHT -> "4-7-8 Breathing"
+                BreathingVariant.BOX_BREATHING -> "Box Breathing"
+                BreathingVariant.CALM_BREATHING -> "Calm Breathing"
+            },
+            style = InterventionTypography.ButtonTextSmall.copy(fontSize = 14.sp),
+            color = textColor.copy(alpha = 0.7f)
+        )
     }
 }
