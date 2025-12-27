@@ -2,10 +2,12 @@ package dev.sadakat.thinkfast.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.sadakat.thinkfast.domain.intervention.FrictionLevel
 import dev.sadakat.thinkfast.domain.model.AppSettings
 import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.GoalProgress
 import dev.sadakat.thinkfast.domain.repository.SettingsRepository
+import dev.sadakat.thinkfast.domain.repository.UsageRepository
 import dev.sadakat.thinkfast.domain.usecase.goals.GetGoalProgressUseCase
 import dev.sadakat.thinkfast.domain.usecase.goals.SetGoalUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +21,8 @@ import kotlinx.coroutines.launch
 class GoalViewModel(
     private val setGoalUseCase: SetGoalUseCase,
     private val getGoalProgressUseCase: GetGoalProgressUseCase,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val usageRepository: UsageRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GoalUiState())
@@ -28,6 +31,7 @@ class GoalViewModel(
     init {
         loadGoalProgress()
         loadSettings()
+        loadFrictionLevel()
     }
 
     /**
@@ -170,6 +174,57 @@ class GoalViewModel(
             }
         }
     }
+
+    /**
+     * Load current friction level and override
+     */
+    private fun loadFrictionLevel() {
+        viewModelScope.launch {
+            try {
+                val override = usageRepository.getFrictionLevelOverride()
+                val effective = usageRepository.getEffectiveFrictionLevel()
+                _uiState.value = _uiState.value.copy(
+                    frictionLevelOverride = override,
+                    currentFrictionLevel = effective
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to load friction level"
+                )
+            }
+        }
+    }
+
+    /**
+     * Set friction level override
+     * Pass null for automatic calculation based on tenure
+     */
+    fun setFrictionLevel(level: FrictionLevel?) {
+        viewModelScope.launch {
+            try {
+                usageRepository.setFrictionLevelOverride(level)
+
+                // Reload to get updated effective level
+                loadFrictionLevel()
+
+                val message = if (level == null) {
+                    "Friction level set to Auto"
+                } else {
+                    "Friction level set to ${level.displayName}"
+                }
+
+                _uiState.value = _uiState.value.copy(successMessage = message)
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(3000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to update friction level"
+                )
+            }
+        }
+    }
 }
 
 /**
@@ -181,6 +236,8 @@ data class GoalUiState(
     val facebookProgress: GoalProgress? = null,
     val instagramProgress: GoalProgress? = null,
     val appSettings: AppSettings = AppSettings(),
+    val frictionLevelOverride: FrictionLevel? = null,  // null = Auto mode
+    val currentFrictionLevel: FrictionLevel = FrictionLevel.GENTLE,
     val error: String? = null,
     val successMessage: String? = null
 )

@@ -35,7 +35,8 @@ val viewModelModule = module {
         GoalViewModel(
             setGoalUseCase = get(),
             getGoalProgressUseCase = get(),
-            settingsRepository = get()
+            settingsRepository = get(),
+            usageRepository = get()
         )
     }
 }

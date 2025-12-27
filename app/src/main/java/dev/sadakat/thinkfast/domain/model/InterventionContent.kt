@@ -21,11 +21,13 @@ sealed class InterventionContent {
     /**
      * Shows what the user could have done with their time instead.
      * Leverages loss aversion (30% weight).
+     * Shows 3-4 alternatives as per spec lines 350-372.
      */
     data class TimeAlternative(
         val sessionMinutes: Int,
-        val alternative: Alternative,
-        val prefix: String = "This ${sessionMinutes} min could have been"
+        val alternatives: List<Alternative>,  // Changed from single to list
+        val prefix: String = "💡 This could have been:",  // Spec-compliant emoji prefix
+        val reflectionQuestion: String = "What will you remember tomorrow: this scroll, or one of these?"
     ) : InterventionContent()
 
     /**

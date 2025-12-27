@@ -11,6 +11,7 @@ import dev.sadakat.thinkfast.presentation.onboarding.OnboardingScreen
 import dev.sadakat.thinkfast.presentation.permission.PermissionRequestScreen
 import dev.sadakat.thinkfast.presentation.settings.SettingsScreen
 import dev.sadakat.thinkfast.presentation.stats.StatsScreen
+import dev.sadakat.thinkfast.presentation.themeappearance.ThemeAppearanceScreen
 
 /**
  * Main navigation graph for the app
@@ -69,6 +70,13 @@ fun NavGraph(
         // Analytics screen - intervention effectiveness (debug)
         composable(route = Screen.Analytics.route) {
             AnalyticsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // Theme and Appearance screen - theme customization (no bottom nav)
+        composable(route = Screen.ThemeAppearance.route) {
+            ThemeAppearanceScreen(
                 onBack = { navController.popBackStack() }
             )
         }

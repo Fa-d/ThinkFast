@@ -513,6 +513,7 @@ private fun ReflectionQuestionContent(
 
 /**
  * Time alternative content (loss framing)
+ * Shows fewer alternatives for reminder overlay (simpler intervention)
  */
 @Composable
 private fun TimeAlternativeContent(
@@ -520,8 +521,9 @@ private fun TimeAlternativeContent(
     textColor: Color,
     secondaryTextColor: Color
 ) {
+    // Emoji prefix: "💡 This could have been:"
     Text(
-        text = "${content.prefix}...",
+        text = content.prefix,
         fontSize = 20.sp,
         fontWeight = FontWeight.SemiBold,
         color = secondaryTextColor,
@@ -530,14 +532,25 @@ private fun TimeAlternativeContent(
 
     Spacer(modifier = Modifier.height(24.dp))
 
-    Text(
-        text = "${content.alternative.emoji} ${content.alternative.activity}",
-        fontSize = 28.sp,
-        fontWeight = FontWeight.Bold,
-        color = textColor,
-        textAlign = TextAlign.Center,
-        lineHeight = 36.sp
-    )
+    // Show first 2 alternatives for reminder overlay (keep it simple)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 16.dp)
+    ) {
+        content.alternatives.take(2).forEach { alternative ->
+            Text(
+                text = "${alternative.emoji} ${alternative.activity}",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor,
+                textAlign = TextAlign.Center,
+                lineHeight = 32.sp
+            )
+            if (alternative != content.alternatives.take(2).last()) {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
 }
 
 /**

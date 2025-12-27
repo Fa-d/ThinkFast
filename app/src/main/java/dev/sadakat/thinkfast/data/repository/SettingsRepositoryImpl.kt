@@ -2,6 +2,7 @@ package dev.sadakat.thinkfast.data.repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import dev.sadakat.thinkfast.data.preferences.InterventionPreferences
 import dev.sadakat.thinkfast.domain.model.AppSettings
 import dev.sadakat.thinkfast.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class SettingsRepositoryImpl(context: Context) : SettingsRepository {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val interventionPreferences: InterventionPreferences = InterventionPreferences.getInstance(context)
 
     // State flow for reactive settings updates
     private val _settingsFlow = MutableStateFlow(loadSettings())
@@ -37,8 +39,13 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
     }
 
     override suspend fun setLockedMode(enabled: Boolean) {
-        // Phase F: Update locked mode setting
+        // Phase F: Update locked mode setting in both stores
         prefs.edit().putBoolean(KEY_LOCKED_MODE, enabled).apply()
+
+        // CRITICAL: Also update InterventionPreferences so overlays reflect the change
+        // InterventionPreferences.setLockedMode() automatically sets friction level to LOCKED
+        interventionPreferences.setLockedMode(enabled)
+
         _settingsFlow.value = loadSettings()
     }
 
@@ -48,17 +55,35 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
             putBoolean(KEY_ALWAYS_SHOW_REMINDER, settings.alwaysShowReminder)
             putBoolean(KEY_LOCKED_MODE, settings.lockedMode)
         }.apply()
+
+        // Also sync locked mode to InterventionPreferences
+        interventionPreferences.setLockedMode(settings.lockedMode)
+
         _settingsFlow.value = settings
     }
 
     /**
      * Load settings from SharedPreferences
+     * Also syncs with InterventionPreferences to ensure consistency
      */
     private fun loadSettings(): AppSettings {
+        // Check if there's a mismatch between the two stores and sync them
+        val appSettingsLockedMode = prefs.getBoolean(KEY_LOCKED_MODE, DEFAULT_LOCKED_MODE)
+        val interventionLockedMode = interventionPreferences.isLockedModeEnabled()
+
+        // If they differ, trust InterventionPreferences (the source of truth for interventions)
+        val actualLockedMode = if (appSettingsLockedMode != interventionLockedMode) {
+            // Sync AppSettings to match InterventionPreferences
+            prefs.edit().putBoolean(KEY_LOCKED_MODE, interventionLockedMode).apply()
+            interventionLockedMode
+        } else {
+            appSettingsLockedMode
+        }
+
         return AppSettings(
             timerAlertMinutes = prefs.getInt(KEY_TIMER_ALERT_MINUTES, DEFAULT_TIMER_MINUTES),
             alwaysShowReminder = prefs.getBoolean(KEY_ALWAYS_SHOW_REMINDER, DEFAULT_ALWAYS_SHOW_REMINDER),
-            lockedMode = prefs.getBoolean(KEY_LOCKED_MODE, DEFAULT_LOCKED_MODE)
+            lockedMode = actualLockedMode
         )
     }
 

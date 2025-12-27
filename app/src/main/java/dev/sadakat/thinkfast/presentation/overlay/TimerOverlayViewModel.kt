@@ -13,6 +13,7 @@ import dev.sadakat.thinkfast.domain.model.InterventionType as DomainIntervention
 import dev.sadakat.thinkfast.domain.model.UsageEvent
 import dev.sadakat.thinkfast.domain.model.UserChoice
 import dev.sadakat.thinkfast.domain.repository.InterventionResultRepository
+import dev.sadakat.thinkfast.domain.repository.SettingsRepository
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
 import dev.sadakat.thinkfast.util.Constants
 import dev.sadakat.thinkfast.analytics.AnalyticsManager
@@ -28,13 +29,14 @@ import java.util.concurrent.TimeUnit
 
 /**
  * ViewModel for TimerOverlayWindow
- * Manages the 10-minute alert overlay state and usage statistics
+ * Manages the timer alert overlay state and usage statistics (duration configurable in settings)
  * Phase G: Now tracks intervention effectiveness
  */
 class TimerOverlayViewModel(
     private val usageRepository: UsageRepository,
     private val resultRepository: InterventionResultRepository,
-    private val analyticsManager: AnalyticsManager
+    private val analyticsManager: AnalyticsManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerOverlayState())
@@ -337,6 +339,7 @@ data class TimerOverlayState(
     val todaysTotalUsageMs: Long = 0,
     val yesterdaysTotalUsageMs: Long = 0,
     val goalMinutes: Int? = null,
+    val timerAlertMinutes: Int = 10,  // Duration before showing timer alert (from settings)
     val frictionLevel: FrictionLevel = FrictionLevel.GENTLE,
     val interventionContent: InterventionContent? = null,
     val interventionContext: InterventionContext? = null,

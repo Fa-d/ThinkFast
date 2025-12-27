@@ -1,6 +1,5 @@
 package dev.sadakat.thinkfast.presentation.settings
 
-import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -20,8 +18,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.GoalProgress
-import dev.sadakat.thinkfast.ui.theme.ThemeMode
-import dev.sadakat.thinkfast.util.ThemePreferences
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
@@ -110,7 +106,9 @@ fun SettingsScreen(
                         )
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -294,30 +292,64 @@ fun SettingsScreen(
                 }
             }
 
-            // Theme & Appearance section header
+            // Friction Level selector
             item {
-                Text(
-                    text = "🎨 Theme & Appearance",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                FrictionLevelCard(
+                    currentLevel = uiState.currentFrictionLevel,
+                    selectedOverride = uiState.frictionLevelOverride,
+                    onLevelSelected = { viewModel.setFrictionLevel(it) }
                 )
             }
 
-            // Theme mode selector
+            // Theme and Appearance card
             item {
-                ThemeModeCard()
-            }
-
-            // Dynamic Color toggle (Android 12+)
-            item {
-                DynamicColorCard()
-            }
-
-            // AMOLED Dark Mode toggle
-            item {
-                AmoledDarkCard()
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(text = "🎨", fontSize = 24.sp)
+                                Text(
+                                    text = "Theme & Appearance",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Customize app theme, colors, and appearance",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 20.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        IconButton(
+                            onClick = { navController.navigate("theme_appearance") }
+                        ) {
+                            Text(
+                                text = "→",
+                                fontSize = 24.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
             }
 
             // Intervention Analytics (debug)
@@ -422,7 +454,11 @@ private fun GoalCard(
     isSaving: Boolean,
     onSetGoal: (Int) -> Unit
 ) {
-    var sliderValue by remember { mutableStateOf(progress?.goal?.dailyLimitMinutes?.toFloat() ?: 30f) }
+    var sliderValue by remember {
+        mutableStateOf(
+            progress?.goal?.dailyLimitMinutes?.toFloat() ?: 30f
+        )
+    }
     val currentLimit = progress?.goal?.dailyLimitMinutes ?: 30
 
     Card(
@@ -481,10 +517,13 @@ private fun GoalCard(
                         containerColor = when (progress.getProgressColor()) {
                             dev.sadakat.thinkfast.domain.model.ProgressColor.GREEN ->
                                 MaterialTheme.colorScheme.primaryContainer
+
                             dev.sadakat.thinkfast.domain.model.ProgressColor.YELLOW ->
                                 MaterialTheme.colorScheme.tertiaryContainer
+
                             dev.sadakat.thinkfast.domain.model.ProgressColor.ORANGE ->
                                 MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+
                             dev.sadakat.thinkfast.domain.model.ProgressColor.RED ->
                                 MaterialTheme.colorScheme.errorContainer
                         }
@@ -512,7 +551,9 @@ private fun GoalCard(
 
                         LinearProgressIndicator(
                             progress = (progress.percentageUsed / 100f).coerceIn(0f, 1f),
-                            modifier = Modifier.fillMaxWidth().height(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
@@ -559,15 +600,25 @@ private fun GoalCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "5 min", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(text = "180 min", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = "5 min",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "180 min",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
             // Set goal button
             Button(
                 onClick = { onSetGoal(sliderValue.roundToInt()) },
-                modifier = Modifier.fillMaxWidth().height(48.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
                 enabled = !isSaving && sliderValue.roundToInt() != currentLimit,
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -668,7 +719,9 @@ private fun TimerDurationCard(
             if (hasChanged) {
                 Button(
                     onClick = { onDurationChange(sliderValue.roundToInt()) },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
@@ -683,262 +736,159 @@ private fun TimerDurationCard(
 }
 
 /**
- * Theme mode selection card with radio buttons
- * Phase 1.4: Visual Polish - Dark mode toggle
+ * Friction Level selector card - allows user to override automatic friction level
  */
 @Composable
-private fun ThemeModeCard() {
-    val context = LocalContext.current
-    var selectedThemeMode by remember { mutableStateOf(ThemePreferences.getThemeMode(context)) }
-
+private fun FrictionLevelCard(
+    currentLevel: dev.sadakat.thinkfast.domain.intervention.FrictionLevel,
+    selectedOverride: dev.sadakat.thinkfast.domain.intervention.FrictionLevel?,
+    onLevelSelected: (dev.sadakat.thinkfast.domain.intervention.FrictionLevel?) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(20.dp)) {
             // Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(text = "🌓", fontSize = 24.sp)
+                Text(text = "⚙️", fontSize = 24.sp)
                 Text(
-                    text = "Theme Mode",
+                    text = "Intervention Strength",
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold
                 )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Choose your preferred app theme",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "Control how much friction appears when opening apps",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 18.sp
             )
 
-            // Theme options
-            ThemeModeOption(
-                label = "Light Mode",
-                description = "Always use light theme",
-                icon = "☀️",
-                isSelected = selectedThemeMode == ThemeMode.LIGHT,
-                onClick = {
-                    selectedThemeMode = ThemeMode.LIGHT
-                    ThemePreferences.saveThemeMode(context, ThemeMode.LIGHT)
-                    (context as? Activity)?.recreate()
-                }
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Auto option (null = automatic based on tenure)
+            FrictionLevelOption(
+                title = "Auto (Recommended)",
+                description = "Gradually increases based on your app usage tenure",
+                level = null,
+                currentLevel = currentLevel,
+                isSelected = selectedOverride == null,
+                onSelect = { onLevelSelected(null) }
             )
 
-            ThemeModeOption(
-                label = "Dark Mode",
-                description = "Always use dark theme",
-                icon = "🌙",
-                isSelected = selectedThemeMode == ThemeMode.DARK,
-                onClick = {
-                    selectedThemeMode = ThemeMode.DARK
-                    ThemePreferences.saveThemeMode(context, ThemeMode.DARK)
-                    (context as? Activity)?.recreate()
-                }
-            )
+            Spacer(modifier = Modifier.height(12.dp))
 
-            ThemeModeOption(
-                label = "Follow System",
-                description = "Match your device settings",
-                icon = "⚙️",
-                isSelected = selectedThemeMode == ThemeMode.FOLLOW_SYSTEM,
-                onClick = {
-                    selectedThemeMode = ThemeMode.FOLLOW_SYSTEM
-                    ThemePreferences.saveThemeMode(context, ThemeMode.FOLLOW_SYSTEM)
-                    (context as? Activity)?.recreate()
-                }
-            )
-        }
-    }
-}
-
-/**
- * Individual theme mode option with radio button
- */
-@Composable
-private fun ThemeModeOption(
-    label: String,
-    description: String,
-    icon: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        },
-        onClick = onClick
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = icon,
-                    fontSize = 28.sp
+            // Manual options for each friction level
+            dev.sadakat.thinkfast.domain.intervention.FrictionLevel.values().forEach { level ->
+                FrictionLevelOption(
+                    title = level.displayName,
+                    description = level.description,
+                    level = level,
+                    currentLevel = currentLevel,
+                    isSelected = selectedOverride == level,
+                    onSelect = { onLevelSelected(level) }
                 )
-                Column {
-                    Text(
-                        text = label,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = description,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Spacer(modifier = Modifier.height(12.dp))
             }
-
-            RadioButton(
-                selected = isSelected,
-                onClick = onClick,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = MaterialTheme.colorScheme.primary,
-                    unselectedColor = MaterialTheme.colorScheme.outline
-                )
-            )
         }
     }
 }
 
 /**
- * Dynamic Color toggle card (Android 12+)
- * Phase 1.5: Implementation of unused theme preference
+ * Individual friction level option row
  */
 @Composable
-private fun DynamicColorCard() {
-    val context = LocalContext.current
-    var dynamicColorEnabled by remember { mutableStateOf(ThemePreferences.getDynamicColor(context)) }
-
+private fun FrictionLevelOption(
+    title: String,
+    description: String,
+    level: dev.sadakat.thinkfast.domain.intervention.FrictionLevel?,
+    currentLevel: dev.sadakat.thinkfast.domain.intervention.FrictionLevel,
+    isSelected: Boolean,
+    onSelect: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = if (isSelected) {
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        } else null,
+        onClick = onSelect
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(text = "🎨", fontSize = 28.sp)
-                Column {
-                    Text(
-                        text = "Dynamic Colors",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Match your system wallpaper colors (Android 12+)",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Switch(
-                checked = dynamicColorEnabled,
-                onCheckedChange = { enabled ->
-                    dynamicColorEnabled = enabled
-                    ThemePreferences.saveDynamicColor(context, enabled)
-                    (context as? Activity)?.recreate()
-                }
-            )
-        }
-    }
-}
-
-/**
- * AMOLED Dark Mode toggle card
- * Phase 1.5: Implementation of unused theme preference
- */
-@Composable
-private fun AmoledDarkCard() {
-    val context = LocalContext.current
-    val currentThemeMode = ThemePreferences.getThemeMode(context)
-    var amoledDarkEnabled by remember { mutableStateOf(ThemePreferences.getAmoledDark(context)) }
-
-    // Only show this option if dark mode or follow system is selected
-    val isDarkModeActive = currentThemeMode == ThemeMode.DARK || currentThemeMode == ThemeMode.FOLLOW_SYSTEM
-
-    if (isDarkModeActive) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(text = "⬛", fontSize = 28.sp)
-                    Column {
+                    Text(
+                        text = title,
+                        fontSize = 16.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+
+                    // Show "Current" badge if this is the active level
+                    if (level == currentLevel && isSelected) {
                         Text(
-                            text = "AMOLED Black",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Pure black background for dark mode (saves battery)",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "• Current",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
 
-                Switch(
-                    checked = amoledDarkEnabled,
-                    onCheckedChange = { enabled ->
-                        amoledDarkEnabled = enabled
-                        ThemePreferences.saveAmoledDark(context, enabled)
-                        (context as? Activity)?.recreate()
-                    }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = description,
+                    fontSize = 13.sp,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    },
+                    lineHeight = 18.sp
                 )
             }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Radio button indicator
+            RadioButton(
+                selected = isSelected,
+                onClick = onSelect,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = MaterialTheme.colorScheme.primary,
+                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
         }
     }
 }

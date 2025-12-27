@@ -33,6 +33,11 @@ sealed class Screen(val route: String) {
      * Analytics screen - intervention effectiveness debug/analytics
      */
     data object Analytics : Screen("analytics")
+
+    /**
+     * Theme and Appearance screen - theme customization
+     */
+    data object ThemeAppearance : Screen("theme_appearance")
 }
 
 /**

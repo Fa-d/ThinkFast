@@ -250,6 +250,7 @@ class ContentSelector {
 
     /**
      * Generates a time alternative with loss framing.
+     * Shows 3-4 alternatives as per spec (lines 350-372).
      */
     private fun generateTimeAlternative(context: InterventionContext): InterventionContent.TimeAlternative {
         val sessionMinutes = context.currentSessionMinutes.coerceAtLeast(1)
@@ -261,12 +262,13 @@ class ContentSelector {
             else -> InterventionContentPools.twentyMinuteAlternatives
         }
 
-        val alternative = alternativePool.random()
+        // Select 3-4 random alternatives from the pool
+        val alternativeCount = if (alternativePool.size >= 4) 4 else alternativePool.size.coerceAtLeast(3)
+        val alternatives = alternativePool.shuffled().take(alternativeCount)
 
         return InterventionContent.TimeAlternative(
             sessionMinutes = sessionMinutes,
-            alternative = alternative,
-            prefix = "This ${sessionMinutes} min could have been"
+            alternatives = alternatives
         )
     }
 
@@ -373,7 +375,7 @@ class ContentSelector {
     private fun trackShownContent(content: InterventionContent) {
         val contentKey = when (content) {
             is InterventionContent.ReflectionQuestion -> "R:${content.question}"
-            is InterventionContent.TimeAlternative -> "T:${content.alternative.activity}"
+            is InterventionContent.TimeAlternative -> "T:${content.alternatives.firstOrNull()?.activity ?: "unknown"}"
             is InterventionContent.BreathingExercise -> "B:${content.variant}"
             is InterventionContent.UsageStats -> "S:stats"
             is InterventionContent.EmotionalAppeal -> "E:${content.message}"

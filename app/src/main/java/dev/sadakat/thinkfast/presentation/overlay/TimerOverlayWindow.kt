@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -423,45 +424,72 @@ private fun TimeAlternativeContent(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.padding(horizontal = 24.dp)
     ) {
+        // Session duration indicator
         Text(
-            text = content.prefix,
-            style = InterventionTypography.TimeAlternativePrefix,
+            text = "⏰ ${content.sessionMinutes} minutes on this app",
+            style = InterventionTypography.StatsLabel,
             color = style.textColor.copy(alpha = 0.8f),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            fontSize = 18.sp
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Alternative activity with emoji
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+        // Emoji prefix: "💡 This could have been:"
+        Text(
+            text = content.prefix,
+            style = InterventionTypography.TimeAlternativePrefix,
+            color = style.textColor.copy(alpha = 0.9f),
+            textAlign = TextAlign.Center,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // List of alternatives as bullet points
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.Start
         ) {
-            Text(
-                text = content.alternative.emoji,
-                fontSize = 48.sp
-            )
+            content.alternatives.forEach { alternative ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "• ${alternative.emoji}",
+                        fontSize = 28.sp,
+                        modifier = Modifier.width(56.dp)
+                    )
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Text(
-                text = content.alternative.activity,
-                style = style.primaryTextStyle,
-                color = style.accentColor,
-                textAlign = TextAlign.Center
-            )
+                    Text(
+                        text = alternative.activity,
+                        style = style.primaryTextStyle,
+                        color = style.textColor,
+                        fontSize = 18.sp,
+                        lineHeight = 24.sp
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Show session stats
+        // Reflection question at bottom
         Text(
-            text = "Current session: $sessionDuration",
-            style = InterventionTypography.StatsLabel,
-            color = style.textColor.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center
+            text = content.reflectionQuestion,
+            style = InterventionTypography.ReflectionSubtext,
+            color = style.accentColor,
+            textAlign = TextAlign.Center,
+            fontSize = 16.sp,
+            fontStyle = FontStyle.Italic,
+            lineHeight = 22.sp
         )
     }
 }
