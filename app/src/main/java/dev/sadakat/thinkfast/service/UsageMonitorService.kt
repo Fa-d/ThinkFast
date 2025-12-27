@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import dev.sadakat.thinkfast.MainActivity
 import dev.sadakat.thinkfast.R
 import dev.sadakat.thinkfast.domain.model.UsageEvent
+import dev.sadakat.thinkfast.domain.repository.InterventionResultRepository
 import dev.sadakat.thinkfast.domain.repository.SettingsRepository
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
 import dev.sadakat.thinkfast.presentation.overlay.ReminderOverlayWindow
@@ -44,6 +45,7 @@ class UsageMonitorService : Service() {
 
     private val usageRepository: UsageRepository by inject()
     private val settingsRepository: SettingsRepository by inject()
+    private val interventionResultRepository: InterventionResultRepository by inject()
 
     private lateinit var appLaunchDetector: AppLaunchDetector
     private lateinit var sessionDetector: SessionDetector
@@ -419,6 +421,32 @@ class UsageMonitorService : Service() {
         // Called when session ends
         sessionDetector.onSessionEnd = { sessionState ->
             isTargetAppActive = false
+
+            // Phase G: Update intervention results with final session outcome
+            serviceScope.launch {
+                try {
+                    val finalDuration = sessionState.totalDuration
+                    val endedNormally = sessionState.lastActiveTimestamp > 0
+
+                    interventionResultRepository.updateSessionOutcome(
+                        sessionId = sessionState.sessionId,
+                        finalDurationMs = finalDuration,
+                        endedNormally = endedNormally
+                    )
+
+                    ErrorLogger.info(
+                        "Updated intervention result for session ${sessionState.sessionId} " +
+                        "with final duration: ${finalDuration}ms",
+                        context = "UsageMonitorService.onSessionEnd"
+                    )
+                } catch (e: Exception) {
+                    ErrorLogger.error(
+                        e,
+                        message = "Failed to update intervention result for session ${sessionState.sessionId}",
+                        context = "UsageMonitorService.onSessionEnd"
+                    )
+                }
+            }
         }
     }
 

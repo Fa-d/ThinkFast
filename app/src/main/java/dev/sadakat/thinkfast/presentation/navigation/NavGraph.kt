@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import dev.sadakat.thinkfast.presentation.analytics.AnalyticsScreen
 import dev.sadakat.thinkfast.presentation.home.HomeScreen
 import dev.sadakat.thinkfast.presentation.permission.PermissionRequestScreen
 import dev.sadakat.thinkfast.presentation.settings.SettingsScreen
@@ -53,6 +54,13 @@ fun NavGraph(
             SettingsScreen(
                 navController = navController,
                 contentPadding = contentPadding
+            )
+        }
+
+        // Analytics screen - intervention effectiveness (debug)
+        composable(route = Screen.Analytics.route) {
+            AnalyticsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
     }

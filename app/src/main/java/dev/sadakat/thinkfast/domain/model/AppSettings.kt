@@ -5,7 +5,8 @@ package dev.sadakat.thinkfast.domain.model
  */
 data class AppSettings(
     val timerAlertMinutes: Int = 10,        // Duration before showing timer alert (default 10 minutes)
-    val alwaysShowReminder: Boolean = true   // Whether to show reminder every time app is opened (default true)
+    val alwaysShowReminder: Boolean = true,  // Whether to show reminder every time app is opened (default true)
+    val lockedMode: Boolean = false          // Phase F: Maximum friction mode for users who want extra control
 ) {
     /**
      * Get timer duration in milliseconds

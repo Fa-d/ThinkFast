@@ -23,6 +23,11 @@ sealed class Screen(val route: String) {
      * Settings screen - app configuration and preferences
      */
     data object Settings : Screen("settings")
+
+    /**
+     * Analytics screen - intervention effectiveness debug/analytics
+     */
+    data object Analytics : Screen("analytics")
 }
 
 /**

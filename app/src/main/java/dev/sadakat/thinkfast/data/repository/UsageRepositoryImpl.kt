@@ -1,22 +1,35 @@
 package dev.sadakat.thinkfast.data.repository
 
+import dev.sadakat.thinkfast.data.local.database.dao.GoalDao
 import dev.sadakat.thinkfast.data.local.database.dao.UsageEventDao
 import dev.sadakat.thinkfast.data.local.database.dao.UsageSessionDao
 import dev.sadakat.thinkfast.data.mapper.toDomain
 import dev.sadakat.thinkfast.data.mapper.toEntity
+import dev.sadakat.thinkfast.data.preferences.InterventionPreferences
+import dev.sadakat.thinkfast.domain.intervention.FrictionLevel
 import dev.sadakat.thinkfast.domain.model.UsageEvent
 import dev.sadakat.thinkfast.domain.model.UsageSession
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 /**
  * Implementation of UsageRepository using Room database
+ * Phase F: Added InterventionPreferences for friction level management
  */
 class UsageRepositoryImpl(
     private val sessionDao: UsageSessionDao,
-    private val eventDao: UsageEventDao
+    private val eventDao: UsageEventDao,
+    private val goalDao: GoalDao,
+    private val interventionPreferences: InterventionPreferences  // Phase F
 ) : UsageRepository {
+
+    companion object {
+        private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    }
 
     override suspend fun insertSession(session: UsageSession): Long {
         return sessionDao.insertSession(session.toEntity())
@@ -91,5 +104,100 @@ class UsageRepositoryImpl(
         endDate: String
     ): Int {
         return eventDao.countEventsByTypeInRange(eventType, startDate, endDate)
+    }
+
+    // ========== Context-Aware Intervention Methods ==========
+
+    override suspend fun getTodayUsageForApp(packageName: String): Long {
+        val today = DATE_FORMAT.format(Calendar.getInstance().time)
+        return sessionDao.getTotalDurationForDate(today, packageName) ?: 0L
+    }
+
+    override suspend fun getYesterdayUsageForApp(packageName: String): Long {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -1)
+        val yesterday = DATE_FORMAT.format(calendar.time)
+        return sessionDao.getTotalDurationForDate(yesterday, packageName) ?: 0L
+    }
+
+    override suspend fun getWeeklyAverageForApp(packageName: String): Long {
+        val calendar = Calendar.getInstance()
+        val endDate = DATE_FORMAT.format(calendar.time)
+
+        calendar.add(Calendar.DAY_OF_YEAR, -6)
+        val startDate = DATE_FORMAT.format(calendar.time)
+
+        val sessions = sessionDao.getSessionsByAppInRange(packageName, startDate, endDate)
+        val totalDuration = sessions.sumOf { it.duration ?: 0L }
+        return totalDuration / 7  // Average over 7 days
+    }
+
+    override suspend fun getTodaySessionCount(packageName: String): Int {
+        val today = DATE_FORMAT.format(Calendar.getInstance().time)
+        return sessionDao.getSessionsByDateAndApp(today, packageName).size
+    }
+
+    override suspend fun getLastSessionEndTime(packageName: String): Long {
+        val today = DATE_FORMAT.format(Calendar.getInstance().time)
+        val sessions = sessionDao.getSessionsByDateAndApp(today, packageName)
+        return sessions.firstOrNull()?.endTimestamp ?: 0L
+    }
+
+    override suspend fun getCurrentSessionDuration(sessionId: Long): Long {
+        val session = sessionDao.getSessionById(sessionId)
+        val currentTime = System.currentTimeMillis()
+
+        return if (session?.endTimestamp == null) {
+            // Session is still active - return current duration
+            currentTime - (session?.startTimestamp ?: currentTime)
+        } else {
+            // Session has ended - return actual duration
+            session.duration
+        }
+    }
+
+    override suspend fun getDailyGoalForApp(packageName: String): Int? {
+        val goal = goalDao.getGoalByApp(packageName)
+        return goal?.dailyLimitMinutes
+    }
+
+    override suspend fun getCurrentStreak(): Int {
+        // For now, return a default streak of 3
+        // TODO: Implement proper streak calculation from goals or user preferences
+        return 3
+    }
+
+    override suspend fun getInstallDate(): Long {
+        // Phase F: Use InterventionPreferences for install date
+        var installDate = interventionPreferences.getInstallDate()
+
+        // Set install date if not already set
+        if (installDate == 0L) {
+            installDate = System.currentTimeMillis()
+            interventionPreferences.setInstallDate(installDate)
+        }
+
+        return installDate
+    }
+
+    /**
+     * Phase F: Get the effective friction level considering user preferences
+     */
+    override suspend fun getEffectiveFrictionLevel(): FrictionLevel {
+        val daysSinceInstall = interventionPreferences.getDaysSinceInstall()
+        val calculatedLevel = FrictionLevel.fromDaysSinceInstall(daysSinceInstall)
+        return interventionPreferences.getEffectiveFrictionLevel(calculatedLevel)
+    }
+
+    override suspend fun getBestSessionMinutes(packageName: String): Int {
+        val today = DATE_FORMAT.format(Calendar.getInstance().time)
+        val sessions = sessionDao.getSessionsByDateAndApp(today, packageName)
+
+        // Find shortest session with a duration > 1 minute (filter out accidental opens)
+        val shortestSession = sessions
+            .filter { it.duration != null && it.duration > 60_000 }  // At least 1 minute
+            .minByOrNull { it.duration ?: Long.MAX_VALUE }
+
+        return ((shortestSession?.duration ?: 300_000) / 1000 / 60).toInt()  // Default 5 minutes
     }
 }

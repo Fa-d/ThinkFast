@@ -2,12 +2,16 @@ package dev.sadakat.thinkfast.data.local.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import dev.sadakat.thinkfast.data.local.database.dao.DailyStatsDao
 import dev.sadakat.thinkfast.data.local.database.dao.GoalDao
+import dev.sadakat.thinkfast.data.local.database.dao.InterventionResultDao
 import dev.sadakat.thinkfast.data.local.database.dao.UsageEventDao
 import dev.sadakat.thinkfast.data.local.database.dao.UsageSessionDao
 import dev.sadakat.thinkfast.data.local.database.entities.DailyStatsEntity
 import dev.sadakat.thinkfast.data.local.database.entities.GoalEntity
+import dev.sadakat.thinkfast.data.local.database.entities.InterventionResultEntity
 import dev.sadakat.thinkfast.data.local.database.entities.UsageEventEntity
 import dev.sadakat.thinkfast.data.local.database.entities.UsageSessionEntity
 
@@ -16,9 +20,10 @@ import dev.sadakat.thinkfast.data.local.database.entities.UsageSessionEntity
         UsageSessionEntity::class,
         UsageEventEntity::class,
         DailyStatsEntity::class,
-        GoalEntity::class
+        GoalEntity::class,
+        InterventionResultEntity::class  // Phase G: Added for effectiveness tracking
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class ThinkFastDatabase : RoomDatabase() {
@@ -26,4 +31,68 @@ abstract class ThinkFastDatabase : RoomDatabase() {
     abstract fun usageEventDao(): UsageEventDao
     abstract fun dailyStatsDao(): DailyStatsDao
     abstract fun goalDao(): GoalDao
+    abstract fun interventionResultDao(): InterventionResultDao  // Phase G
 }
+
+/**
+ * Migration from version 1 to 2
+ * Adds the intervention_results table for Phase G: Effectiveness Tracking
+ */
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create intervention_results table
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS intervention_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                sessionId INTEGER NOT NULL,
+                targetApp TEXT NOT NULL,
+                interventionType TEXT NOT NULL,
+                contentType TEXT NOT NULL,
+                hourOfDay INTEGER NOT NULL,
+                dayOfWeek INTEGER NOT NULL,
+                isWeekend INTEGER NOT NULL,
+                isLateNight INTEGER NOT NULL,
+                sessionCount INTEGER NOT NULL,
+                quickReopen INTEGER NOT NULL,
+                currentSessionDurationMs INTEGER NOT NULL,
+                userChoice TEXT NOT NULL,
+                timeToShowDecisionMs INTEGER NOT NULL,
+                finalSessionDurationMs INTEGER,
+                sessionEndedNormally INTEGER,
+                timestamp INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+
+        // Create index for faster queries
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_intervention_results_sessionId
+            ON intervention_results(sessionId)
+            """.trimIndent()
+        )
+
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_intervention_results_targetApp
+            ON intervention_results(targetApp)
+            """.trimIndent()
+        )
+
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_intervention_results_contentType
+            ON intervention_results(contentType)
+            """.trimIndent()
+        )
+
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_intervention_results_timestamp
+            ON intervention_results(timestamp)
+            """.trimIndent()
+        )
+    }
+}
+

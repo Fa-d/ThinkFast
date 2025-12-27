@@ -1,27 +1,46 @@
 package dev.sadakat.thinkfast.presentation.overlay
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,6 +50,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
@@ -38,8 +58,8 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.sadakat.thinkfast.domain.model.AppTarget
+import dev.sadakat.thinkfast.domain.model.InterventionContent
 import dev.sadakat.thinkfast.ui.theme.ThinkFastTheme
-import dev.sadakat.thinkfast.util.Constants
 import dev.sadakat.thinkfast.util.ErrorLogger
 import android.os.Handler
 import android.os.Looper
@@ -52,6 +72,7 @@ import org.koin.core.component.inject
 /**
  * WindowManager-based overlay that appears on top of all apps
  * Uses Compose UI embedded in a system window
+ * Now renders context-aware dynamic content based on time, usage patterns, and user behavior
  */
 class ReminderOverlayWindow(
     private val context: Context,
@@ -126,8 +147,28 @@ class ReminderOverlayWindow(
 
             setContent {
                 ThinkFastTheme {
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+                    // Handle dismiss
+                    LaunchedEffect(uiState.shouldDismiss) {
+                        if (uiState.shouldDismiss) {
+                            // If user chose "Go Back", navigate to home screen
+                            if (uiState.userChoseGoBack) {
+                                goToHomeScreen()
+                            }
+                            dismiss()
+                            viewModel.onDismissHandled()
+                        }
+                    }
+
                     ReminderOverlayContent(
                         targetApp = targetApp,
+                        interventionContent = uiState.interventionContent,
+                        frictionLevel = uiState.interventionContext?.userFrictionLevel
+                            ?: dev.sadakat.thinkfast.domain.intervention.FrictionLevel.GENTLE,
+                        onGoBackClick = {
+                            handleGoBackClick(sessionId)
+                        },
                         onProceedClick = {
                             handleProceedClick(sessionId)
                         }
@@ -196,8 +237,17 @@ class ReminderOverlayWindow(
     private fun handleProceedClick(sessionId: Long) {
         CoroutineScope(Dispatchers.IO).launch {
             viewModel.onProceedClicked()
-            // Dismiss overlay
-            dismiss()
+            // Note: dismiss() is called via LaunchedEffect when shouldDismiss becomes true
+        }
+    }
+
+    /**
+     * Handle go back button click (user chose NOT to proceed)
+     */
+    private fun handleGoBackClick(sessionId: Long) {
+        CoroutineScope(Dispatchers.IO).launch {
+            viewModel.onGoBackClicked()
+            // Note: dismiss() is called via LaunchedEffect when shouldDismiss becomes true
         }
     }
 
@@ -239,22 +289,84 @@ class ReminderOverlayWindow(
      * Check if overlay is currently showing
      */
     fun isShowing(): Boolean = isShowing
+
+    /**
+     * Go back to home screen, effectively closing the target app
+     */
+    private fun goToHomeScreen() {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(homeIntent)
+    }
+}
+
+/**
+ * Background colors for different intervention types
+ */
+private object InterventionColors {
+    val reflectionBlue = Color(0xFFE3F2FD)
+    val timeAlternativeAmber = Color(0xFFFFF4E6)
+    val breathingGreen = Color(0xFFE8F5E9)
+    val statsPurple = Color(0xFFF3E5F5)
+    val emotionalGray = Color(0xFFECEFF1)
+    val defaultSurface = Color(0xFFFFFBFE)
 }
 
 @Composable
 private fun ReminderOverlayContent(
     targetApp: AppTarget,
+    interventionContent: InterventionContent?,
+    frictionLevel: dev.sadakat.thinkfast.domain.intervention.FrictionLevel,
+    onGoBackClick: () -> Unit,
     onProceedClick: () -> Unit
 ) {
+    // Animation states
+    var visible by remember { mutableStateOf(false) }
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(300),
+        label = "alpha"
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (visible) 1f else 0.95f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "scale"
+    )
+
+    // Background color based on content type
+    val backgroundColor by animateColorAsState(
+        targetValue = when (interventionContent) {
+            is InterventionContent.ReflectionQuestion -> InterventionColors.reflectionBlue
+            is InterventionContent.TimeAlternative -> InterventionColors.timeAlternativeAmber
+            is InterventionContent.BreathingExercise -> InterventionColors.breathingGreen
+            is InterventionContent.UsageStats -> InterventionColors.statsPurple
+            is InterventionContent.EmotionalAppeal -> InterventionColors.emotionalGray
+            else -> InterventionColors.defaultSurface
+        },
+        animationSpec = tween(300),
+        label = "backgroundColor"
+    )
+
+    LaunchedEffect(interventionContent) {
+        visible = true
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(backgroundColor)
+            .alpha(alpha)
+            .scale(scale)
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // App name
+        // App name (always shown)
         Text(
             text = targetApp.displayName,
             fontSize = 32.sp,
@@ -265,45 +377,20 @@ private fun ReminderOverlayContent(
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Reminder message
-        Text(
-            text = Constants.DEFAULT_REMINDER_MESSAGE,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center,
-            lineHeight = 36.sp
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Subtext
-        Text(
-            text = "Take a moment to consider if this is the best use of your time right now.",
-            fontSize = 18.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            lineHeight = 26.sp
-        )
+        // Dynamic content based on intervention type
+        interventionContent?.let { content ->
+            InterventionContentRenderer(content = content)
+        }
 
         Spacer(modifier = Modifier.height(64.dp))
 
-        // Proceed button
-        Button(
-            onClick = onProceedClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text(
-                text = "Proceed",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
+        // Action buttons with progressive friction
+        InterventionActionButtons(
+            contentType = interventionContent?.javaClass?.simpleName,
+            frictionLevel = frictionLevel,
+            onGoBackClick = onGoBackClick,
+            onProceedClick = onProceedClick
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -314,5 +401,387 @@ private fun ReminderOverlayContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
         )
+    }
+}
+
+/**
+ * Renders different types of intervention content
+ */
+@Composable
+private fun InterventionContentRenderer(content: InterventionContent) {
+    when (content) {
+        is InterventionContent.ReflectionQuestion -> ReflectionQuestionContent(content)
+        is InterventionContent.TimeAlternative -> TimeAlternativeContent(content)
+        is InterventionContent.BreathingExercise -> BreathingExerciseContent(content)
+        is InterventionContent.UsageStats -> UsageStatsContent(content)
+        is InterventionContent.EmotionalAppeal -> EmotionalAppealContent(content)
+        is InterventionContent.Quote -> QuoteContent(content)
+        is InterventionContent.Gamification -> GamificationContent(content)
+    }
+}
+
+/**
+ * Reflection question content
+ */
+@Composable
+private fun ReflectionQuestionContent(content: InterventionContent.ReflectionQuestion) {
+    Text(
+        text = content.question,
+        fontSize = 26.sp,
+        fontWeight = FontWeight.Medium,
+        fontFamily = FontFamily.Serif,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = TextAlign.Center,
+        lineHeight = 36.sp
+    )
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Text(
+        text = content.subtext,
+        fontSize = 16.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+    )
+}
+
+/**
+ * Time alternative content (loss framing)
+ */
+@Composable
+private fun TimeAlternativeContent(content: InterventionContent.TimeAlternative) {
+    Text(
+        text = "${content.prefix}...",
+        fontSize = 20.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Text(
+        text = "${content.alternative.emoji} ${content.alternative.activity}",
+        fontSize = 28.sp,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        textAlign = TextAlign.Center,
+        lineHeight = 36.sp
+    )
+}
+
+/**
+ * Breathing exercise content
+ */
+@Composable
+private fun BreathingExerciseContent(content: InterventionContent.BreathingExercise) {
+    Text(
+        text = content.instruction,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(modifier = Modifier.height(48.dp))
+
+    // Animated breathing circle
+    var breatheState by remember { mutableStateOf(0) } // 0 = inhale, 1 = hold, 2 = exhale
+    val circleSize by animateFloatAsState(
+        targetValue = when (breatheState) {
+            0 -> 200f  // Expanded
+            1 -> 200f  // Hold
+            else -> 120f // Contracted
+        },
+        animationSpec = tween(
+            durationMillis = when (breatheState) {
+                0 -> 4000  // 4s inhale
+                1 -> 7000  // 7s hold
+                else -> 8000 // 8s exhale
+            },
+            easing = androidx.compose.animation.core.LinearEasing
+        ),
+        label = "circleSize"
+    )
+
+    // Simple breathing animation (placeholder)
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier
+            .size(circleSize.dp)
+            .background(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                shape = androidx.compose.foundation.shape.CircleShape
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = when (breatheState) {
+                0 -> "Breathe In"
+                1 -> "Hold"
+                else -> "Breathe Out"
+            },
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        // Simplified breathing state cycling
+        while (true) {
+            breatheState = 0
+            kotlinx.coroutines.delay(4000)
+            breatheState = 1
+            kotlinx.coroutines.delay(7000)
+            breatheState = 2
+            kotlinx.coroutines.delay(8000)
+            // Break after one cycle for overlay flow
+            break
+        }
+    }
+}
+
+/**
+ * Usage stats content
+ */
+@Composable
+private fun UsageStatsContent(content: InterventionContent.UsageStats) {
+    Text(
+        text = content.message,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = TextAlign.Center,
+        lineHeight = 26.sp
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Row(
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        StatItem("Today", "${content.todayMinutes}m")
+        content.yesterdayMinutes.let { StatItem("Yesterday", "${it}m") }
+        content.weekAverage.let { StatItem("Week Avg", "${it}m") }
+    }
+}
+
+@Composable
+private fun StatItem(label: String, value: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/**
+ * Emotional appeal content
+ */
+@Composable
+private fun EmotionalAppealContent(content: InterventionContent.EmotionalAppeal) {
+    Text(
+        text = content.message,
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = TextAlign.Center,
+        lineHeight = 32.sp
+    )
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Text(
+        text = content.subtext,
+        fontSize = 16.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
+    )
+}
+
+/**
+ * Quote content
+ */
+@Composable
+private fun QuoteContent(content: InterventionContent.Quote) {
+    Text(
+        text = """"${content.quote}"""",
+        fontSize = 22.sp,
+        fontWeight = FontWeight.Medium,
+        fontFamily = FontFamily.Serif,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = TextAlign.Center,
+        lineHeight = 32.sp
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text(
+        text = "— ${content.author}",
+        fontSize = 16.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+    )
+}
+
+/**
+ * Gamification content
+ */
+@Composable
+private fun GamificationContent(content: InterventionContent.Gamification) {
+    Text(
+        text = "🏆 ${content.challenge}",
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text(
+        text = content.reward,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = TextAlign.Center
+    )
+}
+
+/**
+ * Action buttons for intervention with progressive friction
+ * Phase F: Delayed button appearance based on user tenure
+ */
+@Composable
+private fun InterventionActionButtons(
+    contentType: String?,
+    frictionLevel: dev.sadakat.thinkfast.domain.intervention.FrictionLevel,
+    onGoBackClick: () -> Unit,
+    onProceedClick: () -> Unit
+) {
+    var showButtons by remember { mutableStateOf(frictionLevel.delayMs == 0L) }
+    var countdown by remember { mutableStateOf((frictionLevel.delayMs / 1000).toInt()) }
+
+    // Countdown for delayed buttons
+    LaunchedEffect(frictionLevel.delayMs) {
+        if (frictionLevel.delayMs > 0) {
+            while (countdown > 0) {
+                kotlinx.coroutines.delay(1000)
+                countdown--
+            }
+            showButtons = true
+        }
+    }
+
+    if (!showButtons) {
+        // Show countdown during delay
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = when (frictionLevel) {
+                    dev.sadakat.thinkfast.domain.intervention.FrictionLevel.MODERATE ->
+                        "Take a breath and consider..."
+                    dev.sadakat.thinkfast.domain.intervention.FrictionLevel.FIRM ->
+                        "Pause. Think about what matters."
+                    dev.sadakat.thinkfast.domain.intervention.FrictionLevel.LOCKED ->
+                        "Maximum focus mode active."
+                    else -> "Please wait..."
+                },
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Circular countdown indicator
+            Box(
+                modifier = Modifier.size(80.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    modifier = Modifier.size(64.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 6.dp
+                )
+
+                Text(
+                    text = "${countdown}s",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = when (frictionLevel) {
+                    dev.sadakat.thinkfast.domain.intervention.FrictionLevel.LOCKED ->
+                        "You requested this extra time to reflect"
+                    else ->
+                        "This brief pause helps you make a conscious choice"
+                },
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center
+            )
+        }
+    } else {
+        // Show buttons after delay (or immediately for GENTLE)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Go Back button (prominent green)
+            Button(
+                onClick = onGoBackClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4CAF50)  // Green for positive action
+                )
+            ) {
+                Text(
+                    text = "Go Back",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Proceed button (neutral gray)
+            Button(
+                onClick = onProceedClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF757575)  // Gray for proceed
+                )
+            ) {
+                Text(
+                    text = "Proceed",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
     }
 }

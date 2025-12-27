@@ -375,4 +375,129 @@ class ContentSelector {
     fun clearHistory() {
         recentContent.clear()
     }
+
+    /**
+     * Phase G: Adjust content weights based on historical effectiveness data
+     *
+     * This method boosts the weight of content types that have historically
+     * performed well (higher dismissal rates). The boost is subtle (10-20%)
+     * to maintain variety while favoring effective content.
+     *
+     * @param baseWeights The current base weights from context
+     * @param effectivenessData Historical effectiveness by content type
+     * @return Adjusted weights with effective content boosted
+     */
+    fun adjustWeightsByEffectiveness(
+        baseWeights: Map<ContentType, Int>,
+        effectivenessData: List<dev.sadakat.thinkfast.domain.model.ContentEffectivenessStats>
+    ): Map<ContentType, Int> {
+        if (effectivenessData.isEmpty()) return baseWeights
+
+        val adjustedWeights = baseWeights.toMutableMap()
+
+        // Calculate average dismissal rate
+        val avgDismissalRate = effectivenessData.map { it.dismissalRate }.average()
+
+        effectivenessData.forEach { stats ->
+            // Map content type name to ContentType enum
+            val contentType = when {
+                stats.contentType.contains("Reflection") -> ContentType.REFLECTION
+                stats.contentType.contains("TimeAlternative") -> ContentType.TIME_ALTERNATIVE
+                stats.contentType.contains("Breathing") -> ContentType.BREATHING
+                stats.contentType.contains("Stats") || stats.contentType.contains("Usage") -> ContentType.STATS
+                stats.contentType.contains("Emotional") -> ContentType.EMOTIONAL_APPEAL
+                stats.contentType.contains("Quote") -> ContentType.QUOTE
+                stats.contentType.contains("Gamification") -> ContentType.GAMIFICATION
+                else -> null
+            }
+
+            if (contentType != null && adjustedWeights.containsKey(contentType)) {
+                val currentWeight = adjustedWeights[contentType] ?: 0
+
+                // Boost weight if content performs above average
+                // The boost is proportional to how much it exceeds average
+                when {
+                    stats.dismissalRate >= avgDismissalRate + 15 -> {
+                        // Significantly above average: boost by 25%
+                        adjustedWeights[contentType] = (currentWeight * 1.25).toInt()
+                    }
+                    stats.dismissalRate >= avgDismissalRate + 5 -> {
+                        // Moderately above average: boost by 15%
+                        adjustedWeights[contentType] = (currentWeight * 1.15).toInt()
+                    }
+                    stats.dismissalRate >= avgDismissalRate -> {
+                        // Slightly above average: boost by 5%
+                        adjustedWeights[contentType] = (currentWeight * 1.05).toInt()
+                    }
+                    stats.dismissalRate < avgDismissalRate - 15 -> {
+                        // Significantly below average: reduce by 20%
+                        adjustedWeights[contentType] = (currentWeight * 0.8).toInt()
+                    }
+                }
+            }
+        }
+
+        return adjustedWeights
+    }
+
+    /**
+     * Phase G: Select content using effectiveness data for smarter selection
+     *
+     * This is an alternative select method that considers historical performance
+     * when choosing content. Use this after you have enough data (50+ interventions).
+     *
+     * @param context Current intervention context
+     * @param interventionType Whether this is a reminder or timer intervention
+     * @param effectivenessData Historical effectiveness data
+     * @return Selected intervention content with effectiveness consideration
+     */
+    fun selectContentWithEffectiveness(
+        context: InterventionContext,
+        interventionType: InterventionType,
+        effectivenessData: List<dev.sadakat.thinkfast.domain.model.ContentEffectivenessStats>
+    ): InterventionContent {
+        // Determine base weights from context
+        val baseWeights = determineWeights(context, interventionType)
+
+        // Adjust weights based on effectiveness (only if we have sufficient data)
+        val adjustedWeights = if (effectivenessData.isNotEmpty() &&
+            effectivenessData.sumOf { it.total } >= 50) {
+            adjustWeightsByEffectiveness(baseWeights, effectivenessData)
+        } else {
+            baseWeights
+        }
+
+        // Select content type using adjusted weights
+        val contentType = weightedRandomSelection(adjustedWeights)
+
+        // Generate content of selected type
+        val content = generateContent(contentType, context)
+
+        // Track this content to prevent immediate repeats
+        trackShownContent(content)
+
+        return content
+    }
+
+    /**
+     * Get recommendation for which content types to improve
+     * Based on low effectiveness or low sample count
+     *
+     * @param effectivenessData Historical effectiveness data
+     * @return List of content types that need improvement
+     */
+    fun getUnderperformingContentTypes(
+        effectivenessData: List<dev.sadakat.thinkfast.domain.model.ContentEffectivenessStats>
+    ): List<String> {
+        val avgDismissalRate = effectivenessData.map { it.dismissalRate }.average()
+        val totalInterventions = effectivenessData.sumOf { it.total }
+
+        return effectivenessData.filter { stats ->
+            // Flag content that:
+            // 1. Has below-average dismissal rate, OR
+            // 2. Has very few samples (< 10) for statistical significance
+            (stats.dismissalRate < avgDismissalRate - 5 && stats.total >= 10) ||
+            stats.total < 10
+        }.map { it.contentType }
+    }
 }

@@ -148,6 +148,28 @@ class GoalViewModel(
             }
         }
     }
+
+    /**
+     * Phase F: Toggle locked mode (maximum friction)
+     */
+    fun setLockedMode(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsRepository.setLockedMode(enabled)
+                _uiState.value = _uiState.value.copy(
+                    successMessage = if (enabled) "Locked Mode enabled - Maximum friction active" else "Locked Mode disabled"
+                )
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(3000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to update locked mode"
+                )
+            }
+        }
+    }
 }
 
 /**

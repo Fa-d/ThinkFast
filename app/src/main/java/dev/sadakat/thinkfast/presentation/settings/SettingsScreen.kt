@@ -1,5 +1,6 @@
 package dev.sadakat.thinkfast.presentation.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -207,6 +208,136 @@ fun SettingsScreen(
                             checked = uiState.appSettings.alwaysShowReminder,
                             onCheckedChange = { viewModel.setAlwaysShowReminder(it) }
                         )
+                    }
+                }
+            }
+
+            // Locked Mode toggle (Phase F)
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (uiState.appSettings.lockedMode) {
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        }
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = if (uiState.appSettings.lockedMode) {
+                        BorderStroke(
+                            2.dp,
+                            MaterialTheme.colorScheme.error
+                        )
+                    } else null
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = if (uiState.appSettings.lockedMode) "🔒" else "🔓",
+                                    fontSize = 24.sp
+                                )
+                                Text(
+                                    text = "Locked Mode",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (uiState.appSettings.lockedMode) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onBackground
+                                    }
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (uiState.appSettings.lockedMode) {
+                                    "Maximum friction - 10 second delay with countdown. You requested this extra control."
+                                } else {
+                                    "Enable maximum friction for extra self-control (10s delay)"
+                                },
+                                fontSize = 14.sp,
+                                color = if (uiState.appSettings.lockedMode) {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                lineHeight = 20.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Switch(
+                            checked = uiState.appSettings.lockedMode,
+                            onCheckedChange = { viewModel.setLockedMode(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.error,
+                                checkedTrackColor = MaterialTheme.colorScheme.errorContainer,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.surfaceVariant,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Intervention Analytics (debug)
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(text = "📊", fontSize = 24.sp)
+                                Text(
+                                    text = "Intervention Analytics",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "View intervention effectiveness and content performance",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                                lineHeight = 20.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        IconButton(
+                            onClick = { navController.navigate("analytics") }
+                        ) {
+                            Text(
+                                text = "→",
+                                fontSize = 24.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }

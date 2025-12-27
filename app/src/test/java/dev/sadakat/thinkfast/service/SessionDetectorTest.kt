@@ -75,7 +75,7 @@ class SessionDetectorTest {
         assertEquals(AppTarget.FACEBOOK, sessionStarted!!.targetApp)
         assertEquals(timestamp, sessionStarted!!.startTimestamp)
         assertEquals(timestamp, sessionStarted!!.lastActiveTimestamp)
-        assertFalse(sessionStarted!!.hasShownTenMinuteAlert)
+        assertEquals(0L, sessionStarted!!.lastTimerAlertTime) // No alert shown yet
     }
 
     @Test
@@ -231,7 +231,7 @@ class SessionDetectorTest {
         // Assert
         val currentSession = sessionDetector.getCurrentSession()
         assertNotNull(currentSession)
-        assertTrue(currentSession!!.hasShownTenMinuteAlert)
+        assertTrue(currentSession!!.lastTimerAlertTime > 0) // Alert was shown
         assertNotNull(alertTriggered)
     }
 

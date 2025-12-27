@@ -36,10 +36,17 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
         _settingsFlow.value = loadSettings()
     }
 
+    override suspend fun setLockedMode(enabled: Boolean) {
+        // Phase F: Update locked mode setting
+        prefs.edit().putBoolean(KEY_LOCKED_MODE, enabled).apply()
+        _settingsFlow.value = loadSettings()
+    }
+
     override suspend fun updateSettings(settings: AppSettings) {
         prefs.edit().apply {
             putInt(KEY_TIMER_ALERT_MINUTES, settings.timerAlertMinutes)
             putBoolean(KEY_ALWAYS_SHOW_REMINDER, settings.alwaysShowReminder)
+            putBoolean(KEY_LOCKED_MODE, settings.lockedMode)
         }.apply()
         _settingsFlow.value = settings
     }
@@ -50,7 +57,8 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
     private fun loadSettings(): AppSettings {
         return AppSettings(
             timerAlertMinutes = prefs.getInt(KEY_TIMER_ALERT_MINUTES, DEFAULT_TIMER_MINUTES),
-            alwaysShowReminder = prefs.getBoolean(KEY_ALWAYS_SHOW_REMINDER, DEFAULT_ALWAYS_SHOW_REMINDER)
+            alwaysShowReminder = prefs.getBoolean(KEY_ALWAYS_SHOW_REMINDER, DEFAULT_ALWAYS_SHOW_REMINDER),
+            lockedMode = prefs.getBoolean(KEY_LOCKED_MODE, DEFAULT_LOCKED_MODE)
         )
     }
 
@@ -58,9 +66,11 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
         private const val PREFS_NAME = "thinkfast_settings"
         private const val KEY_TIMER_ALERT_MINUTES = "timer_alert_minutes"
         private const val KEY_ALWAYS_SHOW_REMINDER = "always_show_reminder"
+        private const val KEY_LOCKED_MODE = "locked_mode"
 
         // Default values
         private const val DEFAULT_TIMER_MINUTES = 10
         private const val DEFAULT_ALWAYS_SHOW_REMINDER = true
+        private const val DEFAULT_LOCKED_MODE = false
     }
 }

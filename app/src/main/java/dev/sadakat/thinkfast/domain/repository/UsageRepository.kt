@@ -119,4 +119,64 @@ interface UsageRepository {
         startDate: String,
         endDate: String
     ): Int
+
+    // ========== Context-Aware Intervention Methods ==========
+
+    /**
+     * Get total usage time for a specific app today (in milliseconds)
+     */
+    suspend fun getTodayUsageForApp(packageName: String): Long
+
+    /**
+     * Get total usage time for a specific app yesterday (in milliseconds)
+     */
+    suspend fun getYesterdayUsageForApp(packageName: String): Long
+
+    /**
+     * Get weekly average usage time for a specific app (in milliseconds)
+     */
+    suspend fun getWeeklyAverageForApp(packageName: String): Long
+
+    /**
+     * Get the number of sessions today for a specific app
+     */
+    suspend fun getTodaySessionCount(packageName: String): Int
+
+    /**
+     * Get the end time of the last session for a specific app (timestamp)
+     */
+    suspend fun getLastSessionEndTime(packageName: String): Long
+
+    /**
+     * Get the current session duration for a specific session ID (in milliseconds)
+     */
+    suspend fun getCurrentSessionDuration(sessionId: Long): Long
+
+    /**
+     * Get the daily goal for a specific app (in minutes, null if not set)
+     */
+    suspend fun getDailyGoalForApp(packageName: String): Int?
+
+    /**
+     * Get the current streak of days under goal
+     */
+    suspend fun getCurrentStreak(): Int
+
+    /**
+     * Get the app installation date (timestamp)
+     */
+    suspend fun getInstallDate(): Long
+
+    /**
+     * Get the shortest (best) session duration for a specific app today (in minutes)
+     */
+    suspend fun getBestSessionMinutes(packageName: String): Int
+
+    // ========== Phase F: Progressive Friction ==========
+
+    /**
+     * Get the effective friction level considering user preferences
+     * Returns the user's override if set, otherwise calculates from install date
+     */
+    suspend fun getEffectiveFrictionLevel(): dev.sadakat.thinkfast.domain.intervention.FrictionLevel
 }

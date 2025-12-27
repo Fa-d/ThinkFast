@@ -28,6 +28,12 @@ interface SettingsRepository {
     suspend fun setAlwaysShowReminder(enabled: Boolean)
 
     /**
+     * Phase F: Update locked mode (maximum friction)
+     * When enabled, interventions use LOCKED friction level (10s delay)
+     */
+    suspend fun setLockedMode(enabled: Boolean)
+
+    /**
      * Update all settings at once
      */
     suspend fun updateSettings(settings: AppSettings)
