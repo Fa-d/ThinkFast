@@ -95,6 +95,14 @@ object InterventionColors {
     val GamificationBackground = Color(0xFFE1F5FE)  // Bright light blue
     val GamificationBackgroundDark = Color(0xFF0A2A3D)  // Muted deep ocean blue
 
+    /**
+     * Activity suggestion - Soft teal/cyan
+     * Use for: Time-of-day specific activity suggestions
+     * Psychology: Action-oriented, positive, refreshing
+     */
+    val ActivitySuggestionBackground = Color(0xFFE0F2F1)  // Light cyan/teal
+    val ActivitySuggestionBackgroundDark = Color(0xFF1A2F2E)  // Muted deep teal
+
     // BUTTON COLORS
 
     /**

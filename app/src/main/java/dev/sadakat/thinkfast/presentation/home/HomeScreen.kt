@@ -1,21 +1,35 @@
 package dev.sadakat.thinkfast.presentation.home
 
-import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -24,38 +38,78 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import dev.sadakat.thinkfast.presentation.navigation.Screen
 import dev.sadakat.thinkfast.service.UsageMonitorService
+import dev.sadakat.thinkfast.ui.components.AchievementBadge
+import dev.sadakat.thinkfast.ui.components.CompactCelebrationCard
+import dev.sadakat.thinkfast.ui.components.StreakMilestoneCelebration
+import dev.sadakat.thinkfast.ui.components.rememberFadeInAnimation
+import dev.sadakat.thinkfast.ui.theme.ProgressColors
+import dev.sadakat.thinkfast.util.HapticFeedback
 import dev.sadakat.thinkfast.util.PermissionHelper
 import kotlinx.coroutines.delay
+import org.koin.androidx.compose.koinViewModel
 
 /**
- * Home screen - main dashboard with service controls and status
+ * Home screen - main dashboard with "Today at a Glance" summary
+ * Phase 1.2: Enhanced with usage stats, streaks, and celebration messages
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    contentPadding: PaddingValues = PaddingValues()
+    contentPadding: PaddingValues = PaddingValues(),
+    viewModel: HomeViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
-    var isServiceRunning by remember { mutableStateOf(isMonitorServiceRunning(context)) }
+    val uiState by viewModel.uiState.collectAsState()
     var hasAllPermissions by remember { mutableStateOf(PermissionHelper.hasAllRequiredPermissions(context)) }
 
-    // Periodically check service status
+    // Load data on first composition and periodically refresh
     LaunchedEffect(Unit) {
+        viewModel.loadTodaySummary()
+        viewModel.checkServiceStatus(context)
+
+        // Refresh every 30 seconds
         while (true) {
-            delay(2000) // Check every 2 seconds
-            isServiceRunning = isMonitorServiceRunning(context)
+            delay(30000)
+            viewModel.loadTodaySummary()
+            viewModel.checkServiceStatus(context)
             hasAllPermissions = PermissionHelper.hasAllRequiredPermissions(context)
         }
     }
 
+    // Check for streak milestones when streak changes (Phase 1.5)
+    LaunchedEffect(uiState.currentStreak) {
+        if (uiState.currentStreak > 0) {
+            viewModel.checkForStreakMilestone()
+            viewModel.updateGoalAchievedBadge()
+        }
+    }
+
+    // Streak Milestone Celebration Dialog (Phase 1.5)
+    StreakMilestoneCelebration(
+        show = uiState.showStreakCelebration,
+        streakDays = uiState.currentStreak,
+        onDismiss = { viewModel.dismissStreakCelebration() }
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ThinkFast") },
+                title = {
+                    Column {
+                        Text("ThinkFast", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            "Mindful Usage Tracker",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 actions = {
                     IconButton(onClick = {
-                        isServiceRunning = isMonitorServiceRunning(context)
+                        HapticFeedback.light(context)
+                        viewModel.loadTodaySummary()
+                        viewModel.checkServiceStatus(context)
                         hasAllPermissions = PermissionHelper.hasAllRequiredPermissions(context)
                     }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
@@ -69,286 +123,535 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(contentPadding),
-            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
+            // Today at a Glance Card
             item {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "⏰",
-                        fontSize = 64.sp
-                    )
-                    Text(
-                        text = "ThinkFast",
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Mindful Usage Tracker",
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                TodayAtAGlanceCard(
+                    uiState = uiState,
+                    context = context,
+                    onSetGoalsClick = {
+                        navController.navigate(Screen.Settings.route)
+                    }
+                )
+            }
+
+            // Goal Achievement Badge (Phase 1.5)
+            if (uiState.showGoalAchievedBadge && !uiState.isOverLimit) {
+                item {
+                    CompactCelebrationCard(
+                        show = true,
+                        emoji = "🎯",
+                        title = "On Track!",
+                        message = "You're meeting your daily goal. Keep it up!",
+                        backgroundColor = MaterialTheme.colorScheme.tertiaryContainer
                     )
                 }
             }
 
-            // Service status card
+            // Quick Actions
             item {
-                ServiceStatusCard(
-                    isRunning = isServiceRunning,
-                    hasPermissions = hasAllPermissions
+                QuickActionsRow(
+                    onViewStatsClick = {
+                        navController.navigate(Screen.Statistics.route)
+                    },
+                    onAdjustGoalsClick = {
+                        navController.navigate(Screen.Settings.route)
+                    }
                 )
             }
 
             // Permission warning (if missing)
             if (!hasAllPermissions) {
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = "Warning",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(32.dp)
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Permissions Required",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                                Text(
-                                    text = "Some permissions are missing. Grant them to enable monitoring.",
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
+                    PermissionWarningCard(
+                        onGrantClick = {
+                            navController.navigate(Screen.PermissionRequest.route)
                         }
-                        TextButton(
-                            onClick = {
-                                navController.navigate(Screen.PermissionRequest.route)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Text("Grant Permissions")
-                        }
-                    }
-                }
-            }
-
-            // Control buttons
-            item {
-                if (hasAllPermissions) {
-                    if (isServiceRunning) {
-                        // Stop button
-                        Button(
-                            onClick = {
-                                stopMonitoringService(context)
-                                isServiceRunning = false
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                text = "⏸️ Stop Monitoring",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    } else {
-                        // Start button
-                        Button(
-                            onClick = {
-                                startMonitoringService(context)
-                                isServiceRunning = true
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Start Monitoring",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Info card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "ℹ️ How It Works",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "• Full-screen reminder when opening Facebook/Instagram",
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp
-                        )
-                        Text(
-                            text = "• Alert after 10 minutes of continuous use",
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp
-                        )
-                        Text(
-                            text = "• Track your usage patterns and set daily goals",
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp
-                        )
-                        Text(
-                            text = "• Build streaks by staying under your limits",
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp
-                        )
-                    }
                 }
             }
 
-            // Navigation hints
+            // Service Status Card (compact)
             item {
-                Text(
-                    text = "View Statistics to see detailed analytics and set Goals in Settings.",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ServiceStatusCard(
-    isRunning: Boolean,
-    hasPermissions: Boolean
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isRunning && hasPermissions) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            }
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Status icon
-            Icon(
-                imageVector = if (isRunning && hasPermissions) {
-                    Icons.Default.Check
-                } else {
-                    Icons.Default.Close
-                },
-                contentDescription = null,
-                tint = if (isRunning && hasPermissions) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.size(40.dp)
-            )
-
-            // Status text
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Monitoring Status",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = if (isRunning && hasPermissions) {
-                        "Active - Monitoring usage"
-                    } else if (!hasPermissions) {
-                        "Inactive - Permissions needed"
-                    } else {
-                        "Inactive - Not monitoring"
+                CompactServiceStatusCard(
+                    isRunning = uiState.isServiceRunning,
+                    hasPermissions = hasAllPermissions,
+                    onStartClick = {
+                        HapticFeedback.success(context)
+                        startMonitoringService(context)
+                        viewModel.updateServiceState(true)
                     },
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    onStopClick = {
+                        HapticFeedback.medium(context)
+                        stopMonitoringService(context)
+                        viewModel.updateServiceState(false)
+                    }
                 )
             }
-
-            // Status indicator
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = if (isRunning && hasPermissions) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.outline
-                },
-                modifier = Modifier.size(12.dp)
-            ) {}
         }
     }
 }
 
 /**
- * Check if UsageMonitorService is running
+ * Today at a Glance card - Main summary card
  */
-private fun isMonitorServiceRunning(context: Context): Boolean {
-    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-    @Suppress("DEPRECATION")
-    return activityManager.getRunningServices(Int.MAX_VALUE).any {
-        it.service.className == UsageMonitorService::class.java.name
+@Composable
+private fun TodayAtAGlanceCard(
+    uiState: HomeUiState,
+    context: Context,
+    onSetGoalsClick: () -> Unit
+) {
+    val alpha = rememberFadeInAnimation(durationMillis = 600)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer(alpha = alpha),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header with streak
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Today at a Glance",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+
+                // Streak counter
+                if (uiState.currentStreak > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "🔥",
+                            fontSize = 18.sp
+                        )
+                        Text(
+                            text = "${uiState.currentStreak}",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = if (uiState.currentStreak == 1) "day" else "days",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+
+            // Loading state
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            // No goals set
+            else if (!uiState.hasGoalsSet) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "🎯",
+                        fontSize = 48.sp
+                    )
+                    Text(
+                        text = "Set a daily goal to get started!",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        textAlign = TextAlign.Center
+                    )
+                    Button(
+                        onClick = {
+                            HapticFeedback.light(context)
+                            onSetGoalsClick()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text("Set Goals")
+                    }
+                }
+            }
+            // Goals set - show progress
+            else {
+                // Usage vs Goal
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "Usage Today",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "${uiState.totalUsageMinutes} min",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = if (uiState.isOverLimit) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            }
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "Daily Goal",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "${uiState.goalMinutes} min",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                // Progress bar
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val progress = (uiState.progressPercentage ?: 0) / 100f
+
+                    LinearProgressIndicator(
+                        progress = { progress.coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(6.dp)),
+                        color = ProgressColors.getColorForProgress(uiState.progressPercentage ?: 0),
+                        trackColor = ProgressColors.getLightColorForProgress(uiState.progressPercentage ?: 0).copy(alpha = 0.2f)
+                    )
+
+                    // Progress percentage
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        if (!uiState.isOverLimit && uiState.remainingMinutes != null) {
+                            Text(
+                                text = "${uiState.remainingMinutes} min remaining",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+                        } else if (uiState.isOverLimit) {
+                            Text(
+                                text = "Over limit",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+
+                        Text(
+                            text = "${uiState.progressPercentage}%",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                // Celebration message
+                AnimatedVisibility(
+                    visible = uiState.celebrationMessage != null,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (uiState.isOverLimit) {
+                                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                            } else {
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                            }
+                        )
+                    ) {
+                        Text(
+                            text = uiState.celebrationMessage ?: "",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = if (uiState.isOverLimit) {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            },
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Quick action buttons
+ */
+@Composable
+private fun QuickActionsRow(
+    onViewStatsClick: () -> Unit,
+    onAdjustGoalsClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // View Statistics button
+        OutlinedButton(
+            onClick = onViewStatsClick,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("Statistics")
+        }
+
+        // Adjust Goals button
+        OutlinedButton(
+            onClick = onAdjustGoalsClick,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("Settings")
+        }
+    }
+}
+
+/**
+ * Permission warning card
+ */
+@Composable
+private fun PermissionWarningCard(
+    onGrantClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = "Warning",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Permissions Required",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                        text = "Grant permissions to enable monitoring",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+
+            TextButton(
+                onClick = onGrantClick,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text("Grant Permissions")
+            }
+        }
+    }
+}
+
+/**
+ * Enhanced service status card with toggle switch
+ */
+@Composable
+private fun CompactServiceStatusCard(
+    isRunning: Boolean,
+    hasPermissions: Boolean,
+    onStartClick: () -> Unit,
+    onStopClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header row with icon and toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Left side: Icon + Status text
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Status icon
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isRunning && hasPermissions) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surface
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isRunning && hasPermissions) {
+                                Icons.Default.Check
+                            } else {
+                                Icons.Default.Close
+                            },
+                            contentDescription = null,
+                            tint = if (isRunning && hasPermissions) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    // Status text
+                    Column {
+                        Text(
+                            text = "Usage Monitoring",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (isRunning && hasPermissions) {
+                                "Active and tracking"
+                            } else if (!hasPermissions) {
+                                "Permissions required"
+                            } else {
+                                "Currently paused"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Right side: Toggle switch (only if has permissions)
+                if (hasPermissions) {
+                    Switch(
+                        checked = isRunning,
+                        onCheckedChange = { checked ->
+                            if (checked) {
+                                onStartClick()
+                            } else {
+                                onStopClick()
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                }
+            }
+
+            // Helper text
+            if (hasPermissions) {
+                Text(
+                    text = if (isRunning) {
+                        "ThinkFast is monitoring Facebook and Instagram usage"
+                    } else {
+                        "Turn on to start tracking your social media usage"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+        }
     }
 }
 

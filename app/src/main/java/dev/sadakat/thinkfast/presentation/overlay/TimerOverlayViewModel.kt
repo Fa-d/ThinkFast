@@ -145,6 +145,7 @@ class TimerOverlayViewModel(
                 is InterventionContent.EmotionalAppeal -> "emotional_appeal"
                 is InterventionContent.Quote -> "quote"
                 is InterventionContent.Gamification -> "gamification"
+                is InterventionContent.ActivitySuggestion -> "activity_suggestion"
             }
 
             val contextInfo = buildString {

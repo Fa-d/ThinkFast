@@ -77,6 +77,16 @@ sealed class InterventionContent {
         val currentProgress: Int,
         val target: Int
     ) : InterventionContent()
+
+    /**
+     * Time-of-day specific activity suggestions.
+     * Provides concrete actionable alternatives (15% weight).
+     */
+    data class ActivitySuggestion(
+        val suggestion: String,
+        val emoji: String,
+        val timeContext: TimeContext
+    ) : InterventionContent()
 }
 
 /**
@@ -108,6 +118,16 @@ enum class EmotionalContext {
     WEEKEND_MORNING,      // Saturday/Sunday 06:00-11:00
     RAPID_REOPEN,         // Opened within 2 min
     EXTENDED_SESSION      // 15+ minutes
+}
+
+/**
+ * Time of day contexts for activity suggestions
+ */
+enum class TimeContext {
+    MORNING,     // 6-10 AM
+    MIDDAY,      // 10 AM - 3 PM
+    EVENING,     // 3 PM - 8 PM
+    LATE_NIGHT   // 8 PM - 12 AM
 }
 
 /**
@@ -345,4 +365,136 @@ object InterventionContentPools {
             else -> null
         }
     }
+
+    // ACTIVITY SUGGESTIONS (24+ suggestions organized by time of day)
+
+    val activitySuggestions = listOf(
+        // MORNING (6-10 AM) - 6 suggestions
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Go outside for 5 minutes of sunlight",
+            emoji = "☀️",
+            timeContext = TimeContext.MORNING
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Make your coffee mindfully",
+            emoji = "☕",
+            timeContext = TimeContext.MORNING
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Read the news instead of social feeds",
+            emoji = "📰",
+            timeContext = TimeContext.MORNING
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Start your day with 5-minute meditation",
+            emoji = "🧘",
+            timeContext = TimeContext.MORNING
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Take a quick morning walk",
+            emoji = "🏃",
+            timeContext = TimeContext.MORNING
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Make a healthy breakfast without screens",
+            emoji = "🍳",
+            timeContext = TimeContext.MORNING
+        ),
+
+        // MIDDAY (10 AM - 3 PM) - 6 suggestions
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Eat lunch without your phone",
+            emoji = "🥗",
+            timeContext = TimeContext.MIDDAY
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Take a 10-minute walk outside",
+            emoji = "🚶",
+            timeContext = TimeContext.MIDDAY
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Drink water + stretch for 5 minutes",
+            emoji = "💧",
+            timeContext = TimeContext.MIDDAY
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Call a friend or family member",
+            emoji = "📞",
+            timeContext = TimeContext.MIDDAY
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Listen to a podcast episode",
+            emoji = "🎧",
+            timeContext = TimeContext.MIDDAY
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Write in your journal",
+            emoji = "📝",
+            timeContext = TimeContext.MIDDAY
+        ),
+
+        // EVENING (3 PM - 8 PM) - 6 suggestions
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Get some exercise before dinner",
+            emoji = "🏃",
+            timeContext = TimeContext.EVENING
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Cook something healthy",
+            emoji = "🍳",
+            timeContext = TimeContext.EVENING
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Read for 15 minutes",
+            emoji = "📚",
+            timeContext = TimeContext.EVENING
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Work on a hobby or side project",
+            emoji = "🎨",
+            timeContext = TimeContext.EVENING
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Organize your space for 10 minutes",
+            emoji = "🧹",
+            timeContext = TimeContext.EVENING
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Play or listen to music",
+            emoji = "🎵",
+            timeContext = TimeContext.EVENING
+        ),
+
+        // LATE NIGHT (8 PM - 12 AM) - 6 suggestions
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Wind down for better sleep",
+            emoji = "😴",
+            timeContext = TimeContext.LATE_NIGHT
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Read a physical book",
+            emoji = "📖",
+            timeContext = TimeContext.LATE_NIGHT
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Try evening meditation",
+            emoji = "🧘",
+            timeContext = TimeContext.LATE_NIGHT
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Take a relaxing bath or shower",
+            emoji = "🛁",
+            timeContext = TimeContext.LATE_NIGHT
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Dim lights and prepare for sleep",
+            emoji = "🌙",
+            timeContext = TimeContext.LATE_NIGHT
+        ),
+        InterventionContent.ActivitySuggestion(
+            suggestion = "Make herbal tea and relax",
+            emoji = "☕",
+            timeContext = TimeContext.LATE_NIGHT
+        )
+    )
 }

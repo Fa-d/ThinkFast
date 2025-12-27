@@ -374,6 +374,7 @@ private fun DynamicInterventionContent(
                 is dev.sadakat.thinkfast.domain.model.InterventionContent.EmotionalAppeal -> EmotionalAppealContent(content, style)
                 is dev.sadakat.thinkfast.domain.model.InterventionContent.Quote -> QuoteContent(content, style)
                 is dev.sadakat.thinkfast.domain.model.InterventionContent.Gamification -> GamificationContent(content, style)
+                is dev.sadakat.thinkfast.domain.model.InterventionContent.ActivitySuggestion -> ActivitySuggestionContent(content, style)
             }
         }
 
@@ -634,6 +635,43 @@ private fun GamificationContent(
                 .height(8.dp),
             color = style.accentColor,
             trackColor = style.accentColor.copy(alpha = 0.2f)
+        )
+    }
+}
+
+@Composable
+private fun ActivitySuggestionContent(
+    content: dev.sadakat.thinkfast.domain.model.InterventionContent.ActivitySuggestion,
+    style: dev.sadakat.thinkfast.util.InterventionStyle
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Large emoji
+        Text(
+            text = content.emoji,
+            fontSize = 72.sp
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Header text
+        Text(
+            text = "Instead, try this:",
+            style = style.secondaryTextStyle,
+            color = style.textColor.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Activity suggestion
+        Text(
+            text = content.suggestion,
+            style = style.primaryTextStyle,
+            color = style.textColor,
+            textAlign = TextAlign.Center
         )
     }
 }

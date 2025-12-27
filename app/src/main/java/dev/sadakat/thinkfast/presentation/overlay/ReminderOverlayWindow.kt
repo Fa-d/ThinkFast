@@ -339,6 +339,10 @@ private fun getBackgroundColor(content: InterventionContent?, isDarkTheme: Boole
             InterventionColors.GamificationBackgroundDark
         else
             InterventionColors.GamificationBackground
+        is InterventionContent.ActivitySuggestion -> if (isDarkTheme)
+            InterventionColors.ActivitySuggestionBackgroundDark
+        else
+            InterventionColors.ActivitySuggestionBackground
         null -> if (isDarkTheme)
             InterventionColors.GentleReminderBackgroundDark
         else
@@ -473,6 +477,7 @@ private fun InterventionContentRenderer(
         is InterventionContent.EmotionalAppeal -> EmotionalAppealContent(content, textColor, secondaryTextColor)
         is InterventionContent.Quote -> QuoteContent(content, textColor, secondaryTextColor)
         is InterventionContent.Gamification -> GamificationContent(content, textColor, secondaryTextColor)
+        is InterventionContent.ActivitySuggestion -> ActivitySuggestionContent(content, textColor, secondaryTextColor)
     }
 }
 
@@ -701,6 +706,45 @@ private fun GamificationContent(
         fontWeight = FontWeight.Medium,
         color = secondaryTextColor,
         textAlign = TextAlign.Center
+    )
+}
+
+/**
+ * Activity suggestion content
+ */
+@Composable
+private fun ActivitySuggestionContent(
+    content: InterventionContent.ActivitySuggestion,
+    textColor: Color,
+    secondaryTextColor: Color
+) {
+    // Large emoji
+    Text(
+        text = content.emoji,
+        fontSize = 72.sp,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(bottom = 24.dp)
+    )
+
+    // Header text
+    Text(
+        text = "Instead, try this:",
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Medium,
+        color = secondaryTextColor,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Activity suggestion
+    Text(
+        text = content.suggestion,
+        fontSize = 24.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = textColor,
+        textAlign = TextAlign.Center,
+        lineHeight = 32.sp
     )
 }
 

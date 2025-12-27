@@ -9,6 +9,8 @@ import dev.sadakat.thinkfast.di.databaseModule
 import dev.sadakat.thinkfast.di.repositoryModule
 import dev.sadakat.thinkfast.di.useCaseModule
 import dev.sadakat.thinkfast.di.viewModelModule
+import dev.sadakat.thinkfast.util.NotificationHelper
+import dev.sadakat.thinkfast.worker.AchievementWorker
 import dev.sadakat.thinkfast.worker.DailyStatsAggregatorWorker
 import dev.sadakat.thinkfast.worker.DataCleanupWorker
 import org.koin.android.ext.koin.androidContext
@@ -33,6 +35,9 @@ class ThinkFastApplication : Application() {
                 viewModelModule
             )
         }
+
+        // Initialize notification channels (must be done before scheduling workers)
+        NotificationHelper.createNotificationChannels(this)
 
         // Schedule background workers
         scheduleWorkers()
@@ -68,6 +73,22 @@ class ThinkFastApplication : Application() {
             DataCleanupWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             dataCleanupRequest
+        )
+
+        // Schedule achievement notifications (runs every day, slightly after midnight)
+        // This runs after DailyStatsAggregatorWorker has updated the streaks
+        val achievementRequest = PeriodicWorkRequestBuilder<AchievementWorker>(
+            repeatInterval = 1,
+            repeatIntervalTimeUnit = TimeUnit.DAYS
+        )
+            .setInitialDelay(calculateInitialDelay() + TimeUnit.MINUTES.toMillis(5), TimeUnit.MILLISECONDS)
+            .setConstraints(Constraints.NONE)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            AchievementWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            achievementRequest
         )
     }
 

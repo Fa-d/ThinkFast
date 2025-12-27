@@ -13,7 +13,8 @@ enum class ContentType {
     STATS,
     EMOTIONAL_APPEAL,
     QUOTE,
-    GAMIFICATION
+    GAMIFICATION,
+    ACTIVITY_SUGGESTION
 }
 
 /**
@@ -77,28 +78,31 @@ class ContentSelector {
             ContentType.TIME_ALTERNATIVE to 30,
             ContentType.BREATHING to 20,
             ContentType.STATS to 10,
-            ContentType.EMOTIONAL_APPEAL to 0,  // Used selectively
-            ContentType.QUOTE to 0,             // Rare
-            ContentType.GAMIFICATION to 0       // Conditional
+            ContentType.ACTIVITY_SUGGESTION to 15,  // Concrete alternatives
+            ContentType.EMOTIONAL_APPEAL to 0,      // Used selectively
+            ContentType.QUOTE to 0,                 // Rare
+            ContentType.GAMIFICATION to 0           // Conditional
         )
 
         // CONTEXT-AWARE ADJUSTMENTS
 
         // Late night (22:00-05:00): Promote sleep
         if (context.isLateNight) {
-            weights[ContentType.BREATHING] = 50          // Breathing helps sleep
-            weights[ContentType.REFLECTION] = 30         // Self-awareness
-            weights[ContentType.EMOTIONAL_APPEAL] = 15   // "Tomorrow-you will regret this"
-            weights[ContentType.TIME_ALTERNATIVE] = 5
+            weights[ContentType.ACTIVITY_SUGGESTION] = 40  // Sleep prep activities
+            weights[ContentType.BREATHING] = 30            // Breathing helps sleep
+            weights[ContentType.REFLECTION] = 20           // Self-awareness
+            weights[ContentType.EMOTIONAL_APPEAL] = 10     // "Tomorrow-you will regret this"
+            weights[ContentType.TIME_ALTERNATIVE] = 0
             weights[ContentType.STATS] = 0
         }
 
         // Weekend morning: Encourage better use of precious time
         if (context.isWeekendMorning) {
-            weights[ContentType.REFLECTION] = 50         // "Is this how you want to spend Saturday?"
-            weights[ContentType.TIME_ALTERNATIVE] = 35
+            weights[ContentType.REFLECTION] = 35           // "Is this how you want to spend Saturday?"
+            weights[ContentType.ACTIVITY_SUGGESTION] = 35  // Concrete alternatives for morning
+            weights[ContentType.TIME_ALTERNATIVE] = 20
             weights[ContentType.EMOTIONAL_APPEAL] = 10
-            weights[ContentType.BREATHING] = 5
+            weights[ContentType.BREATHING] = 0
         }
 
         // Quick reopen (< 2 min since last close): Address compulsive behavior
@@ -199,6 +203,7 @@ class ContentSelector {
             ContentType.EMOTIONAL_APPEAL -> generateEmotionalAppeal(context)
             ContentType.QUOTE -> generateQuote()
             ContentType.GAMIFICATION -> generateGamification(context)
+            ContentType.ACTIVITY_SUGGESTION -> generateActivitySuggestion(context)
         }
     }
 
@@ -341,6 +346,24 @@ class ContentSelector {
     }
 
     /**
+     * Generates an activity suggestion based on time of day.
+     */
+    private fun generateActivitySuggestion(context: InterventionContext): InterventionContent.ActivitySuggestion {
+        val timeContext = when (context.timeOfDay) {
+            in 6..9 -> TimeContext.MORNING
+            in 10..14 -> TimeContext.MIDDAY
+            in 15..19 -> TimeContext.EVENING
+            else -> TimeContext.LATE_NIGHT
+        }
+
+        // Filter suggestions by time context and pick a random one
+        val suggestions = InterventionContentPools.activitySuggestions
+            .filter { it.timeContext == timeContext }
+
+        return suggestions.random()
+    }
+
+    /**
      * Tracks shown content to prevent immediate repeats.
      */
     private fun trackShownContent(content: InterventionContent) {
@@ -352,6 +375,7 @@ class ContentSelector {
             is InterventionContent.EmotionalAppeal -> "E:${content.message}"
             is InterventionContent.Quote -> "Q:${content.author}"
             is InterventionContent.Gamification -> "G:${content.challenge}"
+            is InterventionContent.ActivitySuggestion -> "A:${content.suggestion}"
         }
 
         recentContent.add(contentKey)
@@ -408,6 +432,7 @@ class ContentSelector {
                 stats.contentType.contains("Emotional") -> ContentType.EMOTIONAL_APPEAL
                 stats.contentType.contains("Quote") -> ContentType.QUOTE
                 stats.contentType.contains("Gamification") -> ContentType.GAMIFICATION
+                stats.contentType.contains("Activity") -> ContentType.ACTIVITY_SUGGESTION
                 else -> null
             }
 

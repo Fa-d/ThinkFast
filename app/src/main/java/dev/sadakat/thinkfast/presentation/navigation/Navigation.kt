@@ -5,6 +5,11 @@ package dev.sadakat.thinkfast.presentation.navigation
  */
 sealed class Screen(val route: String) {
     /**
+     * Onboarding screen - first-time user onboarding with value prop and goal setup
+     */
+    data object Onboarding : Screen("onboarding")
+
+    /**
      * Permission request screen - onboarding for granting permissions
      */
     data object PermissionRequest : Screen("permission_request")

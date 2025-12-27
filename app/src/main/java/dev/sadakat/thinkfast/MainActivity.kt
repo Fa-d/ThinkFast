@@ -27,7 +27,9 @@ import androidx.navigation.compose.rememberNavController
 import dev.sadakat.thinkfast.presentation.navigation.NavGraph
 import dev.sadakat.thinkfast.presentation.navigation.Screen
 import dev.sadakat.thinkfast.ui.theme.ThinkFastTheme
+import dev.sadakat.thinkfast.ui.theme.ThinkFastThemeWithMode
 import dev.sadakat.thinkfast.util.PermissionHelper
+import dev.sadakat.thinkfast.util.ThemePreferences
 
 /**
  * Main activity for ThinkFast app
@@ -38,11 +40,27 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ThinkFastTheme {
+            val themeMode = ThemePreferences.getThemeMode(this)
+            val dynamicColor = ThemePreferences.getDynamicColor(this)
+            val amoledDark = ThemePreferences.getAmoledDark(this)
+
+            ThinkFastThemeWithMode(
+                themeMode = themeMode,
+                dynamicColor = dynamicColor,
+                amoledDark = amoledDark
+            ) {
                 MainScreen()
             }
         }
     }
+}
+
+/**
+ * Check if onboarding has been completed
+ */
+private fun isOnboardingCompleted(context: android.content.Context): Boolean {
+    val prefs = context.getSharedPreferences("think_fast_onboarding", android.content.Context.MODE_PRIVATE)
+    return prefs.getBoolean("onboarding_completed", false)
 }
 
 @Composable
@@ -50,18 +68,24 @@ fun MainScreen() {
     val context = LocalContext.current
     val navController = rememberNavController()
 
-    // Determine start destination based on permissions
-    val startDestination = if (PermissionHelper.hasAllRequiredPermissions(context)) {
+    // Determine start destination based on onboarding completion and permissions
+    val startDestination = if (!isOnboardingCompleted(context)) {
+        // First time user - show onboarding
+        Screen.Onboarding.route
+    } else if (PermissionHelper.hasAllRequiredPermissions(context)) {
+        // Onboarding done, permissions granted - go to home
         Screen.Home.route
     } else {
+        // Onboarding done, but need permissions
         Screen.PermissionRequest.route
     }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Hide bottom navigation on permission request screen
-    val showBottomBar = currentRoute != Screen.PermissionRequest.route
+    // Hide bottom navigation on onboarding and permission request screens
+    val showBottomBar = currentRoute != Screen.Onboarding.route &&
+                        currentRoute != Screen.PermissionRequest.route
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

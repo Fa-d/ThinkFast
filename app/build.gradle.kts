@@ -18,8 +18,8 @@ android {
         applicationId = "dev.sadakat.thinkfast"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -106,6 +106,9 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+
+    // ProfileInstaller
+    implementation(libs.androidx.profileinstaller)
 
     // Charts (Vico)
     implementation(libs.vico.compose)

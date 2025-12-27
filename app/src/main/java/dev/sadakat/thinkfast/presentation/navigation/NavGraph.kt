@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import dev.sadakat.thinkfast.presentation.analytics.AnalyticsScreen
 import dev.sadakat.thinkfast.presentation.home.HomeScreen
+import dev.sadakat.thinkfast.presentation.onboarding.OnboardingScreen
 import dev.sadakat.thinkfast.presentation.permission.PermissionRequestScreen
 import dev.sadakat.thinkfast.presentation.settings.SettingsScreen
 import dev.sadakat.thinkfast.presentation.stats.StatsScreen
@@ -25,6 +26,14 @@ fun NavGraph(
         navController = navController,
         startDestination = startDestination
     ) {
+        // Onboarding screen - first-time user experience
+        composable(route = Screen.Onboarding.route) {
+            OnboardingScreen(
+                navController = navController,
+                contentPadding = contentPadding
+            )
+        }
+
         // Permission request screen - onboarding
         composable(route = Screen.PermissionRequest.route) {
             PermissionRequestScreen(

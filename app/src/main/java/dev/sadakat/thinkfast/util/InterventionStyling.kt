@@ -48,6 +48,7 @@ object InterventionStyling {
             is InterventionContent.EmotionalAppeal -> emotionalAppealStyle(isDarkTheme)
             is InterventionContent.Quote -> quoteStyle(isDarkTheme)
             is InterventionContent.Gamification -> gamificationStyle(isDarkTheme)
+            is InterventionContent.ActivitySuggestion -> activitySuggestionStyle(isDarkTheme)
         }
     }
 
@@ -168,6 +169,23 @@ object InterventionStyling {
         accentColor = InterventionColors.Success,
         primaryTextStyle = InterventionTypography.GamificationChallenge,
         secondaryTextStyle = InterventionTypography.GamificationReward
+    )
+
+    /**
+     * Activity suggestion styling - Soft teal with action-oriented typography
+     */
+    private fun activitySuggestionStyle(isDarkTheme: Boolean) = InterventionStyle(
+        backgroundColor = if (isDarkTheme)
+            InterventionColors.ActivitySuggestionBackgroundDark
+        else
+            InterventionColors.ActivitySuggestionBackground,
+        textColor = if (isDarkTheme)
+            InterventionColors.InterventionTextPrimaryDark
+        else
+            InterventionColors.InterventionTextPrimary,
+        accentColor = InterventionColors.Success,
+        primaryTextStyle = InterventionTypography.ActivitySuggestionText,
+        secondaryTextStyle = InterventionTypography.ActivitySuggestionHeader
     )
 
     /**
