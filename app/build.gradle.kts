@@ -63,6 +63,77 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+
+    flavorDimensions += "persona"
+
+    productFlavors {
+        create("freshInstall") {
+            dimension = "persona"
+            versionNameSuffix = "-freshInstall"
+            buildConfigField("String", "USER_PERSONA", "\"FRESH_INSTALL\"")
+        }
+        create("earlyAdopter") {
+            dimension = "persona"
+            versionNameSuffix = "-earlyAdopter"
+            buildConfigField("String", "USER_PERSONA", "\"EARLY_ADOPTER\"")
+        }
+        create("transitioningUser") {
+            dimension = "persona"
+            versionNameSuffix = "-transitioningUser"
+            buildConfigField("String", "USER_PERSONA", "\"TRANSITIONING_USER\"")
+        }
+        create("establishedUser") {
+            dimension = "persona"
+            versionNameSuffix = "-establishedUser"
+            buildConfigField("String", "USER_PERSONA", "\"ESTABLISHED_USER\"")
+        }
+        create("lockedModeUser") {
+            dimension = "persona"
+            versionNameSuffix = "-lockedModeUser"
+            buildConfigField("String", "USER_PERSONA", "\"LOCKED_MODE_USER\"")
+        }
+        create("lateNightScroller") {
+            dimension = "persona"
+            versionNameSuffix = "-lateNightScroller"
+            buildConfigField("String", "USER_PERSONA", "\"LATE_NIGHT_SCROLLER\"")
+        }
+        create("weekendWarrior") {
+            dimension = "persona"
+            versionNameSuffix = "-weekendWarrior"
+            buildConfigField("String", "USER_PERSONA", "\"WEEKEND_WARRIOR\"")
+        }
+        create("compulsiveReopener") {
+            dimension = "persona"
+            versionNameSuffix = "-compulsiveReopener"
+            buildConfigField("String", "USER_PERSONA", "\"COMPULSIVE_REOPENER\"")
+        }
+        create("goalSkipper") {
+            dimension = "persona"
+            versionNameSuffix = "-goalSkipper"
+            buildConfigField("String", "USER_PERSONA", "\"GOAL_SKIPPER\"")
+        }
+        create("overLimitStruggler") {
+            dimension = "persona"
+            versionNameSuffix = "-overLimitStruggler"
+            buildConfigField("String", "USER_PERSONA", "\"OVER_LIMIT_STRUGGLER\"")
+        }
+        create("streakAchiever") {
+            dimension = "persona"
+            versionNameSuffix = "-streakAchiever"
+            buildConfigField("String", "USER_PERSONA", "\"STREAK_ACHIEVER\"")
+        }
+        create("realisticMixed") {
+            dimension = "persona"
+            versionNameSuffix = "-realisticMixed"
+            buildConfigField("String", "USER_PERSONA", "\"REALISTIC_MIXED\"")
+        }
+        create("newUser") {
+            dimension = "persona"
+            versionNameSuffix = "-newUser"
+            buildConfigField("String", "USER_PERSONA", "\"NEW_USER\"")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11

@@ -3,6 +3,7 @@ package dev.sadakat.thinkfast.di
 import androidx.room.Room
 import dev.sadakat.thinkfast.data.local.database.MIGRATION_1_2
 import dev.sadakat.thinkfast.data.local.database.ThinkFastDatabase
+import dev.sadakat.thinkfast.data.seed.callback.SeedDatabaseCallback
 import dev.sadakat.thinkfast.util.Constants
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -15,6 +16,7 @@ val databaseModule = module {
             Constants.DATABASE_NAME
         )
             .addMigrations(MIGRATION_1_2)  // Phase G: Add migration
+            .addCallback(SeedDatabaseCallback(androidContext()))  // Seed database on creation
             .fallbackToDestructiveMigration()  // Fallback for development
             .build()
     }
