@@ -132,6 +132,12 @@ fun HomeScreen(
                     context = context,
                     onSetGoalsClick = {
                         navController.navigate(Screen.Settings.route)
+                    },
+                    onViewStatsClick = {
+                        navController.navigate(Screen.Statistics.route)
+                    },
+                    onAdjustGoalsClick = {
+                        navController.navigate(Screen.Settings.route)
                     }
                 )
             }
@@ -189,7 +195,9 @@ fun HomeScreen(
 private fun TodayAtAGlanceCard(
     uiState: HomeUiState,
     context: Context,
-    onSetGoalsClick: () -> Unit
+    onSetGoalsClick: () -> Unit,
+    onViewStatsClick: () -> Unit,
+    onAdjustGoalsClick: () -> Unit
 ) {
     val alpha = rememberFadeInAnimation(durationMillis = 600)
 
@@ -412,6 +420,62 @@ private fun TodayAtAGlanceCard(
                                 MaterialTheme.colorScheme.onSecondaryContainer
                             },
                             modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+
+                // Quick action buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // View Stats button
+                    OutlinedButton(
+                        onClick = {
+                            HapticFeedback.light(context)
+                            onViewStatsClick()
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        border = ButtonDefaults.outlinedButtonBorder.copy(
+                            width = 1.dp
+                        )
+                    ) {
+                        Text(
+                            text = "📊",
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "View Stats",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+
+                    // Adjust Goals button
+                    OutlinedButton(
+                        onClick = {
+                            HapticFeedback.light(context)
+                            onAdjustGoalsClick()
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        border = ButtonDefaults.outlinedButtonBorder.copy(
+                            width = 1.dp
+                        )
+                    ) {
+                        Text(
+                            text = "⚙️",
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Adjust Goals",
+                            style = MaterialTheme.typography.labelLarge
                         )
                     }
                 }
