@@ -137,7 +137,7 @@ fun HomeScreen(
                         navController.navigate(Screen.Statistics.route)
                     },
                     onAdjustGoalsClick = {
-                        navController.navigate(Screen.Settings.route)
+                        navController.navigate(Screen.ManageApps.route)
                     }
                 )
             }

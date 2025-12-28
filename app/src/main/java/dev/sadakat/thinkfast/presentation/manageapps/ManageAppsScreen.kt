@@ -889,14 +889,18 @@ private fun AppSelectionRow(
             containerColor = if (isTracked) {
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
             } else {
-                MaterialTheme.colorScheme.surface
+                // Use background color to blend with screen, avoiding multi-layer look
+                MaterialTheme.colorScheme.background
             }
         ),
         border = if (isTracked) {
             BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-        } else null,
+        } else {
+            // Add subtle border for definition in light theme
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        },
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isTracked) 2.dp else 1.dp,
+            defaultElevation = 0.dp, // Remove elevation for flatter look
             pressedElevation = 0.dp
         )
     ) {

@@ -11,9 +11,7 @@ plugins {
 
 android {
     namespace = "dev.sadakat.thinkfast"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dev.sadakat.thinkfast"
@@ -67,6 +65,11 @@ android {
     flavorDimensions += "persona"
 
     productFlavors {
+        create("production") {
+            dimension = "persona"
+            isDefault = true
+            buildConfigField("String", "USER_PERSONA", "\"PRODUCTION\"")
+        }
         create("freshInstall") {
             dimension = "persona"
             versionNameSuffix = "-freshInstall"

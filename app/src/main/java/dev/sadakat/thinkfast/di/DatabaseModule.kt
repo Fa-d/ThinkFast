@@ -1,6 +1,7 @@
 package dev.sadakat.thinkfast.di
 
 import androidx.room.Room
+import dev.sadakat.thinkfast.BuildConfig
 import dev.sadakat.thinkfast.data.local.database.MIGRATION_1_2
 import dev.sadakat.thinkfast.data.local.database.ThinkFastDatabase
 import dev.sadakat.thinkfast.data.seed.callback.SeedDatabaseCallback
@@ -10,15 +11,17 @@ import org.koin.dsl.module
 
 val databaseModule = module {
     single {
-        Room.databaseBuilder(
-            androidContext(),
-            ThinkFastDatabase::class.java,
-            Constants.DATABASE_NAME
-        )
-            .addMigrations(MIGRATION_1_2)  // Phase G: Add migration
-            .addCallback(SeedDatabaseCallback(androidContext()))  // Seed database on creation
+        val builder = Room.databaseBuilder(
+            androidContext(), ThinkFastDatabase::class.java, Constants.DATABASE_NAME
+        ).addMigrations(MIGRATION_1_2)  // Phase G: Add migration
             .fallbackToDestructiveMigration()  // Fallback for development
-            .build()
+
+        // Only add seed callback for non-production builds
+        if (BuildConfig.USER_PERSONA != "PRODUCTION") {
+            builder.addCallback(SeedDatabaseCallback(androidContext()))
+        }
+
+        builder.build()
     }
 
     single { get<ThinkFastDatabase>().usageSessionDao() }

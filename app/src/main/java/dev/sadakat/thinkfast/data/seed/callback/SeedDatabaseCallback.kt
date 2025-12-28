@@ -46,6 +46,7 @@ class SeedDatabaseCallback(
         // Use reflection to dynamically load the flavor-specific generator
         // This avoids having direct references to flavor classes in main code
         val className = when (BuildConfig.USER_PERSONA) {
+            "PRODUCTION" -> throw IllegalStateException("Production build should not use seed data")
             "FRESH_INSTALL" -> "dev.sadakat.thinkfast.seed.FreshInstallSeedGenerator"
             "EARLY_ADOPTER" -> "dev.sadakat.thinkfast.seed.EarlyAdopterSeedGenerator"
             "TRANSITIONING_USER" -> "dev.sadakat.thinkfast.seed.TransitioningUserSeedGenerator"
