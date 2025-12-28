@@ -31,3 +31,7 @@ keystore.properties
 /.idea/markdown.xml
 /app/release/app-release.aab
 /app/google-services.json
+/.idea/deviceManager.xml
+/.idea/
+/.kotlin/
+/app/earlyAdopter/release/app-earlyAdopter-release.aab

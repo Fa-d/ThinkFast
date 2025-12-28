@@ -20,8 +20,8 @@ import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.github.mikephil.charting.highlight.Highlight
 import dev.sadakat.thinkfast.R
-import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.UsageSession
+import dev.sadakat.thinkfast.presentation.stats.charts.ChartColors
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
@@ -52,8 +52,7 @@ data class SessionDataPoint(
  * Group sessions by app and sort by timestamp
  */
 data class GroupedSessions(
-    val facebookSessions: List<SessionDataPoint>,
-    val instagramSessions: List<SessionDataPoint>,
+    val appSessions: Map<String, List<SessionDataPoint>>,  // Map of packageName to sessions
     val minTimestamp: Long,
     val maxTimestamp: Long
 )
@@ -62,38 +61,28 @@ data class GroupedSessions(
  * Group and prepare session data for charting
  */
 fun prepareSessionData(sessions: List<UsageSession>): GroupedSessions {
-    val facebookSessions = sessions
-        .filter { it.targetApp == AppTarget.FACEBOOK.packageName }
+    // Group sessions by app
+    val appSessions = sessions
         .filter { it.duration > 0 }
-        .sortedBy { it.startTimestamp }
-        .map { session ->
-            SessionDataPoint(
-                timestamp = session.startTimestamp,
-                durationMinutes = session.duration / 60000f, // Convert to minutes
-                appName = "Facebook"
-            )
+        .groupBy { it.targetApp }
+        .mapValues { (packageName, sessions) ->
+            sessions
+                .sortedBy { it.startTimestamp }
+                .map { session ->
+                    SessionDataPoint(
+                        timestamp = session.startTimestamp,
+                        durationMinutes = session.duration / 60000f, // Convert to minutes
+                        appName = packageName.split(".").lastOrNull()?.replaceFirstChar { it.uppercase() } ?: packageName
+                    )
+                }
         }
 
-    val instagramSessions = sessions
-        .filter { it.targetApp == AppTarget.INSTAGRAM.packageName }
-        .filter { it.duration > 0 }
-        .sortedBy { it.startTimestamp }
-        .map { session ->
-            SessionDataPoint(
-                timestamp = session.startTimestamp,
-                durationMinutes = session.duration / 60000f, // Convert to minutes
-                appName = "Instagram"
-            )
-        }
-
-    val allTimestamps = (facebookSessions.map { it.timestamp } +
-                         instagramSessions.map { it.timestamp })
+    val allTimestamps = sessions.map { it.startTimestamp }
     val minTimestamp = allTimestamps.minOrNull() ?: 0L
     val maxTimestamp = allTimestamps.maxOrNull() ?: 0L
 
     return GroupedSessions(
-        facebookSessions = facebookSessions,
-        instagramSessions = instagramSessions,
+        appSessions = appSessions,
         minTimestamp = minTimestamp,
         maxTimestamp = maxTimestamp
     )
@@ -101,15 +90,13 @@ fun prepareSessionData(sessions: List<UsageSession>): GroupedSessions {
 
 /**
  * Composable that displays a line chart showing session duration over time
- * for both Facebook and Instagram with curved lines
+ * for all tracked apps with curved lines
  */
 @Composable
 fun SessionDurationTimeChart(
     sessions: List<UsageSession>,
     period: ChartPeriod,
-    modifier: Modifier = Modifier,
-    facebookColor: ComposeColor = ComposeColor(0xFF1877F2),  // Facebook blue
-    instagramColor: ComposeColor = ComposeColor(0xFFE4405F)  // Instagram pink
+    modifier: Modifier = Modifier
 ) {
     val groupedData = remember(sessions) { prepareSessionData(sessions) }
 
@@ -123,7 +110,7 @@ fun SessionDurationTimeChart(
             }
         },
         update = { chart ->
-            updateChartData(chart, groupedData, facebookColor, instagramColor, period)
+            updateChartData(chart, groupedData, period)
         }
     )
 }
@@ -201,24 +188,13 @@ private fun setupChart(chart: LineChart, period: ChartPeriod) {
 private fun updateChartData(
     chart: LineChart,
     groupedData: GroupedSessions,
-    facebookColor: ComposeColor,
-    instagramColor: ComposeColor,
     period: ChartPeriod
 ) {
     // Normalize timestamps to position values based on period
     val (xMin, xMax) = when (period) {
-        ChartPeriod.DAILY -> {
-            // For daily: 0 to 24 (hours)
-            0f to 24f
-        }
-        ChartPeriod.WEEKLY -> {
-            // For weekly: 1 to 7 (days of week)
-            1f to 7f
-        }
-        ChartPeriod.MONTHLY -> {
-            // For monthly: 1 to 31 (days of month)
-            1f to 31f
-        }
+        ChartPeriod.DAILY -> 0f to 24f  // Hours
+        ChartPeriod.WEEKLY -> 1f to 7f  // Days of week
+        ChartPeriod.MONTHLY -> 1f to 31f  // Days of month
     }
 
     // Convert timestamps to x-axis positions
@@ -234,7 +210,6 @@ private fun updateChartData(
             ChartPeriod.WEEKLY -> {
                 // Day of week (1-7, where 1=Monday)
                 val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-                // Convert to 1-7 format (Monday=1)
                 when (dayOfWeek) {
                     Calendar.MONDAY -> 1f
                     Calendar.TUESDAY -> 2f
@@ -253,49 +228,33 @@ private fun updateChartData(
         }
     }
 
-    // Create Facebook dataset with normalized x positions
-    val facebookEntries = groupedData.facebookSessions.map { point ->
-        Entry(timestampToXPosition(point.timestamp), point.durationMinutes)
+    // Create datasets for each app dynamically
+    val dataSets = groupedData.appSessions.entries.mapIndexed { index, (packageName, sessions) ->
+        val entries = sessions.map { point ->
+            Entry(timestampToXPosition(point.timestamp), point.durationMinutes)
+        }
+
+        val appColor = ChartColors.getColorForApp(index)
+        val appName = packageName.split(".").lastOrNull()?.replaceFirstChar { it.uppercase() } ?: packageName
+
+        LineDataSet(entries, appName).apply {
+            color = appColor
+            setCircleColor(appColor)
+            lineWidth = 3f
+            circleRadius = 5f
+            setCircleHoleColor(appColor)
+            circleHoleRadius = 2f
+            setDrawCircleHole(true)
+            setDrawFilled(false)
+            mode = LineDataSet.Mode.CUBIC_BEZIER  // Curved lines
+            cubicIntensity = 0.5f  // Increased for more dramatic curves
+            valueTextSize = 10f
+            setDrawValues(false)
+        }
     }
 
-    val facebookDataSet = LineDataSet(facebookEntries, "Facebook").apply {
-        color = facebookColor.toArgb()
-        setCircleColor(facebookColor.toArgb())
-        lineWidth = 3f
-        circleRadius = 5f
-        setCircleHoleColor(facebookColor.toArgb())
-        circleHoleRadius = 2f
-        setDrawCircleHole(true)
-        setDrawFilled(false)
-        mode = LineDataSet.Mode.CUBIC_BEZIER  // Curved lines
-        cubicIntensity = 0.5f  // Increased for more dramatic curves
-        valueTextSize = 10f
-        setDrawValues(false)
-    }
-
-    // Create Instagram dataset with normalized x positions
-    val instagramEntries = groupedData.instagramSessions.map { point ->
-        Entry(timestampToXPosition(point.timestamp), point.durationMinutes)
-    }
-
-    val instagramDataSet = LineDataSet(instagramEntries, "Instagram").apply {
-        color = instagramColor.toArgb()
-        setCircleColor(instagramColor.toArgb())
-        lineWidth = 3f
-        circleRadius = 5f
-        setCircleHoleColor(instagramColor.toArgb())
-        circleHoleRadius = 2f
-        setDrawCircleHole(true)
-        setDrawFilled(false)
-        mode = LineDataSet.Mode.CUBIC_BEZIER  // Curved lines
-        cubicIntensity = 0.5f  // Increased for more dramatic curves
-        valueTextSize = 10f
-        setDrawValues(false)
-    }
-
-    // Create line data with both datasets
-    val lineData = LineData(facebookDataSet, instagramDataSet)
-
+    // Create line data with all datasets
+    val lineData = LineData(dataSets)
     chart.data = lineData
 
     // Set x-axis range based on period
@@ -303,8 +262,9 @@ private fun updateChartData(
     chart.xAxis.axisMaximum = xMax
 
     // Calculate max duration for y-axis with some padding
-    val allDurations = (groupedData.facebookSessions.map { it.durationMinutes } +
-                        groupedData.instagramSessions.map { it.durationMinutes })
+    val allDurations = groupedData.appSessions.values.flatMap { sessions ->
+        sessions.map { it.durationMinutes }
+    }
     if (allDurations.isNotEmpty()) {
         val maxDuration = allDurations.maxOrNull() ?: 0f
         chart.axisLeft.axisMaximum = if (maxDuration > 0) maxDuration * 1.2f else 10f
@@ -347,7 +307,12 @@ class TimeAxisValueFormatter(private val period: ChartPeriod) : ValueFormatter()
 
 /**
  * Custom MarkerView for displaying session details when tapping on data points
+ *
+ * Note: Currently commented out as it's not being used in setupChart.
+ * To implement properly, would need to pass chart reference to access datasets
+ * via highlight.dataSetIndex since Highlight doesn't expose dataSet directly.
  */
+/*
 class SessionChartMarkerView(
     context: Context,
     layoutResource: Int,
@@ -359,10 +324,11 @@ class SessionChartMarkerView(
     private val tvTime: TextView = findViewById(R.id.tv_marker_time)
 
     override fun refreshContent(e: Entry, highlight: Highlight) {
-        val dataSetIndex = highlight.dataSetIndex
-        val appName = if (dataSetIndex == 0) "Facebook" else "Instagram"
+        // Would need chart reference to get dataset:
+        // val dataset = chart.data.getDataSetByIndex(highlight.dataSetIndex) as? LineDataSet
+        // val appName = dataset?.label ?: "App"
 
-        tvApp.text = appName
+        tvApp.text = "App" // placeholder
         tvDuration.text = "Duration: ${e.y.toInt()} min"
 
         // Format time based on period
@@ -385,3 +351,4 @@ class SessionChartMarkerView(
         super.refreshContent(e, highlight)
     }
 }
+*/

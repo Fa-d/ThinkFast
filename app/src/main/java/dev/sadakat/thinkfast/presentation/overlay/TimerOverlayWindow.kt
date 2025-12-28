@@ -39,7 +39,6 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.presentation.overlay.components.BreathingExercise
 import dev.sadakat.thinkfast.ui.theme.InterventionColors
 import dev.sadakat.thinkfast.ui.theme.InterventionTypography
@@ -86,7 +85,7 @@ class TimerOverlayWindow(
      */
     fun show(
         sessionId: Long,
-        targetApp: AppTarget,
+        targetApp: String,
         sessionStartTime: Long,
         sessionDuration: Long
     ) {
@@ -175,7 +174,7 @@ class TimerOverlayWindow(
             viewModel.onOverlayShown(sessionId, targetApp, sessionStartTime, sessionDuration)
 
             ErrorLogger.info(
-                "Timer overlay shown successfully for ${targetApp.displayName} (session duration: ${sessionDuration}ms)",
+                "Timer overlay shown successfully for $targetApp (session duration: ${sessionDuration}ms)",
                 context = "TimerOverlayWindow.show"
             )
         } catch (e: SecurityException) {
@@ -324,7 +323,7 @@ private fun LoadingScreen() {
 @Composable
 private fun DynamicInterventionContent(
     content: dev.sadakat.thinkfast.domain.model.InterventionContent,
-    targetApp: dev.sadakat.thinkfast.domain.model.AppTarget?,
+    targetApp: String?,
     sessionDuration: String,
     todaysTotalUsage: String,
     timerAlertMinutes: Int,
@@ -348,7 +347,7 @@ private fun DynamicInterventionContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = targetApp?.displayName ?: "Target App",
+                text = targetApp?.split(".")?.lastOrNull()?.replaceFirstChar { it.uppercase() } ?: "App",
                 style = InterventionTypography.AppName,
                 color = style.textColor,
                 textAlign = TextAlign.Center

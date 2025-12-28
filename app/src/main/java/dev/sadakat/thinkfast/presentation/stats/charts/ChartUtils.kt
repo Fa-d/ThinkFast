@@ -3,7 +3,6 @@ package dev.sadakat.thinkfast.presentation.stats.charts
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.formatter.ValueFormatter
-import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.UsageSession
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -14,11 +13,30 @@ import java.util.Locale
  * Shared utilities for chart implementations
  */
 object ChartColors {
-    const val FACEBOOK_BLUE = 0xFF1877F2.toInt()
-    const val INSTAGRAM_PINK = 0xFFE4405F.toInt()
     const val GOAL_GREEN = 0xFF4CAF50.toInt()
     const val OVER_GOAL_RED = 0xFFFF5252.toInt()
     const val GRID_LIGHT_GRAY = 0xFFE0E0E0.toInt()
+
+    // Dynamic color palette for tracked apps
+    val APP_COLORS = listOf(
+        0xFF1877F2.toInt(),  // Blue (Facebook)
+        0xFFE4405F.toInt(),  // Pink (Instagram)
+        0xFF1DA1F2.toInt(),  // Twitter Blue
+        0xFFFF0000.toInt(),  // YouTube Red
+        0xFF25D366.toInt(),  // WhatsApp Green
+        0xFFFF6600.toInt(),  // Reddit Orange
+        0xFF0077B5.toInt(),  // LinkedIn Blue
+        0xFFFFFC00.toInt(),  // Snapchat Yellow
+        0xFFE60023.toInt(),  // Pinterest Red
+        0xFF00AFF0.toInt()   // TikTok Cyan
+    )
+
+    /**
+     * Get color for an app by its index in tracked apps list
+     */
+    fun getColorForApp(index: Int): Int {
+        return APP_COLORS[index % APP_COLORS.size]
+    }
 }
 
 /**
@@ -151,43 +169,39 @@ fun YAxis.applyCommonStyling() {
 
 /**
  * Data class for aggregated usage by time slot
+ * Now supports any number of tracked apps dynamically
  */
 data class TimeSlotUsage(
     val timeSlot: Float,
-    val facebookMinutes: Float,
-    val instagramMinutes: Float
+    val appUsage: Map<String, Float>  // Map of packageName to minutes
 ) {
     val totalMinutes: Float
-        get() = facebookMinutes + instagramMinutes
+        get() = appUsage.values.sum()
 }
 
 /**
  * Aggregate sessions by hour of day
  */
 fun aggregateSessionsByHour(sessions: List<UsageSession>): List<TimeSlotUsage> {
-    val hourlyData = mutableMapOf<Int, Pair<Float, Float>>()
+    val hourlyData = mutableMapOf<Int, MutableMap<String, Float>>()
 
-    // Initialize all 24 hours with 0
+    // Initialize all 24 hours with empty maps
     for (hour in 0..23) {
-        hourlyData[hour] = Pair(0f, 0f)
+        hourlyData[hour] = mutableMapOf()
     }
 
-    // Aggregate sessions
+    // Aggregate sessions by app
     sessions.forEach { session ->
         val hour = getHourFromTimestamp(session.startTimestamp)
         val durationMinutes = session.duration / 60000f
 
-        val (fbMinutes, igMinutes) = hourlyData[hour] ?: Pair(0f, 0f)
-
-        hourlyData[hour] = when (session.targetApp) {
-            AppTarget.FACEBOOK.packageName -> Pair(fbMinutes + durationMinutes, igMinutes)
-            AppTarget.INSTAGRAM.packageName -> Pair(fbMinutes, igMinutes + durationMinutes)
-            else -> Pair(fbMinutes, igMinutes)
-        }
+        val appMap = hourlyData[hour] ?: mutableMapOf()
+        appMap[session.targetApp] = (appMap[session.targetApp] ?: 0f) + durationMinutes
+        hourlyData[hour] = appMap
     }
 
-    return hourlyData.map { (hour, data) ->
-        TimeSlotUsage(hour.toFloat(), data.first, data.second)
+    return hourlyData.map { (hour, appUsage) ->
+        TimeSlotUsage(hour.toFloat(), appUsage)
     }.sortedBy { it.timeSlot }
 }
 
@@ -195,29 +209,25 @@ fun aggregateSessionsByHour(sessions: List<UsageSession>): List<TimeSlotUsage> {
  * Aggregate sessions by day of week
  */
 fun aggregateSessionsByDayOfWeek(sessions: List<UsageSession>): List<TimeSlotUsage> {
-    val dailyData = mutableMapOf<Int, Pair<Float, Float>>()
+    val dailyData = mutableMapOf<Int, MutableMap<String, Float>>()
 
-    // Initialize all 7 days with 0
+    // Initialize all 7 days with empty maps
     for (day in 1..7) {
-        dailyData[day] = Pair(0f, 0f)
+        dailyData[day] = mutableMapOf()
     }
 
-    // Aggregate sessions
+    // Aggregate sessions by app
     sessions.forEach { session ->
         val day = getDayOfWeek(session.startTimestamp)
         val durationMinutes = session.duration / 60000f
 
-        val (fbMinutes, igMinutes) = dailyData[day] ?: Pair(0f, 0f)
-
-        dailyData[day] = when (session.targetApp) {
-            AppTarget.FACEBOOK.packageName -> Pair(fbMinutes + durationMinutes, igMinutes)
-            AppTarget.INSTAGRAM.packageName -> Pair(fbMinutes, igMinutes + durationMinutes)
-            else -> Pair(fbMinutes, igMinutes)
-        }
+        val appMap = dailyData[day] ?: mutableMapOf()
+        appMap[session.targetApp] = (appMap[session.targetApp] ?: 0f) + durationMinutes
+        dailyData[day] = appMap
     }
 
-    return dailyData.map { (day, data) ->
-        TimeSlotUsage(day.toFloat(), data.first, data.second)
+    return dailyData.map { (day, appUsage) ->
+        TimeSlotUsage(day.toFloat(), appUsage)
     }.sortedBy { it.timeSlot }
 }
 
@@ -225,7 +235,7 @@ fun aggregateSessionsByDayOfWeek(sessions: List<UsageSession>): List<TimeSlotUsa
  * Aggregate sessions by day of month
  */
 fun aggregateSessionsByDayOfMonth(sessions: List<UsageSession>): List<TimeSlotUsage> {
-    val dailyData = mutableMapOf<Int, Pair<Float, Float>>()
+    val dailyData = mutableMapOf<Int, MutableMap<String, Float>>()
 
     // Get the range of days in the sessions
     if (sessions.isEmpty()) return emptyList()
@@ -234,53 +244,45 @@ fun aggregateSessionsByDayOfMonth(sessions: List<UsageSession>): List<TimeSlotUs
     calendar.timeInMillis = sessions.first().startTimestamp
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
 
-    // Initialize all days with 0
+    // Initialize all days with empty maps
     for (day in 1..daysInMonth) {
-        dailyData[day] = Pair(0f, 0f)
+        dailyData[day] = mutableMapOf()
     }
 
-    // Aggregate sessions
+    // Aggregate sessions by app
     sessions.forEach { session ->
         val day = getDayOfMonth(session.startTimestamp)
         val durationMinutes = session.duration / 60000f
 
-        val (fbMinutes, igMinutes) = dailyData[day] ?: Pair(0f, 0f)
-
-        dailyData[day] = when (session.targetApp) {
-            AppTarget.FACEBOOK.packageName -> Pair(fbMinutes + durationMinutes, igMinutes)
-            AppTarget.INSTAGRAM.packageName -> Pair(fbMinutes, igMinutes + durationMinutes)
-            else -> Pair(fbMinutes, igMinutes)
-        }
+        val appMap = dailyData[day] ?: mutableMapOf()
+        appMap[session.targetApp] = (appMap[session.targetApp] ?: 0f) + durationMinutes
+        dailyData[day] = appMap
     }
 
-    return dailyData.map { (day, data) ->
-        TimeSlotUsage(day.toFloat(), data.first, data.second)
+    return dailyData.map { (day, appUsage) ->
+        TimeSlotUsage(day.toFloat(), appUsage)
     }.sortedBy { it.timeSlot }
 }
 
 /**
  * Aggregate sessions by time period
  */
-fun aggregateSessionsByTimePeriod(sessions: List<UsageSession>): Map<TimePeriod, Pair<Float, Float>> {
-    val periodData = mutableMapOf<TimePeriod, Pair<Float, Float>>()
+fun aggregateSessionsByTimePeriod(sessions: List<UsageSession>): Map<TimePeriod, Map<String, Float>> {
+    val periodData = mutableMapOf<TimePeriod, MutableMap<String, Float>>()
 
-    // Initialize all periods with 0
-    TimePeriod.values().forEach { period ->
-        periodData[period] = Pair(0f, 0f)
+    // Initialize all periods with empty maps
+    TimePeriod.entries.forEach { period ->
+        periodData[period] = mutableMapOf()
     }
 
-    // Aggregate sessions
+    // Aggregate sessions by app
     sessions.forEach { session ->
         val period = getTimePeriod(session.startTimestamp)
         val durationMinutes = session.duration / 60000f
 
-        val (fbMinutes, igMinutes) = periodData[period] ?: Pair(0f, 0f)
-
-        periodData[period] = when (session.targetApp) {
-            AppTarget.FACEBOOK.packageName -> Pair(fbMinutes + durationMinutes, igMinutes)
-            AppTarget.INSTAGRAM.packageName -> Pair(fbMinutes, igMinutes + durationMinutes)
-            else -> Pair(fbMinutes, igMinutes)
-        }
+        val appMap = periodData[period] ?: mutableMapOf()
+        appMap[session.targetApp] = (appMap[session.targetApp] ?: 0f) + durationMinutes
+        periodData[period] = appMap
     }
 
     return periodData

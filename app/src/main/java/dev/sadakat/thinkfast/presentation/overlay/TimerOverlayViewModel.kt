@@ -6,7 +6,6 @@ import dev.sadakat.thinkfast.domain.intervention.ContentSelector
 import dev.sadakat.thinkfast.domain.intervention.FrictionLevel
 import dev.sadakat.thinkfast.domain.intervention.InterventionContext
 import dev.sadakat.thinkfast.domain.intervention.InterventionType
-import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.InterventionContent
 import dev.sadakat.thinkfast.domain.model.InterventionResult
 import dev.sadakat.thinkfast.domain.model.InterventionType as DomainInterventionType
@@ -56,7 +55,7 @@ class TimerOverlayViewModel(
      */
     fun onOverlayShown(
         sessionId: Long,
-        targetApp: AppTarget,
+        targetApp: String,
         sessionStartTime: Long,
         sessionDuration: Long
     ) {
@@ -67,16 +66,16 @@ class TimerOverlayViewModel(
             val settings = settingsRepository.getSettingsOnce()
             val timerAlertMinutes = settings.timerAlertMinutes
 
-            // Get context-aware data
-            val todayUsage = usageRepository.getTodayUsageForApp(targetApp.packageName)
-            val yesterdayUsage = usageRepository.getYesterdayUsageForApp(targetApp.packageName)
-            val weeklyAverage = usageRepository.getWeeklyAverageForApp(targetApp.packageName)
-            val sessionCount = usageRepository.getTodaySessionCount(targetApp.packageName)
-            val lastSessionEnd = usageRepository.getLastSessionEndTime(targetApp.packageName)
-            val goalMinutes = usageRepository.getDailyGoalForApp(targetApp.packageName)
+            // Get context-aware data (targetApp is already a package name)
+            val todayUsage = usageRepository.getTodayUsageForApp(targetApp)
+            val yesterdayUsage = usageRepository.getYesterdayUsageForApp(targetApp)
+            val weeklyAverage = usageRepository.getWeeklyAverageForApp(targetApp)
+            val sessionCount = usageRepository.getTodaySessionCount(targetApp)
+            val lastSessionEnd = usageRepository.getLastSessionEndTime(targetApp)
+            val goalMinutes = usageRepository.getDailyGoalForApp(targetApp)
             val streakDays = usageRepository.getCurrentStreak()
             val installDate = usageRepository.getInstallDate()
-            val bestSessionMinutes = usageRepository.getBestSessionMinutes(targetApp.packageName)
+            val bestSessionMinutes = usageRepository.getBestSessionMinutes(targetApp)
 
             // Calculate current session duration
             val currentDuration = if (sessionDuration > 0) {
@@ -159,7 +158,7 @@ class TimerOverlayViewModel(
 
             val contextInfo = buildString {
                 append("Session: ${currentDuration}ms, ")
-                append("App: ${targetApp.displayName}, ")
+                append("App: $targetApp, ")
                 append("Content: $contentType, ")
                 append("IsExtendedSession: ${context.isExtendedSession}, ")
                 append("QuickReopen: ${context.quickReopenAttempt}, ")
@@ -276,7 +275,7 @@ class TimerOverlayViewModel(
 
         val result = InterventionResult(
             sessionId = sessionId,
-            targetApp = targetApp.packageName,
+            targetApp = targetApp,  // Already a package name
             interventionType = DomainInterventionType.TIMER,
             contentType = content?.javaClass?.simpleName ?: "Unknown",
             hourOfDay = calendar.get(Calendar.HOUR_OF_DAY),
@@ -336,7 +335,7 @@ class TimerOverlayViewModel(
  */
 data class TimerOverlayState(
     val sessionId: Long? = null,
-    val targetApp: AppTarget? = null,
+    val targetApp: String? = null,  // Package name
     val sessionStartTime: String = "",
     val currentSessionDuration: String = "",
     val todaysTotalUsage: String = "",

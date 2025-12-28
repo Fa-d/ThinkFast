@@ -1,6 +1,5 @@
 package dev.sadakat.thinkfast.service
 
-import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.UsageEvent
 import dev.sadakat.thinkfast.domain.model.UsageSession
 import dev.sadakat.thinkfast.util.Constants
@@ -56,7 +55,7 @@ class SessionDetectorTest {
         sessionDetector.onSessionStart = { sessionStarted = it }
 
         // Act
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
 
         // Advance dispatcher to process coroutines
         testDispatcher.scheduler.advanceUntilIdle()
@@ -72,7 +71,7 @@ class SessionDetectorTest {
         }
 
         assertNotNull(sessionStarted)
-        assertEquals(AppTarget.FACEBOOK, sessionStarted!!.targetApp)
+        assertEquals("com.facebook.katana", sessionStarted!!.targetApp)
         assertEquals(timestamp, sessionStarted!!.startTimestamp)
         assertEquals(timestamp, sessionStarted!!.lastActiveTimestamp)
         assertEquals(0L, sessionStarted!!.lastTimerAlertTime) // No alert shown yet
@@ -90,12 +89,12 @@ class SessionDetectorTest {
         sessionDetector.onSessionStart = { sessionStarted = it }
 
         // Start initial session
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act - same app comes back within 30 seconds
         val newTimestamp = timestamp + 15000 // 15 seconds later
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, newTimestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", newTimestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Assert - only one session should have been created
@@ -130,12 +129,12 @@ class SessionDetectorTest {
         sessionDetector.onSessionEnd = { sessionsEnded.add(it) }
 
         // Start initial session
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act - same app comes back after 30+ seconds
         val newTimestamp = timestamp + Constants.SESSION_GAP_THRESHOLD + 1000 // 31 seconds later
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, newTimestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", newTimestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Assert - two sessions should have been created
@@ -176,12 +175,12 @@ class SessionDetectorTest {
         sessionDetector.onSessionEnd = { sessionsEnded.add(it) }
 
         // Start Facebook session
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act - Instagram comes to foreground
         val newTimestamp = timestamp + 5000 // 5 seconds later
-        sessionDetector.onAppInForeground(AppTarget.INSTAGRAM, newTimestamp)
+        sessionDetector.onAppInForeground("com.instagram.android", newTimestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Assert
@@ -189,8 +188,8 @@ class SessionDetectorTest {
         assertEquals(2, sessionsStarted.size)
         assertEquals(1, sessionsEnded.size)
 
-        assertEquals(AppTarget.FACEBOOK, sessionsStarted[0].targetApp)
-        assertEquals(AppTarget.INSTAGRAM, sessionsStarted[1].targetApp)
+        assertEquals("com.facebook.katana", sessionsStarted[0].targetApp)
+        assertEquals("com.instagram.android", sessionsStarted[1].targetApp)
     }
 
     @Test
@@ -206,17 +205,17 @@ class SessionDetectorTest {
         sessionDetector.onTenMinuteAlert = { alertTriggered = it }
 
         // Start session
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act - continue session multiple times to reach 10+ minutes
         // We need to stay within the 30-second gap threshold
         var currentTime = timestamp + 20000 // 20 seconds later (within threshold)
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, currentTime)
+        sessionDetector.onAppInForeground("com.facebook.katana", currentTime)
         testDispatcher.scheduler.advanceUntilIdle()
 
         currentTime += 20000 // 40 seconds total (within threshold)
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, currentTime)
+        sessionDetector.onAppInForeground("com.facebook.katana", currentTime)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Add more updates until we exceed 10 minutes, staying within 30-second threshold
@@ -224,7 +223,7 @@ class SessionDetectorTest {
         var accumulatedTime = currentTime
         while (accumulatedTime < tenMinutesPlus) {
             accumulatedTime += 20000 // Add 20 seconds each time
-            sessionDetector.onAppInForeground(AppTarget.FACEBOOK, accumulatedTime)
+            sessionDetector.onAppInForeground("com.facebook.katana", accumulatedTime)
             testDispatcher.scheduler.advanceUntilIdle()
         }
 
@@ -251,7 +250,7 @@ class SessionDetectorTest {
         coEvery { mockRepository.insertSession(any()) } returns 1L
         coEvery { mockRepository.insertEvent(any()) } returns Unit
 
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act - check timeout after 10 seconds
@@ -290,7 +289,7 @@ class SessionDetectorTest {
         var sessionEnded: SessionDetector.SessionState? = null
         sessionDetector.onSessionEnd = { sessionEnded = it }
 
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act - check timeout after 30+ seconds
@@ -330,7 +329,7 @@ class SessionDetectorTest {
         var sessionEnded: SessionDetector.SessionState? = null
         sessionDetector.onSessionEnd = { sessionEnded = it }
 
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act
@@ -358,7 +357,7 @@ class SessionDetectorTest {
         coEvery { mockRepository.insertSession(any()) } returns 1L
         coEvery { mockRepository.insertEvent(any()) } returns Unit
 
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act - wait a bit and check duration
@@ -377,7 +376,7 @@ class SessionDetectorTest {
         coEvery { mockRepository.insertEvent(any()) } returns Unit
 
         // Act
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Assert
@@ -397,7 +396,7 @@ class SessionDetectorTest {
         coEvery { mockRepository.insertSession(any()) } returns 1L
         coEvery { mockRepository.insertEvent(any()) } returns Unit
 
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(sessionDetector.hasActiveSession())
 
@@ -425,7 +424,7 @@ class SessionDetectorTest {
             )
         } returns Unit
 
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act - end session after only 3 seconds (below 5 second threshold)
@@ -458,7 +457,7 @@ class SessionDetectorTest {
         sessionDetector.onTenMinuteAlert = { alertCount++ }
 
         // Start session
-        sessionDetector.onAppInForeground(AppTarget.FACEBOOK, timestamp)
+        sessionDetector.onAppInForeground("com.facebook.katana", timestamp)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Act - continue session multiple times beyond 10 minutes, staying within 30-second threshold
@@ -468,7 +467,7 @@ class SessionDetectorTest {
         // Add time in increments of 20 seconds to stay within the 30-second threshold
         while (currentTime < tenMinutesPlus) {
             currentTime += 20000
-            sessionDetector.onAppInForeground(AppTarget.FACEBOOK, currentTime)
+            sessionDetector.onAppInForeground("com.facebook.katana", currentTime)
             testDispatcher.scheduler.advanceUntilIdle()
         }
 
@@ -476,7 +475,7 @@ class SessionDetectorTest {
         val twelveMinutes = timestamp + Constants.TEN_MINUTES_MILLIS + 120000
         while (currentTime < twelveMinutes) {
             currentTime += 20000
-            sessionDetector.onAppInForeground(AppTarget.FACEBOOK, currentTime)
+            sessionDetector.onAppInForeground("com.facebook.katana", currentTime)
             testDispatcher.scheduler.advanceUntilIdle()
         }
 

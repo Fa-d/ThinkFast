@@ -46,6 +46,7 @@ class UsageMonitorService : Service() {
     private val usageRepository: UsageRepository by inject()
     private val settingsRepository: SettingsRepository by inject()
     private val interventionResultRepository: InterventionResultRepository by inject()
+    private val trackedAppsRepository: dev.sadakat.thinkfast.domain.repository.TrackedAppsRepository by inject()
 
     private lateinit var appLaunchDetector: AppLaunchDetector
     private lateinit var sessionDetector: SessionDetector
@@ -121,7 +122,10 @@ class UsageMonitorService : Service() {
         }
 
         // Initialize detectors
-        appLaunchDetector = AppLaunchDetector(this)
+        appLaunchDetector = AppLaunchDetector(
+            context = this,
+            trackedAppsRepository = trackedAppsRepository
+        )
         sessionDetector = SessionDetector(
             usageRepository = usageRepository,
             scope = serviceScope,
@@ -333,11 +337,11 @@ class UsageMonitorService : Service() {
     }
 
     /**
-     * Handle target app detection
+     * Handle tracked app detection
      */
     private suspend fun onTargetAppDetected(launchEvent: AppLaunchDetector.AppLaunchEvent) {
         // Update session detector first (this will trigger onSessionStart for new sessions)
-        sessionDetector.onAppInForeground(launchEvent.appTarget, launchEvent.timestamp)
+        sessionDetector.onAppInForeground(launchEvent.packageName, launchEvent.timestamp)
 
         // Check if we should always show reminder
         val settings = settingsRepository.getSettingsOnce()
@@ -356,7 +360,7 @@ class UsageMonitorService : Service() {
                             sessionId = currentSession.sessionId,
                             eventType = Constants.EVENT_REMINDER_SHOWN,
                             timestamp = System.currentTimeMillis(),
-                            metadata = "App: ${launchEvent.appTarget.displayName} (Every Time)"
+                            metadata = "App: ${launchEvent.packageName} (Every Time)"
                         )
                     )
                 }
@@ -379,7 +383,7 @@ class UsageMonitorService : Service() {
         // Called when configured timer threshold is reached
         sessionDetector.onTenMinuteAlert = { sessionState ->
             ErrorLogger.info(
-                "onTenMinuteAlert callback triggered for ${sessionState.targetApp.displayName}, " +
+                "onTenMinuteAlert callback triggered for ${sessionState.targetApp}, " +
                 "sessionId=${sessionState.sessionId}, duration=${sessionState.totalDuration}ms",
                 context = "UsageMonitorService.setupSessionCallbacks"
             )
@@ -394,7 +398,7 @@ class UsageMonitorService : Service() {
                         sessionId = sessionState.sessionId,
                         eventType = Constants.EVENT_TEN_MIN_ALERT,
                         timestamp = System.currentTimeMillis(),
-                        metadata = "Duration: ${sessionState.totalDuration}ms"
+                        metadata = "App: ${sessionState.targetApp}, Duration: ${sessionState.totalDuration}ms"
                     )
                 )
             }
@@ -493,7 +497,7 @@ class UsageMonitorService : Service() {
      */
     private fun showTimerOverlay(sessionState: SessionDetector.SessionState) {
         ErrorLogger.info(
-            "showTimerOverlay called for ${sessionState.targetApp.displayName}",
+            "showTimerOverlay called for ${sessionState.targetApp}",
             context = "UsageMonitorService.showTimerOverlay"
         )
 

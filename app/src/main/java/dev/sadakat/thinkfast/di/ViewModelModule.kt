@@ -2,6 +2,7 @@ package dev.sadakat.thinkfast.di
 
 import dev.sadakat.thinkfast.presentation.analytics.AnalyticsViewModel
 import dev.sadakat.thinkfast.presentation.home.HomeViewModel
+import dev.sadakat.thinkfast.presentation.manageapps.ManageAppsViewModel
 import dev.sadakat.thinkfast.presentation.onboarding.OnboardingViewModel
 import dev.sadakat.thinkfast.presentation.overlay.ReminderOverlayViewModel
 import dev.sadakat.thinkfast.presentation.overlay.TimerOverlayViewModel
@@ -36,7 +37,18 @@ val viewModelModule = module {
             setGoalUseCase = get(),
             getGoalProgressUseCase = get(),
             settingsRepository = get(),
-            usageRepository = get()
+            usageRepository = get(),
+            trackedAppsRepository = get(),
+            getTrackedAppsWithDetailsUseCase = get()
+        )
+    }
+    viewModel {
+        ManageAppsViewModel(
+            getInstalledAppsUseCase = get(),
+            addTrackedAppUseCase = get(),
+            removeTrackedAppUseCase = get(),
+            trackedAppsRepository = get(),
+            getTrackedAppsWithDetailsUseCase = get()
         )
     }
 }

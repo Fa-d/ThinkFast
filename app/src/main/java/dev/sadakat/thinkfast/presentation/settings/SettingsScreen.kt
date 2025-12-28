@@ -1,23 +1,34 @@
 package dev.sadakat.thinkfast.presentation.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.GoalProgress
+import dev.sadakat.thinkfast.presentation.navigation.Screen
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
@@ -125,27 +136,126 @@ fun SettingsScreen(
                 }
             }
 
-            // Facebook goal
+            // Tracked Apps section header
             item {
-                GoalCard(
-                    appName = "Facebook",
-                    appIcon = "📘",
-                    progress = uiState.facebookProgress,
-                    isLoading = uiState.isLoading,
-                    isSaving = uiState.isSaving,
-                    onSetGoal = { viewModel.setFacebookGoal(it) }
+                Text(
+                    text = "📱 Tracked Apps",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                 )
             }
 
-            // Instagram goal
+            // Manage Apps navigation card
             item {
-                GoalCard(
-                    appName = "Instagram",
-                    appIcon = "📷",
-                    progress = uiState.instagramProgress,
-                    isLoading = uiState.isLoading,
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { navController.navigate(Screen.ManageApps.route) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(text = "⚙️", fontSize = 24.sp)
+                                Text(
+                                    text = "Manage Tracked Apps",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Select which apps to track (${uiState.trackedAppsCount}/10)",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                lineHeight = 20.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Manage apps",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
+
+            // Empty state if no tracked apps
+            if (uiState.trackedAppsProgress.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = "📱",
+                                fontSize = 48.sp
+                            )
+                            Text(
+                                text = "No Apps Tracked",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Add apps to start tracking your usage and setting goals",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            Button(
+                                onClick = { navController.navigate(Screen.ManageApps.route) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    text = "Add Your First App",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Compact goal cards for each tracked app
+            items(uiState.trackedAppsProgress) { progress ->
+                CompactGoalCard(
+                    progress = progress,
+                    isExpanded = uiState.expandedAppId == progress.goal.targetApp,
                     isSaving = uiState.isSaving,
-                    onSetGoal = { viewModel.setInstagramGoal(it) }
+                    onToggleExpanded = { viewModel.toggleExpanded(progress.goal.targetApp) },
+                    onSetGoal = { viewModel.setGoal(progress.goal.targetApp, it) }
                 )
             }
 
@@ -889,6 +999,225 @@ private fun FrictionLevelOption(
                     unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
+        }
+    }
+}
+
+/**
+ * Compact goal card with expand/collapse functionality
+ * Shows app name, usage, and progress indicator when collapsed
+ * Shows full goal editor when expanded
+ */
+@Composable
+private fun CompactGoalCard(
+    progress: GoalProgress,
+    isExpanded: Boolean,
+    isSaving: Boolean,
+    onToggleExpanded: () -> Unit,
+    onSetGoal: (Int) -> Unit
+) {
+    var sliderValue by remember(progress.goal.dailyLimitMinutes) {
+        mutableStateOf(progress.goal.dailyLimitMinutes.toFloat())
+    }
+    val currentLimit = progress.goal.dailyLimitMinutes
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggleExpanded),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Collapsed header - always visible
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // Circular progress indicator
+                    Box(
+                        modifier = Modifier.size(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            progress = (progress.percentageUsed / 100f).coerceIn(0f, 1f),
+                            modifier = Modifier.fillMaxSize(),
+                            strokeWidth = 4.dp,
+                            color = when (progress.getProgressColor()) {
+                                dev.sadakat.thinkfast.domain.model.ProgressColor.GREEN ->
+                                    MaterialTheme.colorScheme.primary
+                                dev.sadakat.thinkfast.domain.model.ProgressColor.YELLOW ->
+                                    MaterialTheme.colorScheme.tertiary
+                                dev.sadakat.thinkfast.domain.model.ProgressColor.ORANGE ->
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                dev.sadakat.thinkfast.domain.model.ProgressColor.RED ->
+                                    MaterialTheme.colorScheme.error
+                            },
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        Text(
+                            text = "${progress.percentageUsed.toInt()}%",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // App name and usage
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = progress.goal.targetApp.split(".").lastOrNull()?.capitalize() ?: "App",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = progress.formatTodayUsage(),
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Expand/collapse icon
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // Expanded content - goal editor
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    HorizontalDivider()
+
+                    // Streak info
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = progress.goal.getStreakMessage(),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = progress.goal.getLongestStreakMessage(),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Progress details
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = when (progress.getProgressColor()) {
+                                dev.sadakat.thinkfast.domain.model.ProgressColor.GREEN ->
+                                    MaterialTheme.colorScheme.primaryContainer
+                                dev.sadakat.thinkfast.domain.model.ProgressColor.YELLOW ->
+                                    MaterialTheme.colorScheme.tertiaryContainer
+                                dev.sadakat.thinkfast.domain.model.ProgressColor.ORANGE ->
+                                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                                dev.sadakat.thinkfast.domain.model.ProgressColor.RED ->
+                                    MaterialTheme.colorScheme.errorContainer
+                            }
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = progress.getStatusMessage(),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = progress.formatRemainingTime(),
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Goal slider
+                    Text(
+                        text = "Daily Limit: ${sliderValue.roundToInt()} minutes",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Slider(
+                        value = sliderValue,
+                        onValueChange = { sliderValue = it },
+                        valueRange = 5f..180f,
+                        steps = 34,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "5 min",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "180 min",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Update button
+                    Button(
+                        onClick = { onSetGoal(sliderValue.roundToInt()) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
+                        enabled = !isSaving && sliderValue.roundToInt() != currentLimit,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Update Goal",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

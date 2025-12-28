@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import dev.sadakat.thinkfast.presentation.analytics.AnalyticsScreen
 import dev.sadakat.thinkfast.presentation.home.HomeScreen
+import dev.sadakat.thinkfast.presentation.manageapps.ManageAppsScreen
 import dev.sadakat.thinkfast.presentation.onboarding.OnboardingScreen
 import dev.sadakat.thinkfast.presentation.permission.PermissionRequestScreen
 import dev.sadakat.thinkfast.presentation.settings.SettingsScreen
@@ -77,6 +78,13 @@ fun NavGraph(
         // Theme and Appearance screen - theme customization (no bottom nav)
         composable(route = Screen.ThemeAppearance.route) {
             ThemeAppearanceScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // Manage Apps screen - select and manage tracked apps (no bottom nav)
+        composable(route = Screen.ManageApps.route) {
+            ManageAppsScreen(
                 onBack = { navController.popBackStack() }
             )
         }

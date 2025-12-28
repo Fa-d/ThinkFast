@@ -58,7 +58,6 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.InterventionContent
 import dev.sadakat.thinkfast.presentation.overlay.components.CompactBreathingExercise
 import dev.sadakat.thinkfast.ui.theme.InterventionColors
@@ -102,7 +101,7 @@ class ReminderOverlayWindow(
      * Show the reminder overlay
      * This method can be called from any thread - it will post to main thread
      */
-    fun show(sessionId: Long, targetApp: AppTarget) {
+    fun show(sessionId: Long, targetApp: String) {
         // Ensure we're on the main thread
         if (Looper.myLooper() != Looper.getMainLooper()) {
             mainHandler.post { show(sessionId, targetApp) }
@@ -212,7 +211,7 @@ class ReminderOverlayWindow(
             viewModel.onOverlayShown(sessionId, targetApp)
 
             ErrorLogger.info(
-                "Reminder overlay shown successfully for ${targetApp.displayName}",
+                "Reminder overlay shown successfully for $targetApp",
                 context = "ReminderOverlayWindow.show"
             )
         } catch (e: SecurityException) {
@@ -366,7 +365,7 @@ private fun getSecondaryTextColor(isDarkTheme: Boolean): Color {
 
 @Composable
 private fun ReminderOverlayContent(
-    targetApp: AppTarget,
+    targetApp: String,
     interventionContent: InterventionContent?,
     frictionLevel: dev.sadakat.thinkfast.domain.intervention.FrictionLevel,
     onGoBackClick: () -> Unit,
@@ -415,9 +414,9 @@ private fun ReminderOverlayContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // App name (always shown)
+        // App name (always shown) - extract simple name from package
         Text(
-            text = targetApp.displayName,
+            text = targetApp.split(".").lastOrNull()?.replaceFirstChar { it.uppercase() } ?: "App",
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = textColor,

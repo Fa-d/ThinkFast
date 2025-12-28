@@ -3,14 +3,18 @@ package dev.sadakat.thinkfast.service
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
-import dev.sadakat.thinkfast.domain.model.AppTarget
-import dev.sadakat.thinkfast.util.Constants
+import dev.sadakat.thinkfast.domain.repository.TrackedAppsRepository
+import kotlinx.coroutines.runBlocking
 
 /**
- * Detects when target apps (Facebook, Instagram) are launched or brought to foreground
+ * Detects when tracked apps are launched or brought to foreground
  * Uses UsageStatsManager to query recent app usage
+ * Dynamically checks against user-configured tracked apps
  */
-class AppLaunchDetector(private val context: Context) {
+class AppLaunchDetector(
+    private val context: Context,
+    private val trackedAppsRepository: TrackedAppsRepository
+) {
 
     private val usageStatsManager: UsageStatsManager by lazy {
         context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
@@ -22,14 +26,39 @@ class AppLaunchDetector(private val context: Context) {
     // Track the last query timestamp to avoid re-processing events
     private var lastQueryTime: Long = System.currentTimeMillis()
 
+    // Cache tracked apps to avoid frequent repository queries
+    private var cachedTrackedApps: Set<String> = emptySet()
+    private var lastCacheUpdate: Long = 0L
+    private val cacheValidityDuration = 5000L // 5 seconds
+
     /**
      * Data class representing a detected app launch
      */
     data class AppLaunchEvent(
         val packageName: String,
-        val appTarget: AppTarget,
         val timestamp: Long
     )
+
+    /**
+     * Refresh cached tracked apps if cache is stale
+     */
+    private fun refreshTrackedAppsCache() {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastCacheUpdate > cacheValidityDuration) {
+            cachedTrackedApps = runBlocking {
+                trackedAppsRepository.getTrackedApps().toSet()
+            }
+            lastCacheUpdate = currentTime
+        }
+    }
+
+    /**
+     * Check if a package name is in the tracked apps list
+     */
+    private fun isTrackedApp(packageName: String): Boolean {
+        refreshTrackedAppsCache()
+        return cachedTrackedApps.contains(packageName)
+    }
 
     /**
      * Check if any target app has been launched since the last check
@@ -74,12 +103,10 @@ class AppLaunchDetector(private val context: Context) {
         if (latestForegroundApp != null && latestForegroundApp != lastForegroundApp) {
             lastForegroundApp = latestForegroundApp
 
-            // Check if it's a target app
-            val targetApp = AppTarget.fromPackageName(latestForegroundApp)
-            if (targetApp != null) {
+            // Check if it's a tracked app
+            if (isTrackedApp(latestForegroundApp)) {
                 return AppLaunchEvent(
                     packageName = latestForegroundApp,
-                    appTarget = targetApp,
                     timestamp = latestForegroundTime
                 )
             }
@@ -128,37 +155,37 @@ class AppLaunchDetector(private val context: Context) {
     }
 
     /**
-     * Check if a target app is currently in the foreground
-     * Returns the AppTarget if a target app is detected, null otherwise
+     * Check if a tracked app is currently in the foreground
+     * Returns the package name if a tracked app is detected, null otherwise
      *
      * IMPORTANT: This uses the cached lastForegroundApp to handle continuous usage
      * where there might not be recent events. It's updated by checkForAppLaunch().
      */
-    fun isTargetAppInForeground(): AppTarget? {
+    fun isTargetAppInForeground(): String? {
         // First try to get from recent events
         val foregroundApp = getCurrentForegroundApp()
 
-        // If we got a recent event, update our cache and return
+        // If we got a recent event, update our cache and check if it's tracked
         if (foregroundApp != null) {
             lastForegroundApp = foregroundApp
-            return AppTarget.fromPackageName(foregroundApp)
+            return if (isTrackedApp(foregroundApp)) foregroundApp else null
         }
 
         // No recent events - use cached lastForegroundApp for continuous usage
         // This handles the case where user is actively using the app but there are no new events
-        return if (lastForegroundApp != null) {
-            AppTarget.fromPackageName(lastForegroundApp!!)
+        return if (lastForegroundApp != null && isTrackedApp(lastForegroundApp!!)) {
+            lastForegroundApp
         } else {
             null
         }
     }
 
     /**
-     * Check if a specific target app is currently in the foreground
+     * Check if a specific app (by package name) is currently in the foreground
      */
-    fun isAppInForeground(targetApp: AppTarget): Boolean {
+    fun isAppInForeground(packageName: String): Boolean {
         val foregroundApp = getCurrentForegroundApp()
-        return foregroundApp == targetApp.packageName
+        return foregroundApp == packageName
     }
 
     /**

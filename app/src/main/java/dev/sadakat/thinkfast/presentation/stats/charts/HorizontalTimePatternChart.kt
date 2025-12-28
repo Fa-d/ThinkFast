@@ -49,8 +49,7 @@ fun HorizontalTimePatternChart(
  */
 private data class TimePeriodData(
     val period: TimePeriod,
-    val facebookMinutes: Float,
-    val instagramMinutes: Float,
+    val appUsage: Map<String, Float>,
     val totalMinutes: Float
 )
 
@@ -60,12 +59,11 @@ private data class TimePeriodData(
 private fun prepareTimePatternData(sessions: List<UsageSession>): List<TimePeriodData> {
     val periodMap = aggregateSessionsByTimePeriod(sessions)
 
-    return periodMap.map { (period, data) ->
+    return periodMap.map { (period, appUsage) ->
         TimePeriodData(
             period = period,
-            facebookMinutes = data.first,
-            instagramMinutes = data.second,
-            totalMinutes = data.first + data.second
+            appUsage = appUsage,
+            totalMinutes = appUsage.values.sum()
         )
     }.sortedByDescending { it.totalMinutes } // Sort by total usage (highest first)
 }
@@ -153,22 +151,37 @@ private fun updateHorizontalBarChartData(
         return
     }
 
-    // Create bar entries with stacked values [Facebook, Instagram]
+    // Get all unique apps across all time periods (sorted for consistency)
+    val allApps = data.flatMap { it.appUsage.keys }.distinct().sorted()
+
+    if (allApps.isEmpty()) {
+        chart.clear()
+        chart.invalidate()
+        return
+    }
+
+    // Create bar entries with stacked values for each app
     // Use index as x-value since we'll use a custom formatter for labels
     val barEntries = data.mapIndexed { index, periodData ->
-        BarEntry(
-            index.toFloat(),
-            floatArrayOf(periodData.facebookMinutes, periodData.instagramMinutes)
-        )
+        // Build stacked values array in consistent app order
+        val stackedValues = allApps.map { app ->
+            periodData.appUsage[app] ?: 0f
+        }.toFloatArray()
+
+        BarEntry(index.toFloat(), stackedValues)
     }
 
     // Create dataset
     val dataSet = BarDataSet(barEntries, "").apply {
-        // Set colors for stacked bars
-        colors = listOf(ChartColors.FACEBOOK_BLUE, ChartColors.INSTAGRAM_PINK)
+        // Set colors for stacked bars (one color per app)
+        colors = allApps.mapIndexed { index, _ ->
+            ChartColors.getColorForApp(index)
+        }
 
-        // Labels for legend
-        stackLabels = arrayOf("Facebook", "Instagram")
+        // Labels for legend (extract simple app names from package names)
+        stackLabels = allApps.map { packageName ->
+            packageName.split(".").lastOrNull()?.replaceFirstChar { it.uppercase() } ?: packageName
+        }.toTypedArray()
 
         // Visual settings
         setDrawValues(true)

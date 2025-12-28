@@ -1,5 +1,9 @@
 package dev.sadakat.thinkfast.di
 
+import dev.sadakat.thinkfast.domain.usecase.apps.AddTrackedAppUseCase
+import dev.sadakat.thinkfast.domain.usecase.apps.GetInstalledAppsUseCase
+import dev.sadakat.thinkfast.domain.usecase.apps.GetTrackedAppsWithDetailsUseCase
+import dev.sadakat.thinkfast.domain.usecase.apps.RemoveTrackedAppUseCase
 import dev.sadakat.thinkfast.domain.usecase.goals.GetGoalProgressUseCase
 import dev.sadakat.thinkfast.domain.usecase.goals.SetGoalUseCase
 import dev.sadakat.thinkfast.domain.usecase.goals.UpdateStreakUseCase
@@ -8,6 +12,7 @@ import dev.sadakat.thinkfast.domain.usecase.stats.GetDailyStatisticsUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.GetMonthlyStatisticsUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.GetSessionBreakdownUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.GetWeeklyStatisticsUseCase
+import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 /**
@@ -25,4 +30,10 @@ val useCaseModule = module {
     factory { SetGoalUseCase(goalRepository = get()) }
     factory { GetGoalProgressUseCase(goalRepository = get(), usageRepository = get()) }
     factory { UpdateStreakUseCase(goalRepository = get(), usageRepository = get()) }
+
+    // App management use cases
+    factory { GetInstalledAppsUseCase(context = androidContext()) }
+    factory { AddTrackedAppUseCase(trackedAppsRepository = get(), context = androidContext()) }
+    factory { RemoveTrackedAppUseCase(trackedAppsRepository = get(), goalRepository = get()) }
+    factory { GetTrackedAppsWithDetailsUseCase(trackedAppsRepository = get(), context = androidContext()) }
 }

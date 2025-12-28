@@ -7,7 +7,9 @@ import dev.sadakat.thinkfast.domain.model.AppSettings
 import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.GoalProgress
 import dev.sadakat.thinkfast.domain.repository.SettingsRepository
+import dev.sadakat.thinkfast.domain.repository.TrackedAppsRepository
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
+import dev.sadakat.thinkfast.domain.usecase.apps.GetTrackedAppsWithDetailsUseCase
 import dev.sadakat.thinkfast.domain.usecase.goals.GetGoalProgressUseCase
 import dev.sadakat.thinkfast.domain.usecase.goals.SetGoalUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +24,9 @@ class GoalViewModel(
     private val setGoalUseCase: SetGoalUseCase,
     private val getGoalProgressUseCase: GetGoalProgressUseCase,
     private val settingsRepository: SettingsRepository,
-    private val usageRepository: UsageRepository
+    private val usageRepository: UsageRepository,
+    private val trackedAppsRepository: TrackedAppsRepository,
+    private val getTrackedAppsWithDetailsUseCase: GetTrackedAppsWithDetailsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GoalUiState())
@@ -32,6 +36,7 @@ class GoalViewModel(
         loadGoalProgress()
         loadSettings()
         loadFrictionLevel()
+        observeTrackedApps()
     }
 
     /**
@@ -45,19 +50,49 @@ class GoalViewModel(
         }
     }
 
+    /**
+     * Observe tracked apps for reactive updates
+     */
+    private fun observeTrackedApps() {
+        viewModelScope.launch {
+            trackedAppsRepository.observeTrackedApps().collect { trackedApps ->
+                _uiState.value = _uiState.value.copy(
+                    trackedAppsCount = trackedApps.size
+                )
+                // Reload progress when tracked apps change
+                loadGoalProgress()
+            }
+        }
+    }
+
     fun loadGoalProgress() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                // Load progress for all supported apps
-                val facebookProgress = getGoalProgressUseCase(AppTarget.FACEBOOK.packageName)
-                val instagramProgress = getGoalProgressUseCase(AppTarget.INSTAGRAM.packageName)
+                // Load progress for all tracked apps
+                val trackedApps = trackedAppsRepository.getTrackedApps()
+                val allProgress = trackedApps.mapNotNull { packageName ->
+                    try {
+                        getGoalProgressUseCase(packageName)
+                    } catch (e: Exception) {
+                        null // Skip apps without goals
+                    }
+                }
+
+                // For backward compatibility, keep separate FB/IG fields
+                val facebookProgress = allProgress.find {
+                    it.goal.targetApp == AppTarget.FACEBOOK.packageName
+                }
+                val instagramProgress = allProgress.find {
+                    it.goal.targetApp == AppTarget.INSTAGRAM.packageName
+                }
 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     facebookProgress = facebookProgress,
-                    instagramProgress = instagramProgress
+                    instagramProgress = instagramProgress,
+                    trackedAppsProgress = allProgress
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -225,6 +260,19 @@ class GoalViewModel(
             }
         }
     }
+
+    /**
+     * Toggle expanded state for compact goal cards
+     */
+    fun toggleExpanded(packageName: String) {
+        _uiState.value = _uiState.value.copy(
+            expandedAppId = if (_uiState.value.expandedAppId == packageName) {
+                null
+            } else {
+                packageName
+            }
+        )
+    }
 }
 
 /**
@@ -235,6 +283,9 @@ data class GoalUiState(
     val isSaving: Boolean = false,
     val facebookProgress: GoalProgress? = null,
     val instagramProgress: GoalProgress? = null,
+    val trackedAppsProgress: List<GoalProgress> = emptyList(),
+    val trackedAppsCount: Int = 0,
+    val expandedAppId: String? = null,  // For compact expandable cards
     val appSettings: AppSettings = AppSettings(),
     val frictionLevelOverride: FrictionLevel? = null,  // null = Auto mode
     val currentFrictionLevel: FrictionLevel = FrictionLevel.GENTLE,

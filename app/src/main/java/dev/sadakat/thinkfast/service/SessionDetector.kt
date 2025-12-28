@@ -1,6 +1,5 @@
 package dev.sadakat.thinkfast.service
 
-import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.UsageEvent
 import dev.sadakat.thinkfast.domain.model.UsageSession
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
@@ -17,6 +16,7 @@ import java.util.Locale
 /**
  * Manages session detection and lifecycle
  * Handles session start, continuation, and end based on app usage patterns
+ * Updated to work with dynamic tracked apps (package names instead of enum)
  */
 class SessionDetector(
     private val usageRepository: UsageRepository,
@@ -31,7 +31,7 @@ class SessionDetector(
      */
     data class SessionState(
         val sessionId: Long,
-        val targetApp: AppTarget,
+        val targetApp: String,  // Package name (e.g., "com.facebook.katana")
         val startTimestamp: Long,
         var lastActiveTimestamp: Long,
         var totalDuration: Long = 0L,
@@ -53,12 +53,12 @@ class SessionDetector(
 
     /**
      * Process app foreground event
-     * This should be called when a target app is detected in foreground
+     * This should be called when a tracked app is detected in foreground
      *
-     * @param targetApp the detected target app
+     * @param targetApp the detected tracked app package name
      * @param timestamp the timestamp when the app was detected
      */
-    suspend fun onAppInForeground(targetApp: AppTarget, timestamp: Long) {
+    suspend fun onAppInForeground(targetApp: String, timestamp: Long) {
         val current = currentSession
 
         if (current == null) {
@@ -164,13 +164,13 @@ class SessionDetector(
      * Start a new session
      * NOTE: This is a suspend function that performs database insert non-blockingly
      */
-    private suspend fun startNewSession(targetApp: AppTarget, timestamp: Long) {
+    private suspend fun startNewSession(targetApp: String, timestamp: Long) {
         // Create session in database using withContext (non-blocking suspend)
         // This ensures callbacks have a valid session ID without blocking the thread
         val sessionId = withContext(Dispatchers.IO) {
             // Create session in database
             val session = UsageSession(
-                targetApp = targetApp.packageName,
+                targetApp = targetApp,  // Already a package name
                 startTimestamp = timestamp,
                 endTimestamp = null,
                 duration = 0L,
@@ -182,7 +182,7 @@ class SessionDetector(
         // Create session state with valid session ID
         val sessionState = SessionState(
             sessionId = sessionId,
-            targetApp = targetApp,
+            targetApp = targetApp,  // Package name
             startTimestamp = timestamp,
             lastActiveTimestamp = timestamp,
             timerStartTime = timestamp  // Timer starts when session begins
@@ -196,7 +196,7 @@ class SessionDetector(
                     sessionId = sessionId,
                     eventType = Constants.EVENT_APP_OPENED,
                     timestamp = timestamp,
-                    metadata = "App: ${targetApp.displayName}"
+                    metadata = "App: $targetApp"
                 )
             )
         }
@@ -233,7 +233,7 @@ class SessionDetector(
 
         if (timeSinceLastAlert >= timerDuration) {
             ErrorLogger.info(
-                "Timer threshold reached! Triggering alert for ${current.targetApp.displayName}",
+                "Timer threshold reached! Triggering alert for ${current.targetApp}",
                 context = "SessionDetector.continueSession"
             )
             current.lastTimerAlertTime = timeSinceTimerStarted
@@ -245,7 +245,7 @@ class SessionDetector(
             usageRepository.updateSession(
                 UsageSession(
                     id = current.sessionId,
-                    targetApp = current.targetApp.packageName,
+                    targetApp = current.targetApp,  // Already a package name
                     startTimestamp = current.startTimestamp,
                     endTimestamp = null,
                     duration = duration,

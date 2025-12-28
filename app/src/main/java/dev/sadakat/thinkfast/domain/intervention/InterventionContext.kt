@@ -1,6 +1,5 @@
 package dev.sadakat.thinkfast.domain.intervention
 
-import dev.sadakat.thinkfast.domain.model.AppTarget
 import java.util.Calendar
 
 /**
@@ -14,7 +13,7 @@ data class InterventionContext(
     val isWeekend: Boolean,                 // Saturday or Sunday
 
     // Session context
-    val targetApp: AppTarget,               // Which app is being opened
+    val targetApp: String,                  // Package name of the app being opened
     val currentSessionMinutes: Int,         // Current session duration
     val sessionCount: Int,                  // Number of sessions today
 
@@ -45,7 +44,7 @@ data class InterventionContext(
          * Creates an InterventionContext from current app state.
          */
         fun create(
-            targetApp: AppTarget,
+            targetApp: String,
             currentSessionDuration: Long = 0,
             sessionCount: Int,
             lastSessionEndTime: Long,

@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import dev.sadakat.thinkfast.domain.intervention.ContentSelector
 import dev.sadakat.thinkfast.domain.intervention.InterventionContext
 import dev.sadakat.thinkfast.domain.intervention.InterventionType
-import dev.sadakat.thinkfast.domain.model.AppTarget
 import dev.sadakat.thinkfast.domain.model.InterventionContent
 import dev.sadakat.thinkfast.domain.model.InterventionResult
 import dev.sadakat.thinkfast.domain.model.InterventionType as DomainInterventionType
@@ -44,7 +43,7 @@ class ReminderOverlayViewModel(
      * Called when the overlay is shown to the user
      * Generates context-aware content and logs the reminder shown event
      */
-    fun onOverlayShown(sessionId: Long, targetApp: AppTarget) {
+    fun onOverlayShown(sessionId: Long, targetApp: String) {
         viewModelScope.launch {
             interventionShownTime = System.currentTimeMillis()
 
@@ -90,7 +89,7 @@ class ReminderOverlayViewModel(
                     sessionId = sessionId,
                     eventType = Constants.EVENT_REMINDER_SHOWN,
                     timestamp = interventionShownTime,
-                    metadata = "App: ${targetApp.displayName} | Content: ${content::class.simpleName}"
+                    metadata = "App: $targetApp | Content: ${content::class.simpleName}"
                 )
             )
         }
@@ -184,7 +183,7 @@ class ReminderOverlayViewModel(
 
         val result = InterventionResult(
             sessionId = sessionId,
-            targetApp = targetApp.packageName,
+            targetApp = targetApp,  // Already a package name
             interventionType = DomainInterventionType.REMINDER,
             contentType = content?.javaClass?.simpleName ?: "Unknown",
             hourOfDay = calendar.get(Calendar.HOUR_OF_DAY),
@@ -224,24 +223,24 @@ class ReminderOverlayViewModel(
      * Phase F: Now uses effective friction level considering user preferences
      */
     private suspend fun buildInterventionContext(
-        targetApp: AppTarget,
+        targetApp: String,
         sessionId: Long
     ): InterventionContext {
-        // Get today's usage statistics
-        val todayUsage = usageRepository.getTodayUsageForApp(targetApp.packageName)
-        val yesterdayUsage = usageRepository.getYesterdayUsageForApp(targetApp.packageName)
-        val weeklyAverage = usageRepository.getWeeklyAverageForApp(targetApp.packageName)
+        // Get today's usage statistics (targetApp is already a package name)
+        val todayUsage = usageRepository.getTodayUsageForApp(targetApp)
+        val yesterdayUsage = usageRepository.getYesterdayUsageForApp(targetApp)
+        val weeklyAverage = usageRepository.getWeeklyAverageForApp(targetApp)
 
         // Get session data
-        val sessionCount = usageRepository.getTodaySessionCount(targetApp.packageName)
-        val lastSessionEnd = usageRepository.getLastSessionEndTime(targetApp.packageName)
+        val sessionCount = usageRepository.getTodaySessionCount(targetApp)
+        val lastSessionEnd = usageRepository.getLastSessionEndTime(targetApp)
         val currentSessionDuration = usageRepository.getCurrentSessionDuration(sessionId)
 
         // Get user settings
-        val goalMinutes = usageRepository.getDailyGoalForApp(targetApp.packageName)
+        val goalMinutes = usageRepository.getDailyGoalForApp(targetApp)
         val streakDays = usageRepository.getCurrentStreak()
         val installDate = usageRepository.getInstallDate()
-        val bestSessionMinutes = usageRepository.getBestSessionMinutes(targetApp.packageName)
+        val bestSessionMinutes = usageRepository.getBestSessionMinutes(targetApp)
 
         // Phase F: Get effective friction level (considers user override)
         val frictionLevel = usageRepository.getEffectiveFrictionLevel()
@@ -269,7 +268,7 @@ class ReminderOverlayViewModel(
  */
 data class ReminderOverlayState(
     val sessionId: Long? = null,
-    val targetApp: AppTarget? = null,
+    val targetApp: String? = null,  // Package name
     val interventionContent: InterventionContent? = null,
     val interventionContext: InterventionContext? = null,
     val isLoading: Boolean = true,

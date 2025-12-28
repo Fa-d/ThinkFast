@@ -131,21 +131,36 @@ private fun updateBarChartData(
         return
     }
 
-    // Create bar entries with stacked values [Facebook, Instagram]
+    // Get all unique apps across all time slots (sorted for consistency)
+    val allApps = data.flatMap { it.appUsage.keys }.distinct().sorted()
+
+    if (allApps.isEmpty()) {
+        chart.clear()
+        chart.invalidate()
+        return
+    }
+
+    // Create bar entries with stacked values for each app
     val barEntries = data.map { usage ->
-        BarEntry(
-            usage.timeSlot,
-            floatArrayOf(usage.facebookMinutes, usage.instagramMinutes)
-        )
+        // Build stacked values array in consistent app order
+        val stackedValues = allApps.map { app ->
+            usage.appUsage[app] ?: 0f
+        }.toFloatArray()
+
+        BarEntry(usage.timeSlot, stackedValues)
     }
 
     // Create dataset
     val dataSet = BarDataSet(barEntries, "").apply {
-        // Set colors for stacked bars
-        colors = listOf(ChartColors.FACEBOOK_BLUE, ChartColors.INSTAGRAM_PINK)
+        // Set colors for stacked bars (one color per app)
+        colors = allApps.mapIndexed { index, _ ->
+            ChartColors.getColorForApp(index)
+        }
 
-        // Labels for legend
-        stackLabels = arrayOf("Facebook", "Instagram")
+        // Labels for legend (extract simple app names from package names)
+        stackLabels = allApps.map { packageName ->
+            packageName.split(".").lastOrNull()?.replaceFirstChar { it.uppercase() } ?: packageName
+        }.toTypedArray()
 
         // Visual settings
         setDrawValues(true)

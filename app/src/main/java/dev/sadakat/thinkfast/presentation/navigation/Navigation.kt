@@ -38,6 +38,11 @@ sealed class Screen(val route: String) {
      * Theme and Appearance screen - theme customization
      */
     data object ThemeAppearance : Screen("theme_appearance")
+
+    /**
+     * Manage Apps screen - select and manage tracked apps
+     */
+    data object ManageApps : Screen("manage_apps")
 }
 
 /**
