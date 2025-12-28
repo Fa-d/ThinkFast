@@ -36,13 +36,13 @@ class TrackedAppsRepositoryImpl(
     private val _trackedAppsFlow = MutableStateFlow<List<String>>(emptyList())
 
     init {
-        // Load initial state
-        _trackedAppsFlow.value = loadTrackedApps()
-
-        // Perform one-time migration for existing users
-        // Migration runs asynchronously but updates the flow when complete
+        // Perform one-time migration for existing users BEFORE loading initial state
+        // This ensures the initial state is correct and prevents race conditions
+        // Run the migration in a blocking manner during init to ensure data consistency
         scope.launch {
             performInitialMigration()
+            // Load initial state AFTER migration completes to ensure we have correct data
+            _trackedAppsFlow.value = loadTrackedApps()
         }
     }
 

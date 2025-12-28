@@ -48,7 +48,9 @@ val viewModelModule = module {
             addTrackedAppUseCase = get(),
             removeTrackedAppUseCase = get(),
             trackedAppsRepository = get(),
-            getTrackedAppsWithDetailsUseCase = get()
+            getTrackedAppsWithDetailsUseCase = get(),
+            getGoalProgressUseCase = get(),
+            setGoalUseCase = get()
         )
     }
 }

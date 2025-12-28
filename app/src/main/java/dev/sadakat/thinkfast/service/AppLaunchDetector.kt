@@ -4,7 +4,11 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import dev.sadakat.thinkfast.domain.repository.TrackedAppsRepository
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Detects when tracked apps are launched or brought to foreground
@@ -19,6 +23,8 @@ class AppLaunchDetector(
     private val usageStatsManager: UsageStatsManager by lazy {
         context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // Track the last known foreground app to detect changes
     private var lastForegroundApp: String? = null
@@ -41,11 +47,12 @@ class AppLaunchDetector(
 
     /**
      * Refresh cached tracked apps if cache is stale
+     * This is a suspend function that performs the refresh asynchronously
      */
-    private fun refreshTrackedAppsCache() {
+    private suspend fun refreshTrackedAppsCacheAsync() {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastCacheUpdate > cacheValidityDuration) {
-            cachedTrackedApps = runBlocking {
+            cachedTrackedApps = withContext(Dispatchers.IO) {
                 trackedAppsRepository.getTrackedApps().toSet()
             }
             lastCacheUpdate = currentTime
@@ -53,10 +60,22 @@ class AppLaunchDetector(
     }
 
     /**
-     * Check if a package name is in the tracked apps list
+     * Triggers an async cache refresh without blocking
+     * Call this when tracked apps are added/removed to ensure quick detection
      */
-    private fun isTrackedApp(packageName: String): Boolean {
-        refreshTrackedAppsCache()
+    fun invalidateCache() {
+        lastCacheUpdate = 0L
+        scope.launch {
+            refreshTrackedAppsCacheAsync()
+        }
+    }
+
+    /**
+     * Check if a package name is in the tracked apps list
+     * This is now a suspend function to avoid blocking
+     */
+    private suspend fun isTrackedApp(packageName: String): Boolean {
+        refreshTrackedAppsCacheAsync()
         return cachedTrackedApps.contains(packageName)
     }
 
@@ -66,7 +85,7 @@ class AppLaunchDetector(
      *
      * This method should be called frequently (every 1.5 seconds) to minimize detection delay
      */
-    fun checkForAppLaunch(): AppLaunchEvent? {
+    suspend fun checkForAppLaunch(): AppLaunchEvent? {
         val currentTime = System.currentTimeMillis()
 
         // Query events from the last check until now
@@ -161,7 +180,7 @@ class AppLaunchDetector(
      * IMPORTANT: This uses the cached lastForegroundApp to handle continuous usage
      * where there might not be recent events. It's updated by checkForAppLaunch().
      */
-    fun isTargetAppInForeground(): String? {
+    suspend fun isTargetAppInForeground(): String? {
         // First try to get from recent events
         val foregroundApp = getCurrentForegroundApp()
 

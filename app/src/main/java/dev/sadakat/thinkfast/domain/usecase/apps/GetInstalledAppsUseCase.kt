@@ -3,6 +3,7 @@ package dev.sadakat.thinkfast.domain.usecase.apps
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import dev.sadakat.thinkfast.domain.model.AppCategory
 import dev.sadakat.thinkfast.domain.model.InstalledAppInfo
 import kotlinx.coroutines.Dispatchers
@@ -20,16 +21,26 @@ class GetInstalledAppsUseCase(
             val pm = context.packageManager
 
             pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                .filter {
-                    // Filter: Include non-system apps OR apps updated from system (like pre-installed apps user can disable)
+                .filter { appInfo ->
                     // Exclude ThinkFast itself
-                    val isSystemApp = (it.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                    val isUpdatedSystemApp = (it.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
-                    val isThinkFast = it.packageName == context.packageName
+                    if (appInfo.packageName == context.packageName) {
+                        return@filter false
+                    }
 
-                    // Keep: non-system apps OR updated system apps (user-manageable pre-installed apps)
-                    // Skip: pure system apps that weren't updated, and ThinkFast itself
-                    (!isSystemApp || isUpdatedSystemApp) && !isThinkFast
+                    // Filter out system apps
+                    // A system app typically:
+                    // 1. Has FLAG_SYSTEM flag set
+                    // 2. Does NOT have FLAG_UPDATED_SYSTEM_APP (not updated by user)
+                    // 3. Has no launcher intent (not a user-facing app)
+                    val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                    val isUpdatedSystemApp = (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+                    val hasLauncherIntent = pm.getLaunchIntentForPackage(appInfo.packageName) != null
+
+                    // Exclude if: it's a system app AND not updated by user AND has no launcher
+                    // This keeps: user apps, updated system apps, and system apps with launchers
+                    val shouldExclude = isSystemApp && !isUpdatedSystemApp && !hasLauncherIntent
+
+                    !shouldExclude
                 }
                 .mapNotNull { appInfo ->
                     try {
@@ -41,7 +52,7 @@ class GetInstalledAppsUseCase(
                             isInstalled = true
                         )
                     } catch (e: Exception) {
-                        // Skip apps we can't load info for
+                        // Skip apps we can't load info for (e.g., no icon, no label)
                         null
                     }
                 }

@@ -167,6 +167,18 @@ class UsageMonitorService : Service() {
             sessionDetector.initialize()
         }
 
+        // Observe tracked apps changes and invalidate cache when apps are added/removed
+        serviceScope.launch {
+            trackedAppsRepository.observeTrackedApps().collect { trackedApps ->
+                // Invalidate cache when tracked apps list changes
+                appLaunchDetector.invalidateCache()
+                ErrorLogger.info(
+                    "Tracked apps changed: ${trackedApps.size} apps tracked",
+                    context = "UsageMonitorService.onCreate"
+                )
+            }
+        }
+
         // Start foreground service with notification
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
@@ -327,13 +339,59 @@ class UsageMonitorService : Service() {
                     (timeSinceReminderOverlay < gracePeriod || timeSinceTimerOverlay < gracePeriod)
 
             if (shouldContinueSession) {
-                // Continue the session to update duration and check timer threshold
-                sessionDetector.onAppInForeground(currentSession.targetApp, currentTime)
+                // During grace period, verify the tracked app is still in the current process
+                // by checking if it's the topmost app in the usage events
+                val trackedAppStillActive = isAppStillActive(currentSession.targetApp)
+
+                if (trackedAppStillActive) {
+                    // App is still active - continue the session
+                    sessionDetector.onAppInForeground(currentSession.targetApp, currentTime)
+                } else {
+                    // User switched to a different app - end the session
+                    sessionDetector.checkForSessionTimeout(currentTime)
+                }
             } else {
                 // Check for session timeout
                 sessionDetector.checkForSessionTimeout(currentTime)
             }
         }
+    }
+
+    /**
+     * Check if a specific app is still the active/foreground app
+     * This is used during grace period to verify the user hasn't switched apps
+     */
+    private fun isAppStillActive(packageName: String): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val queryStartTime = currentTime - 10000L // Look back 10 seconds
+
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+            ?: return false
+
+        val usageEvents = usageStatsManager.queryEvents(queryStartTime, currentTime)
+        var latestEventApp: String? = null
+        var latestEventTime: Long = 0L
+
+        val event = android.app.usage.UsageEvents.Event()
+        while (usageEvents.hasNextEvent()) {
+            usageEvents.getNextEvent(event)
+
+            // Check for any event that indicates activity
+            when (event.eventType) {
+                android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED,
+                android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND,
+                android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED,
+                android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    if (event.timeStamp > latestEventTime) {
+                        latestEventApp = event.packageName
+                        latestEventTime = event.timeStamp
+                    }
+                }
+            }
+        }
+
+        // App is considered still active if the most recent event is for this app
+        return latestEventApp == packageName
     }
 
     /**

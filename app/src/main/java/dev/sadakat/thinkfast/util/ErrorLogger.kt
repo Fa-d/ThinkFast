@@ -19,15 +19,20 @@ object ErrorLogger {
         context: String? = null
     ) {
         val logMessage = buildLogMessage(message, context)
-        when {
-            BuildConfig.DEBUG -> {
-                Log.e(TAG, logMessage, exception)
-                exception.printStackTrace()
+        try {
+            when {
+                BuildConfig.DEBUG -> {
+                    Log.e(TAG, logMessage, exception)
+                    exception.printStackTrace()
+                }
+                else -> {
+                    // In production, only log the message without stack trace
+                    Log.e(TAG, "$logMessage: ${exception.javaClass.simpleName}: ${exception.message}")
+                }
             }
-            else -> {
-                // In production, only log the message without stack trace
-                Log.e(TAG, "$logMessage: ${exception.javaClass.simpleName}: ${exception.message}")
-            }
+        } catch (e: RuntimeException) {
+            // Log not mocked in unit tests - silently ignore
+            // In tests, we can rely on the test output instead
         }
     }
 
@@ -39,7 +44,11 @@ object ErrorLogger {
         context: String? = null
     ) {
         val logMessage = buildLogMessage(message, context)
-        Log.w(TAG, logMessage)
+        try {
+            Log.w(TAG, logMessage)
+        } catch (e: RuntimeException) {
+            // Log not mocked in unit tests - silently ignore
+        }
     }
 
     /**
@@ -50,7 +59,11 @@ object ErrorLogger {
         context: String? = null
     ) {
         val logMessage = buildLogMessage(message, context)
-        Log.i(TAG, logMessage)
+        try {
+            Log.i(TAG, logMessage)
+        } catch (e: RuntimeException) {
+            // Log not mocked in unit tests - silently ignore
+        }
     }
 
     /**
@@ -62,7 +75,11 @@ object ErrorLogger {
     ) {
         if (BuildConfig.DEBUG) {
             val logMessage = buildLogMessage(message, context)
-            Log.d(TAG, logMessage)
+            try {
+                Log.d(TAG, logMessage)
+            } catch (e: RuntimeException) {
+                // Log not mocked in unit tests - silently ignore
+            }
         }
     }
 

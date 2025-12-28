@@ -21,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -136,18 +137,8 @@ fun SettingsScreen(
                 }
             }
 
-            // Tracked Apps section header
-            item {
-                Text(
-                    text = "📱 Tracked Apps",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-                )
-            }
 
-            // Manage Apps navigation card
+            // Unified Manage Apps & Goals card
             item {
                 Card(
                     modifier = Modifier
@@ -159,47 +150,133 @@ fun SettingsScreen(
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        // Header row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(text = "⚙️", fontSize = 24.sp)
                                 Text(
-                                    text = "Manage Tracked Apps",
+                                    text = "Manage Apps & Goals",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Select which apps to track (${uiState.trackedAppsCount}/10)",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                                lineHeight = 20.sp
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Manage apps",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .rotate(270f)
                             )
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Manage apps",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(32.dp)
+
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                            thickness = 1.dp
                         )
+
+                        // Info sections
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Tracked apps count
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "📱",
+                                    fontSize = 20.sp
+                                )
+                                Column {
+                                    Text(
+                                        text = "${uiState.trackedAppsCount}/10",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = "Apps tracked",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
+
+                            // Goals info
+                            if (uiState.trackedAppsCount > 0) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = "🎯",
+                                        fontSize = 20.sp
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Set limits",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        Text(
+                                            text = "Daily goals",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                }
+                            } else {
+                                // Empty state hint
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = "➕",
+                                        fontSize = 20.sp
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Add apps",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        Text(
+                                            text = "Start tracking",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            // Empty state if no tracked apps
-            if (uiState.trackedAppsProgress.isEmpty()) {
+            // Empty state if no tracked apps (separate card for emphasis)
+            if (uiState.trackedAppsCount == 0) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -211,52 +288,24 @@ fun SettingsScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp),
+                                .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "📱",
-                                fontSize = 48.sp
-                            )
-                            Text(
-                                text = "No Apps Tracked",
-                                fontSize = 20.sp,
+                                text = "💡 Tip",
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Add apps to start tracking your usage and setting goals",
-                                fontSize = 14.sp,
+                                text = "Add apps to track usage and set daily time limits",
+                                fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
                             )
-                            Button(
-                                onClick = { navController.navigate(Screen.ManageApps.route) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(
-                                    text = "Add Your First App",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
                         }
                     }
                 }
-            }
-
-            // Compact goal cards for each tracked app
-            items(uiState.trackedAppsProgress) { progress ->
-                CompactGoalCard(
-                    progress = progress,
-                    isExpanded = uiState.expandedAppId == progress.goal.targetApp,
-                    isSaving = uiState.isSaving,
-                    onToggleExpanded = { viewModel.toggleExpanded(progress.goal.targetApp) },
-                    onSetGoal = { viewModel.setGoal(progress.goal.targetApp, it) }
-                )
             }
 
             // App Settings section header
@@ -1003,221 +1052,3 @@ private fun FrictionLevelOption(
     }
 }
 
-/**
- * Compact goal card with expand/collapse functionality
- * Shows app name, usage, and progress indicator when collapsed
- * Shows full goal editor when expanded
- */
-@Composable
-private fun CompactGoalCard(
-    progress: GoalProgress,
-    isExpanded: Boolean,
-    isSaving: Boolean,
-    onToggleExpanded: () -> Unit,
-    onSetGoal: (Int) -> Unit
-) {
-    var sliderValue by remember(progress.goal.dailyLimitMinutes) {
-        mutableStateOf(progress.goal.dailyLimitMinutes.toFloat())
-    }
-    val currentLimit = progress.goal.dailyLimitMinutes
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggleExpanded),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Collapsed header - always visible
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    // Circular progress indicator
-                    Box(
-                        modifier = Modifier.size(48.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            progress = (progress.percentageUsed / 100f).coerceIn(0f, 1f),
-                            modifier = Modifier.fillMaxSize(),
-                            strokeWidth = 4.dp,
-                            color = when (progress.getProgressColor()) {
-                                dev.sadakat.thinkfast.domain.model.ProgressColor.GREEN ->
-                                    MaterialTheme.colorScheme.primary
-                                dev.sadakat.thinkfast.domain.model.ProgressColor.YELLOW ->
-                                    MaterialTheme.colorScheme.tertiary
-                                dev.sadakat.thinkfast.domain.model.ProgressColor.ORANGE ->
-                                    MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                                dev.sadakat.thinkfast.domain.model.ProgressColor.RED ->
-                                    MaterialTheme.colorScheme.error
-                            },
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                        Text(
-                            text = "${progress.percentageUsed.toInt()}%",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    // App name and usage
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = progress.goal.targetApp.split(".").lastOrNull()?.capitalize() ?: "App",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = progress.formatTodayUsage(),
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                // Expand/collapse icon
-                Icon(
-                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            // Expanded content - goal editor
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    HorizontalDivider()
-
-                    // Streak info
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = progress.goal.getStreakMessage(),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = progress.goal.getLongestStreakMessage(),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Progress details
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = when (progress.getProgressColor()) {
-                                dev.sadakat.thinkfast.domain.model.ProgressColor.GREEN ->
-                                    MaterialTheme.colorScheme.primaryContainer
-                                dev.sadakat.thinkfast.domain.model.ProgressColor.YELLOW ->
-                                    MaterialTheme.colorScheme.tertiaryContainer
-                                dev.sadakat.thinkfast.domain.model.ProgressColor.ORANGE ->
-                                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
-                                dev.sadakat.thinkfast.domain.model.ProgressColor.RED ->
-                                    MaterialTheme.colorScheme.errorContainer
-                            }
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = progress.getStatusMessage(),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = progress.formatRemainingTime(),
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    // Goal slider
-                    Text(
-                        text = "Daily Limit: ${sliderValue.roundToInt()} minutes",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Slider(
-                        value = sliderValue,
-                        onValueChange = { sliderValue = it },
-                        valueRange = 5f..180f,
-                        steps = 34,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "5 min",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "180 min",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Update button
-                    Button(
-                        onClick = { onSetGoal(sliderValue.roundToInt()) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp),
-                        enabled = !isSaving && sliderValue.roundToInt() != currentLimit,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        if (isSaving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text(
-                                text = "Update Goal",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
