@@ -24,6 +24,8 @@ object NotificationHelper {
     private const val NOTIFICATION_ID_STREAK_MILESTONE = 2000
     private const val NOTIFICATION_ID_STREAK_BROKEN = 3000
     private const val NOTIFICATION_ID_RECOVERY_PROGRESS = 4000
+    private const val NOTIFICATION_ID_QUEST_DAY = 5000
+    private const val NOTIFICATION_ID_QUEST_COMPLETE = 5010
 
     /**
      * Create notification channels (must be called on app start)
@@ -309,5 +311,68 @@ object NotificationHelper {
             .build()
 
         notificationManager.notify(NOTIFICATION_ID_RECOVERY_PROGRESS + targetApp.hashCode(), notification)
+    }
+
+    /**
+     * Show notification for quest day completion (Days 1, 2)
+     * First-Week Retention feature
+     */
+    fun showQuestDayNotification(
+        context: Context,
+        day: Int,
+        emoji: String,
+        message: String
+    ) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ACHIEVEMENTS)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("$emoji Day $day Complete!")
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID_QUEST_DAY + day, notification)
+    }
+
+    /**
+     * Show notification when 7-day quest is complete
+     * First-Week Retention feature
+     */
+    fun showQuestCompleteNotification(context: Context) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ACHIEVEMENTS)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("🎉 7-Day Quest Complete!")
+            .setContentText("Amazing! You've completed your first week. You're building lasting habits!")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("Incredible achievement! You've successfully completed the 7-day onboarding quest. You're building lasting habits and taking control of your social media usage. Keep it up! 🌟")
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID_QUEST_COMPLETE, notification)
     }
 }

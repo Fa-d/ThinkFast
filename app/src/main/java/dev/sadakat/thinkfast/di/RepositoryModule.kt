@@ -1,6 +1,7 @@
 package dev.sadakat.thinkfast.di
 
 import dev.sadakat.thinkfast.data.preferences.InterventionPreferences
+import dev.sadakat.thinkfast.data.preferences.OnboardingQuestPreferences
 import dev.sadakat.thinkfast.data.preferences.StreakFreezePreferences
 import dev.sadakat.thinkfast.data.repository.GoalRepositoryImpl
 import dev.sadakat.thinkfast.data.repository.InterventionResultRepositoryImpl
@@ -9,6 +10,7 @@ import dev.sadakat.thinkfast.data.repository.StatsRepositoryImpl
 import dev.sadakat.thinkfast.data.repository.StreakRecoveryRepositoryImpl
 import dev.sadakat.thinkfast.data.repository.TrackedAppsRepositoryImpl
 import dev.sadakat.thinkfast.data.repository.UsageRepositoryImpl
+import dev.sadakat.thinkfast.data.repository.UserBaselineRepositoryImpl
 import dev.sadakat.thinkfast.domain.repository.GoalRepository
 import dev.sadakat.thinkfast.domain.repository.InterventionResultRepository
 import dev.sadakat.thinkfast.domain.repository.SettingsRepository
@@ -16,6 +18,7 @@ import dev.sadakat.thinkfast.domain.repository.StatsRepository
 import dev.sadakat.thinkfast.domain.repository.StreakRecoveryRepository
 import dev.sadakat.thinkfast.domain.repository.TrackedAppsRepository
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
+import dev.sadakat.thinkfast.domain.repository.UserBaselineRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -24,6 +27,7 @@ import org.koin.dsl.module
  * Phase F: Added InterventionPreferences for friction level management
  * Phase G: Added InterventionResultRepository for effectiveness tracking
  * Broken Streak Recovery: Added StreakFreezePreferences and StreakRecoveryRepository
+ * First-Week Retention: Added OnboardingQuestPreferences and UserBaselineRepository
  */
 val repositoryModule = module {
 
@@ -35,6 +39,11 @@ val repositoryModule = module {
     // StreakFreezePreferences (singleton) - Broken Streak Recovery
     single {
         StreakFreezePreferences(androidContext())
+    }
+
+    // OnboardingQuestPreferences (singleton) - First-Week Retention
+    single {
+        OnboardingQuestPreferences(androidContext())
     }
 
     // UsageRepository
@@ -58,6 +67,13 @@ val repositoryModule = module {
     single<StreakRecoveryRepository> {
         StreakRecoveryRepositoryImpl(
             streakRecoveryDao = get()
+        )
+    }
+
+    // UserBaselineRepository - First-Week Retention
+    single<UserBaselineRepository> {
+        UserBaselineRepositoryImpl(
+            baselineDao = get()
         )
     }
 

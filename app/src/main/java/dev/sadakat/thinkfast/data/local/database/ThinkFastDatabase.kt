@@ -8,12 +8,14 @@ import dev.sadakat.thinkfast.data.local.database.dao.DailyStatsDao
 import dev.sadakat.thinkfast.data.local.database.dao.GoalDao
 import dev.sadakat.thinkfast.data.local.database.dao.InterventionResultDao
 import dev.sadakat.thinkfast.data.local.database.dao.StreakRecoveryDao
+import dev.sadakat.thinkfast.data.local.database.dao.UserBaselineDao
 import dev.sadakat.thinkfast.data.local.database.dao.UsageEventDao
 import dev.sadakat.thinkfast.data.local.database.dao.UsageSessionDao
 import dev.sadakat.thinkfast.data.local.database.entities.DailyStatsEntity
 import dev.sadakat.thinkfast.data.local.database.entities.GoalEntity
 import dev.sadakat.thinkfast.data.local.database.entities.InterventionResultEntity
 import dev.sadakat.thinkfast.data.local.database.entities.StreakRecoveryEntity
+import dev.sadakat.thinkfast.data.local.database.entities.UserBaselineEntity
 import dev.sadakat.thinkfast.data.local.database.entities.UsageEventEntity
 import dev.sadakat.thinkfast.data.local.database.entities.UsageSessionEntity
 
@@ -24,9 +26,10 @@ import dev.sadakat.thinkfast.data.local.database.entities.UsageSessionEntity
         DailyStatsEntity::class,
         GoalEntity::class,
         InterventionResultEntity::class,  // Phase G: Added for effectiveness tracking
-        StreakRecoveryEntity::class  // Broken Streak Recovery feature
+        StreakRecoveryEntity::class,  // Broken Streak Recovery feature
+        UserBaselineEntity::class  // First-Week Retention feature
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class ThinkFastDatabase : RoomDatabase() {
@@ -36,6 +39,7 @@ abstract class ThinkFastDatabase : RoomDatabase() {
     abstract fun goalDao(): GoalDao
     abstract fun interventionResultDao(): InterventionResultDao  // Phase G
     abstract fun streakRecoveryDao(): StreakRecoveryDao  // Broken Streak Recovery
+    abstract fun userBaselineDao(): UserBaselineDao  // First-Week Retention
 }
 
 /**
@@ -127,6 +131,31 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
             """
             CREATE INDEX IF NOT EXISTS index_streak_recovery_isRecoveryComplete
             ON streak_recovery(isRecoveryComplete)
+            """.trimIndent()
+        )
+    }
+}
+
+/**
+ * Migration from version 3 to 4
+ * Adds the user_baseline table for First-Week Retention feature
+ */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create user_baseline table
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS user_baseline (
+                id INTEGER PRIMARY KEY NOT NULL,
+                firstWeekStartDate TEXT NOT NULL,
+                firstWeekEndDate TEXT NOT NULL,
+                totalUsageMinutes INTEGER NOT NULL,
+                averageDailyMinutes INTEGER NOT NULL,
+                facebookAverageMinutes INTEGER NOT NULL,
+                instagramAverageMinutes INTEGER NOT NULL,
+                calculatedDate TEXT NOT NULL,
+                timestamp INTEGER NOT NULL
+            )
             """.trimIndent()
         )
     }

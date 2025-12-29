@@ -6,6 +6,9 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dev.sadakat.thinkfast.domain.repository.GoalRepository
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
+import dev.sadakat.thinkfast.domain.usecase.baseline.CalculateUserBaselineUseCase
+import dev.sadakat.thinkfast.domain.usecase.quest.CompleteQuestDayUseCase
+import dev.sadakat.thinkfast.domain.usecase.quest.GetOnboardingQuestStatusUseCase
 import dev.sadakat.thinkfast.util.HapticFeedback
 import dev.sadakat.thinkfast.util.NotificationHelper
 import org.koin.core.component.KoinComponent
@@ -19,6 +22,7 @@ import java.util.Locale
  * Runs daily after DailyStatsAggregatorWorker updates streaks
  *
  * Phase 1.5: Quick Wins - Achievement notifications
+ * First-Week Retention: Quest milestone tracking and baseline calculation
  */
 class AchievementWorker(
     private val context: Context,
@@ -27,6 +31,9 @@ class AchievementWorker(
 
     private val goalRepository: GoalRepository by inject()
     private val usageRepository: UsageRepository by inject()
+    private val getOnboardingQuestStatusUseCase: GetOnboardingQuestStatusUseCase by inject()
+    private val completeQuestDayUseCase: CompleteQuestDayUseCase by inject()
+    private val calculateUserBaselineUseCase: CalculateUserBaselineUseCase by inject()
     private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     override suspend fun doWork(): Result {
@@ -35,7 +42,10 @@ class AchievementWorker(
 
             // Check achievements for yesterday (streak was just updated for yesterday)
             val yesterday = getYesterdayDate()
-            checkAndNotifyAchievements(yesterday)
+            val goalMet = checkAndNotifyAchievements(yesterday)
+
+            // Check quest milestones (First-Week Retention)
+            checkQuestMilestones(goalMet)
 
             Log.d(TAG, "AchievementWorker completed successfully")
             Result.success()
@@ -51,14 +61,15 @@ class AchievementWorker(
 
     /**
      * Check for achievements and send appropriate notifications
+     * Returns true if goal was met
      */
-    private suspend fun checkAndNotifyAchievements(date: String) {
+    private suspend fun checkAndNotifyAchievements(date: String): Boolean {
         // Get all active goals
         val allGoals = goalRepository.getAllGoals()
 
         if (allGoals.isEmpty()) {
             Log.d(TAG, "No goals set, skipping achievement check")
-            return
+            return false
         }
 
         var totalUsageMinutes = 0
@@ -121,6 +132,47 @@ class AchievementWorker(
             }
         } else {
             Log.d(TAG, "Goal not met: $totalUsageMinutes/$totalGoalMinutes min")
+        }
+
+        return goalMet
+    }
+
+    /**
+     * Check quest milestones and calculate baseline
+     * First-Week Retention Feature
+     */
+    private suspend fun checkQuestMilestones(goalMet: Boolean) {
+        try {
+            val questStatus = getOnboardingQuestStatusUseCase()
+
+            if (!questStatus.isActive) {
+                Log.d(TAG, "Quest not active, skipping quest milestone check")
+                return
+            }
+
+            val currentDay = questStatus.currentDay
+            Log.d(TAG, "Quest status - Day: $currentDay, Active: ${questStatus.isActive}, Completed: ${questStatus.isCompleted}")
+
+            // Complete quest day if goal was met
+            if (goalMet && currentDay in 1..7) {
+                completeQuestDayUseCase(currentDay, goalMet)
+                Log.d(TAG, "Completed quest day $currentDay")
+
+                // Calculate baseline on Day 7
+                if (currentDay == 7) {
+                    val baseline = calculateUserBaselineUseCase()
+                    if (baseline != null) {
+                        Log.d(TAG, "Baseline calculated: ${baseline.averageDailyMinutes} min/day")
+                    } else {
+                        Log.d(TAG, "Baseline calculation skipped (not enough data yet)")
+                    }
+                }
+            } else {
+                Log.d(TAG, "Quest day $currentDay not completed (goal met: $goalMet)")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking quest milestones", e)
+            // Don't fail the worker if quest check fails
         }
     }
 

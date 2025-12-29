@@ -22,6 +22,10 @@ import dev.sadakat.thinkfast.domain.usecase.streaks.GetRecoveryProgressUseCase
 import dev.sadakat.thinkfast.domain.usecase.streaks.GetStreakFreezeStatusUseCase
 import dev.sadakat.thinkfast.domain.usecase.streaks.ResetMonthlyFreezesUseCase
 import dev.sadakat.thinkfast.domain.usecase.streaks.UpdateStreakWithRecoveryUseCase
+import dev.sadakat.thinkfast.domain.usecase.baseline.CalculateUserBaselineUseCase
+import dev.sadakat.thinkfast.domain.usecase.quickwins.CheckQuickWinMilestonesUseCase
+import dev.sadakat.thinkfast.domain.usecase.quest.CompleteQuestDayUseCase
+import dev.sadakat.thinkfast.domain.usecase.quest.GetOnboardingQuestStatusUseCase
 import dev.sadakat.thinkfast.util.NotificationHelper
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -73,6 +77,35 @@ val useCaseModule = module {
             usageRepository = get(),
             streakRecoveryRepository = get(),
             freezePreferences = get(),
+            notificationHelper = NotificationHelper,
+            context = androidContext()
+        )
+    }
+
+    // First-Week Retention use cases
+    factory {
+        CalculateUserBaselineUseCase(
+            usageRepository = get(),
+            goalRepository = get(),
+            baselineRepository = get()
+        )
+    }
+    factory {
+        CheckQuickWinMilestonesUseCase(
+            usageRepository = get(),
+            goalRepository = get(),
+            questPreferences = get()
+        )
+    }
+    factory {
+        GetOnboardingQuestStatusUseCase(
+            questPreferences = get(),
+            goalRepository = get()
+        )
+    }
+    factory {
+        CompleteQuestDayUseCase(
+            questPreferences = get(),
             notificationHelper = NotificationHelper,
             context = androidContext()
         )
