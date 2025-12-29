@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -895,69 +896,194 @@ private fun TimerDurationCard(
 }
 
 /**
- * Friction Level selector card - allows user to override automatic friction level
+ * Friction Level selector card - shows summary and opens bottom sheet for selection
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FrictionLevelCard(
     currentLevel: dev.sadakat.thinkfast.domain.intervention.FrictionLevel,
     selectedOverride: dev.sadakat.thinkfast.domain.intervention.FrictionLevel?,
     onLevelSelected: (dev.sadakat.thinkfast.domain.intervention.FrictionLevel?) -> Unit
 ) {
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
+    // Get display name for current selection
+    val currentDisplayName = when {
+        selectedOverride == null -> "Auto (Recommended)"
+        else -> selectedOverride.displayName
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showBottomSheet = true },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            // Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(text = "⚙️", fontSize = 24.sp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                // Header
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(text = "⚙️", fontSize = 24.sp)
+                    Text(
+                        text = "Intervention Strength",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Control how much friction appears when opening apps",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 18.sp
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Current selection display
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Current:",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = currentDisplayName,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowUp,
+                contentDescription = "Show options",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+
+    // Bottom Sheet
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .padding(vertical = 16.dp)
+                            .width(32.dp)
+                            .height(4.dp),
+                        shape = RoundedCornerShape(2.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    ) {}
+                }
+            }
+        ) {
+            FrictionLevelBottomSheetContent(
+                currentLevel = currentLevel,
+                selectedOverride = selectedOverride,
+                onLevelSelected = {
+                    onLevelSelected(it)
+                    showBottomSheet = false
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Bottom sheet content for friction level selection
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FrictionLevelBottomSheetContent(
+    currentLevel: dev.sadakat.thinkfast.domain.intervention.FrictionLevel,
+    selectedOverride: dev.sadakat.thinkfast.domain.intervention.FrictionLevel?,
+    onLevelSelected: (dev.sadakat.thinkfast.domain.intervention.FrictionLevel?) -> Unit
+) {
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = screenHeight * 0.7f)
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Title
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
                 Text(
                     text = "Intervention Strength",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Select the level of friction",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
 
-            Spacer(modifier = Modifier.height(8.dp))
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 8.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
 
-            Text(
-                text = "Control how much friction appears when opening apps",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                lineHeight = 18.sp
-            )
+        // Auto option (null = automatic based on tenure)
+        FrictionLevelOption(
+            title = "Auto (Recommended)",
+            description = "Gradually increases based on your app usage tenure",
+            level = null,
+            currentLevel = currentLevel,
+            isSelected = selectedOverride == null,
+            onSelect = { onLevelSelected(null) }
+        )
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Auto option (null = automatic based on tenure)
+        // Manual options for each friction level
+        dev.sadakat.thinkfast.domain.intervention.FrictionLevel.values().forEach { level ->
             FrictionLevelOption(
-                title = "Auto (Recommended)",
-                description = "Gradually increases based on your app usage tenure",
-                level = null,
+                title = level.displayName,
+                description = level.description,
+                level = level,
                 currentLevel = currentLevel,
-                isSelected = selectedOverride == null,
-                onSelect = { onLevelSelected(null) }
+                isSelected = selectedOverride == level,
+                onSelect = { onLevelSelected(level) }
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Manual options for each friction level
-            dev.sadakat.thinkfast.domain.intervention.FrictionLevel.values().forEach { level ->
-                FrictionLevelOption(
-                    title = level.displayName,
-                    description = level.description,
-                    level = level,
-                    currentLevel = currentLevel,
-                    isSelected = selectedOverride == level,
-                    onSelect = { onLevelSelected(level) }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
         }
     }
 }

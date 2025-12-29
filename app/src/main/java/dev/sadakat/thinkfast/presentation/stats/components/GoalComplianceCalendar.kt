@@ -18,8 +18,13 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +43,7 @@ import java.util.Locale
 /**
  * Goal compliance calendar showing monthly view of goal achievement
  * Phase 5: Visual month-at-a-glance compliance tracking
+ * Phase 4.3: Added month navigation
  *
  * Visual indicators:
  * - Green: Goal met
@@ -49,10 +55,16 @@ import java.util.Locale
 fun GoalComplianceCalendar(
     complianceData: Map<String, Boolean>,  // date -> met goal?
     modifier: Modifier = Modifier,
-    showCurrentMonth: Boolean = true
+    monthOffset: Int = 0,  // Phase 4.3: 0 = current month, -1 = previous, +1 = next
+    onPreviousMonth: () -> Unit = {},  // Phase 4.3: Navigation callback
+    onNextMonth: () -> Unit = {}  // Phase 4.3: Navigation callback
 ) {
     val calendar = Calendar.getInstance()
-    val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.time)
+    // Phase 4.3: Apply month offset
+    calendar.add(Calendar.MONTH, monthOffset)
+
+    val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Calendar.getInstance().time)
+    val displayMonth = SimpleDateFormat("MMMM yyyy", Locale.US).format(calendar.time)
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -67,33 +79,44 @@ fun GoalComplianceCalendar(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header
+            // Phase 4.3: Enhanced header with navigation
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "📅", fontSize = 28.sp)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "Goal Compliance",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (showCurrentMonth) {
-                                SimpleDateFormat("MMMM yyyy", Locale.US).format(calendar.time)
-                            } else {
-                                "Last 30 Days"
-                            },
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
-                    }
+                // Previous month button
+                IconButton(onClick = onPreviousMonth) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowLeft,
+                        contentDescription = "Previous month",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // Month display
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Goal Compliance",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = displayMonth,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Next month button
+                IconButton(onClick = onNextMonth) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowRight,
+                        contentDescription = "Next month",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 
@@ -139,14 +162,18 @@ fun GoalComplianceCalendar(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Calendar grid
-            val calendarDays = generateCalendarDays(showCurrentMonth)
+            // Calendar grid - Phase 4.3: Use calendar with month offset
+            // Fixed height to avoid infinite constraints in LazyColumn
+            val calendarDays = generateCalendarDays(calendar)
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(7),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp),  // Fixed height: 6 rows of ~40dp cells + spacing
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                userScrollEnabled = false  // Disable nested scrolling
             ) {
                 items(calendarDays) { day ->
                     CalendarDayCell(
@@ -314,60 +341,43 @@ private data class CalendarDay(
  * Generate calendar days for display
  * @param showCurrentMonth If true, shows current month. If false, shows last 30 days
  */
-private fun generateCalendarDays(showCurrentMonth: Boolean): List<CalendarDay> {
-    val calendar = Calendar.getInstance()
+/**
+ * Phase 4.3: Updated to accept calendar with month offset
+ */
+private fun generateCalendarDays(calendar: Calendar): List<CalendarDay> {
     val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     val days = mutableListOf<CalendarDay>()
 
-    if (showCurrentMonth) {
-        // Get current month
-        val currentMonth = calendar.get(Calendar.MONTH)
-        val currentYear = calendar.get(Calendar.YEAR)
+    // Get month from provided calendar (which has monthOffset applied)
+    val currentMonth = calendar.get(Calendar.MONTH)
+    val currentYear = calendar.get(Calendar.YEAR)
 
-        // Set to first day of month
-        calendar.set(Calendar.DAY_OF_MONTH, 1)
+    // Set to first day of month
+    calendar.set(Calendar.DAY_OF_MONTH, 1)
 
-        // Get day of week for first day (1 = Sunday, 7 = Saturday)
-        val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+    // Get day of week for first day (1 = Sunday, 7 = Saturday)
+    val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
 
-        // Add empty days for padding at start
-        val paddingDays = firstDayOfWeek - 1
-        calendar.add(Calendar.DAY_OF_MONTH, -paddingDays)
+    // Add empty days for padding at start
+    val paddingDays = firstDayOfWeek - 1
+    calendar.add(Calendar.DAY_OF_MONTH, -paddingDays)
 
-        // Generate 42 days (6 weeks) to fill the grid
-        repeat(42) {
-            val date = dateFormat.format(calendar.time)
-            val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
-            val month = calendar.get(Calendar.MONTH)
-            val isCurrentMonth = month == currentMonth
+    // Generate 42 days (6 weeks) to fill the grid
+    repeat(42) {
+        val date = dateFormat.format(calendar.time)
+        val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
+        val month = calendar.get(Calendar.MONTH)
+        val isCurrentMonth = month == currentMonth
 
-            days.add(
-                CalendarDay(
-                    date = date,
-                    dayOfMonth = dayOfMonth,
-                    isCurrentMonth = isCurrentMonth
-                )
+        days.add(
+            CalendarDay(
+                date = date,
+                dayOfMonth = dayOfMonth,
+                isCurrentMonth = isCurrentMonth
             )
+        )
 
-            calendar.add(Calendar.DAY_OF_MONTH, 1)
-        }
-    } else {
-        // Last 30 days mode - not currently used but available
-        repeat(30) {
-            val date = dateFormat.format(calendar.time)
-            val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
-
-            days.add(
-                0, // Insert at beginning
-                CalendarDay(
-                    date = date,
-                    dayOfMonth = dayOfMonth,
-                    isCurrentMonth = true
-                )
-            )
-
-            calendar.add(Calendar.DAY_OF_MONTH, -1)
-        }
+        calendar.add(Calendar.DAY_OF_MONTH, 1)
     }
 
     return days

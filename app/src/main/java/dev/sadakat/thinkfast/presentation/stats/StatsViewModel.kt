@@ -65,10 +65,19 @@ class StatsViewModel(
 
     /**
      * Load all statistics data
+     * Phase 2.1: Added isRefreshing state for better loading feedback
      */
     fun loadStatistics() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            // If already has data, show refreshing indicator instead of full loading
+            val hasExistingData = _uiState.value.dailyStats != null ||
+                    _uiState.value.weeklyStats != null ||
+                    _uiState.value.monthlyStats != null
+
+            _uiState.value = _uiState.value.copy(
+                isLoading = !hasExistingData,
+                isRefreshing = hasExistingData
+            )
 
             try {
                 val today = dateFormatter.format(Date())
@@ -115,6 +124,7 @@ class StatsViewModel(
 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
+                    isRefreshing = false,
                     dailyStats = dailyStats,
                     weeklyStats = weeklyStats,
                     monthlyStats = monthlyStats,
@@ -137,6 +147,7 @@ class StatsViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
+                    isRefreshing = false,
                     error = e.message ?: "Failed to load statistics"
                 )
             }
@@ -155,6 +166,29 @@ class StatsViewModel(
      */
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    /**
+     * Navigate to previous month in calendar
+     * Phase 4.3: Month navigation
+     */
+    fun selectPreviousMonth() {
+        val newOffset = _uiState.value.calendarMonthOffset - 1
+        _uiState.value = _uiState.value.copy(calendarMonthOffset = newOffset)
+        // TODO: Reload compliance data for the selected month
+    }
+
+    /**
+     * Navigate to next month in calendar
+     * Phase 4.3: Month navigation
+     */
+    fun selectNextMonth() {
+        val newOffset = _uiState.value.calendarMonthOffset + 1
+        // Don't allow future months
+        if (newOffset <= 0) {
+            _uiState.value = _uiState.value.copy(calendarMonthOffset = newOffset)
+            // TODO: Reload compliance data for the selected month
+        }
     }
 
     /**
@@ -221,9 +255,13 @@ class StatsViewModel(
 /**
  * UI state for the Statistics screen
  * Phase 5: Enhanced with smart insights and behavioral analytics
+ * Phase 2.1: Added isRefreshing for loading feedback
+ * Phase 4.3: Added calendar month navigation
  */
 data class StatsUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val calendarMonthOffset: Int = 0,  // Phase 4.3: 0 = current, -1 = previous, etc.
     val dailyStats: DailyStatistics? = null,
     val weeklyStats: WeeklyStatistics? = null,
     val monthlyStats: MonthlyStatistics? = null,

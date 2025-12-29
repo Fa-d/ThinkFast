@@ -1,12 +1,21 @@
 package dev.sadakat.thinkfast.presentation.stats.charts
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
@@ -19,6 +28,8 @@ import dev.sadakat.thinkfast.presentation.stats.ChartPeriod
 /**
  * Composable that displays a stacked bar chart showing usage breakdown over time
  * Displays Facebook and Instagram usage stacked in each bar
+ * Phase 1.3: Added empty state handling
+ * Phase 4.1: Added responsive chart heights
  */
 @Composable
 fun StackedBarUsageChart(
@@ -26,23 +37,63 @@ fun StackedBarUsageChart(
     period: ChartPeriod,
     modifier: Modifier = Modifier
 ) {
+    // Phase 4.1: Responsive chart height based on screen size
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val chartHeight = when {
+        screenHeight < 600.dp -> 240.dp  // Small screens: reduce by 20%
+        screenHeight > 800.dp -> 330.dp  // Large screens: increase by 10%
+        else -> 300.dp  // Medium screens: default
+    }
+
     val chartData = remember(sessions, period) {
         prepareStackedBarData(sessions, period)
     }
 
-    AndroidView(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(300.dp),
-        factory = { context ->
-            BarChart(context).apply {
-                setupBarChart(this, period)
+    // Check if chart has data to display
+    val hasData = chartData.isNotEmpty() && chartData.any { it.totalMinutes > 0f }
+
+    if (!hasData) {
+        // Empty state
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(chartHeight),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "📊",
+                    fontSize = 36.sp
+                )
+                Text(
+                    text = "No usage data for this period",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
-        },
-        update = { chart ->
-            updateBarChartData(chart, chartData, period)
         }
-    )
+    } else {
+        // Chart with data
+        AndroidView(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(chartHeight),
+            factory = { context ->
+                BarChart(context).apply {
+                    setupBarChart(this, period)
+                }
+            },
+            update = { chart ->
+                updateBarChartData(chart, chartData, period)
+            }
+        )
+    }
 }
 
 /**

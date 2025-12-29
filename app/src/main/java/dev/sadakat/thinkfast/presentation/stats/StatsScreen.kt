@@ -1,5 +1,10 @@
 package dev.sadakat.thinkfast.presentation.stats
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
@@ -29,7 +34,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +61,9 @@ import dev.sadakat.thinkfast.presentation.stats.components.BehavioralInsightsCar
 import dev.sadakat.thinkfast.presentation.stats.components.InterventionEffectivenessCard
 import dev.sadakat.thinkfast.presentation.stats.components.ComparativeAnalyticsCard
 import dev.sadakat.thinkfast.presentation.stats.components.GoalComplianceCalendar
+import dev.sadakat.thinkfast.presentation.stats.components.ErrorStateCard
+import dev.sadakat.thinkfast.presentation.stats.components.EmptyStatsCard
+import dev.sadakat.thinkfast.presentation.stats.components.InsightCardSkeleton
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.graphics.Color as ComposeColor
 
@@ -67,13 +79,33 @@ fun StatsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Phase 5.1: Card entrance animation state
+    var showContent by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.isLoading) {
+        if (!uiState.isLoading) {
+            showContent = true
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Statistics") },
                 actions = {
-                    IconButton(onClick = { viewModel.loadStatistics() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    // Phase 2.1: Refresh button with loading indicator
+                    IconButton(
+                        onClick = { viewModel.loadStatistics() },
+                        enabled = !uiState.isRefreshing
+                    ) {
+                        if (uiState.isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
                     }
                 }
             )
@@ -123,10 +155,54 @@ fun StatsScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Phase 5: Smart Insight - Featured insight (shown on all tabs)
-                    uiState.smartInsight?.let { insight ->
+                    // Phase 1: Error state handling
+                    uiState.error?.let { errorMessage ->
                         item {
-                            SmartInsightCard(insight = insight)
+                            ErrorStateCard(
+                                errorMessage = errorMessage,
+                                onRetry = { viewModel.loadStatistics() },
+                                onDismiss = { viewModel.clearError() }
+                            )
+                        }
+                    }
+
+                    // Phase 1: Empty state handling - check if any stats data exists
+                    val hasAnyData = uiState.dailyStats != null ||
+                            uiState.weeklyStats != null ||
+                            uiState.monthlyStats != null
+
+                    if (!hasAnyData && uiState.error == null) {
+                        item {
+                            EmptyStatsCard(
+                                onNavigateToManageApps = {
+                                    navController.navigate("manage_apps")
+                                }
+                            )
+                        }
+                    }
+
+                    // Phase 5: Smart Insight - Featured insight (shown on all tabs)
+                    // Phase 2.2: Show skeleton while loading
+                    // Phase 5.1: Added entrance animation
+                    if (hasAnyData) {
+                        val smartInsight = uiState.smartInsight
+                        if (smartInsight != null) {
+                            item {
+                                AnimatedVisibility(
+                                    visible = showContent,
+                                    enter = fadeIn(animationSpec = tween(400)) +
+                                            slideInVertically(
+                                                initialOffsetY = { it / 4 },
+                                                animationSpec = tween(400)
+                                            )
+                                ) {
+                                    SmartInsightCard(insight = smartInsight)
+                                }
+                            }
+                        } else if (uiState.isRefreshing) {
+                            item {
+                                InsightCardSkeleton()
+                            }
                         }
                     }
 
@@ -254,11 +330,14 @@ fun StatsScreen(
                                 item { MonthlyStatsContent(stats, uiState.monthlyTrend) }
 
                                 // Phase 5: Goal Compliance Calendar
+                                // Phase 4.3: Added month navigation
                                 if (uiState.goalComplianceData.isNotEmpty()) {
                                     item {
                                         GoalComplianceCalendar(
                                             complianceData = uiState.goalComplianceData,
-                                            showCurrentMonth = true
+                                            monthOffset = uiState.calendarMonthOffset,
+                                            onPreviousMonth = { viewModel.selectPreviousMonth() },
+                                            onNextMonth = { viewModel.selectNextMonth() }
                                         )
                                     }
                                 }
@@ -321,16 +400,37 @@ fun StatsScreen(
 @Composable
 private fun DailyStatsContent(stats: DailyStatistics, trend: UsageTrend?) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Header
-        Text(
-            text = "Today's Usage",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        // Phase 3: Enhanced header with divider
+        Column {
+            Text(
+                text = "Today's Usage",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            )
+        }
 
-        // Trend card
-        trend?.let { TrendCard(it) }
+        // Phase 3: Enhanced trend card with prominence
+        trend?.let {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                )
+            ) {
+                Box(modifier = Modifier.padding(12.dp)) {
+                    TrendCard(it)
+                }
+            }
+        }
 
         // Main stats card
         StatCard(
@@ -376,22 +476,43 @@ private fun DailyStatsContent(stats: DailyStatistics, trend: UsageTrend?) {
 @Composable
 private fun WeeklyStatsContent(stats: WeeklyStatistics, trend: UsageTrend?) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Header
-        Text(
-            text = "This Week",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        // Phase 3: Enhanced header with divider
+        Column {
+            Text(
+                text = "This Week",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${stats.weekStart} to ${stats.weekEnd}",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            )
+        }
 
-        Text(
-            text = "${stats.weekStart} to ${stats.weekEnd}",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        // Trend card
-        trend?.let { TrendCard(it) }
+        // Phase 3: Enhanced trend card with prominence
+        trend?.let {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                )
+            ) {
+                Box(modifier = Modifier.padding(12.dp)) {
+                    TrendCard(it)
+                }
+            }
+        }
 
         // Main stats card
         StatCard(
@@ -437,16 +558,37 @@ private fun WeeklyStatsContent(stats: WeeklyStatistics, trend: UsageTrend?) {
 @Composable
 private fun MonthlyStatsContent(stats: MonthlyStatistics, trend: UsageTrend?) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Header
-        Text(
-            text = stats.monthName,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        // Phase 3: Enhanced header with divider
+        Column {
+            Text(
+                text = stats.monthName,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            )
+        }
 
-        // Trend card
-        trend?.let { TrendCard(it) }
+        // Phase 3: Enhanced trend card with prominence
+        trend?.let {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                )
+            ) {
+                Box(modifier = Modifier.padding(12.dp)) {
+                    TrendCard(it)
+                }
+            }
+        }
 
         // Main stats card
         StatCard(
