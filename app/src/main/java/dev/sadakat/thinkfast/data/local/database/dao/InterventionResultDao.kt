@@ -91,6 +91,89 @@ interface InterventionResultDao {
 
     @Query("SELECT COUNT(*) FROM intervention_results")
     suspend fun getTotalResultCount(): Int
+
+    // Phase 3: Intervention effectiveness queries
+
+    /**
+     * Get effectiveness by time window with date range filter
+     */
+    @Query("""
+        SELECT
+            CASE
+                WHEN hourOfDay BETWEEN 22 AND 23 OR hourOfDay BETWEEN 0 AND 5 THEN 'Late Night'
+                WHEN hourOfDay BETWEEN 6 AND 11 THEN 'Morning'
+                WHEN hourOfDay BETWEEN 12 AND 17 THEN 'Afternoon'
+                ELSE 'Evening'
+            END as timeWindow,
+            COUNT(*) as total,
+            SUM(CASE WHEN userChoice = 'GO_BACK' THEN 1 ELSE 0 END) as goBackCount,
+            AVG(timeToShowDecisionMs) as avgDecisionTimeMs
+        FROM intervention_results
+        WHERE timestamp >= :startTimestamp AND timestamp <= :endTimestamp
+        GROUP BY timeWindow
+    """)
+    suspend fun getEffectivenessByTimeWindow(
+        startTimestamp: Long,
+        endTimestamp: Long
+    ): List<TimeWindowStats>
+
+    /**
+     * Get effectiveness for specific contexts
+     */
+    @Query("""
+        SELECT
+            contentType,
+            COUNT(*) as total,
+            SUM(CASE WHEN userChoice = 'GO_BACK' THEN 1 ELSE 0 END) as goBackCount,
+            AVG(timeToShowDecisionMs) as avgDecisionTimeMs
+        FROM intervention_results
+        WHERE timestamp >= :startTimestamp AND timestamp <= :endTimestamp
+        AND (
+            CASE
+                WHEN :contextFilter = 'LATE_NIGHT' THEN (hourOfDay >= 22 OR hourOfDay <= 5)
+                WHEN :contextFilter = 'WEEKEND' THEN isWeekend = 1
+                WHEN :contextFilter = 'QUICK_REOPEN' THEN quickReopen = 1
+                ELSE 1 = 1
+            END
+        )
+        GROUP BY contentType
+    """)
+    suspend fun getEffectivenessByContext(
+        startTimestamp: Long,
+        endTimestamp: Long,
+        contextFilter: String  // 'LATE_NIGHT', 'WEEKEND', 'QUICK_REOPEN', or 'ALL'
+    ): List<ContextEffectivenessStats>
+
+    /**
+     * Get all intervention results in a date range
+     */
+    @Query("""
+        SELECT * FROM intervention_results
+        WHERE timestamp >= :startTimestamp AND timestamp <= :endTimestamp
+        ORDER BY timestamp DESC
+    """)
+    suspend fun getResultsInRange(
+        startTimestamp: Long,
+        endTimestamp: Long
+    ): List<InterventionResultEntity>
+
+    /**
+     * Get effectiveness trend over time (by day)
+     */
+    @Query("""
+        SELECT
+            date(timestamp/1000, 'unixepoch', 'localtime') as day,
+            COUNT(*) as total,
+            SUM(CASE WHEN userChoice = 'GO_BACK' THEN 1 ELSE 0 END) as goBackCount
+        FROM intervention_results
+        WHERE timestamp >= :startTimestamp AND timestamp <= :endTimestamp
+        GROUP BY day
+        ORDER BY day ASC
+    """)
+    suspend fun getEffectivenessTrendByDay(
+        startTimestamp: Long,
+        endTimestamp: Long
+    ): List<DailyEffectivenessStat>
 }
 
 /**
@@ -125,4 +208,42 @@ data class AppStats(
 ) {
     val dismissalRate: Double
         get() = if (interventions > 0) (goBackCount.toDouble() / interventions) * 100 else 0.0
+}
+
+/**
+ * Stats by time window (Phase 3)
+ */
+data class TimeWindowStats(
+    val timeWindow: String,
+    val total: Int,
+    val goBackCount: Int,
+    val avgDecisionTimeMs: Double?
+) {
+    val successRate: Double
+        get() = if (total > 0) (goBackCount.toDouble() / total) * 100 else 0.0
+}
+
+/**
+ * Stats by context (Phase 3)
+ */
+data class ContextEffectivenessStats(
+    val contentType: String,
+    val total: Int,
+    val goBackCount: Int,
+    val avgDecisionTimeMs: Double?
+) {
+    val successRate: Double
+        get() = if (total > 0) (goBackCount.toDouble() / total) * 100 else 0.0
+}
+
+/**
+ * Daily effectiveness stat for trend analysis (Phase 3)
+ */
+data class DailyEffectivenessStat(
+    val day: String,
+    val total: Int,
+    val goBackCount: Int
+) {
+    val successRate: Double
+        get() = if (total > 0) (goBackCount.toDouble() / total) * 100 else 0.0
 }

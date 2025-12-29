@@ -40,11 +40,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import dev.sadakat.thinkfast.domain.model.DailyStatistics
 import dev.sadakat.thinkfast.domain.model.MonthlyStatistics
+import dev.sadakat.thinkfast.domain.model.StatsPeriod
 import dev.sadakat.thinkfast.domain.model.UsageTrend
 import dev.sadakat.thinkfast.domain.model.WeeklyStatistics
 import dev.sadakat.thinkfast.presentation.stats.charts.StackedBarUsageChart
 import dev.sadakat.thinkfast.presentation.stats.charts.HorizontalTimePatternChart
 import dev.sadakat.thinkfast.presentation.stats.charts.GoalProgressChart
+import dev.sadakat.thinkfast.presentation.stats.components.SmartInsightCard
+import dev.sadakat.thinkfast.presentation.stats.components.PredictiveInsightsCard
+import dev.sadakat.thinkfast.presentation.stats.components.BehavioralInsightsCard
+import dev.sadakat.thinkfast.presentation.stats.components.InterventionEffectivenessCard
+import dev.sadakat.thinkfast.presentation.stats.components.ComparativeAnalyticsCard
+import dev.sadakat.thinkfast.presentation.stats.components.GoalComplianceCalendar
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.graphics.Color as ComposeColor
 
@@ -116,10 +123,24 @@ fun StatsScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // Phase 5: Smart Insight - Featured insight (shown on all tabs)
+                    uiState.smartInsight?.let { insight ->
+                        item {
+                            SmartInsightCard(insight = insight)
+                        }
+                    }
+
                     when (uiState.selectedPeriod) {
                         StatsPeriod.DAILY -> {
                             uiState.dailyStats?.let { stats ->
                                 item { DailyStatsContent(stats, uiState.dailyTrend) }
+
+                                // Phase 5: Predictive Insights
+                                uiState.predictiveInsights?.let { predictive ->
+                                    item {
+                                        PredictiveInsightsCard(insights = predictive)
+                                    }
+                                }
 
                                 // Stacked Bar Chart - Primary usage visualization
                                 item {
@@ -155,7 +176,8 @@ fun StatsScreen(
                                         GoalProgressChart(
                                             sessions = uiState.dailySessions,
                                             period = ChartPeriod.DAILY,
-                                            dailyGoalMinutes = null // TODO: Add goal data to ViewModel
+                                            dailyGoalMinutes = uiState.goalProgress
+                                                .firstOrNull()?.goal?.dailyLimitMinutes
                                         )
                                     }
                                 }
@@ -164,6 +186,27 @@ fun StatsScreen(
                         StatsPeriod.WEEKLY -> {
                             uiState.weeklyStats?.let { stats ->
                                 item { WeeklyStatsContent(stats, uiState.weeklyTrend) }
+
+                                // Phase 5: Behavioral Insights
+                                uiState.behavioralInsights?.let { behavioral ->
+                                    item {
+                                        BehavioralInsightsCard(insights = behavioral)
+                                    }
+                                }
+
+                                // Phase 5: Intervention Effectiveness
+                                uiState.interventionInsights?.let { intervention ->
+                                    item {
+                                        InterventionEffectivenessCard(insights = intervention)
+                                    }
+                                }
+
+                                // Phase 5: Comparative Analytics
+                                uiState.comparativeAnalytics?.let { comparative ->
+                                    item {
+                                        ComparativeAnalyticsCard(analytics = comparative)
+                                    }
+                                }
 
                                 // Stacked Bar Chart
                                 item {
@@ -199,7 +242,8 @@ fun StatsScreen(
                                         GoalProgressChart(
                                             sessions = uiState.weeklySessions,
                                             period = ChartPeriod.WEEKLY,
-                                            dailyGoalMinutes = null // TODO: Add goal data to ViewModel
+                                            dailyGoalMinutes = uiState.goalProgress
+                                                .firstOrNull()?.goal?.dailyLimitMinutes
                                         )
                                     }
                                 }
@@ -208,6 +252,23 @@ fun StatsScreen(
                         StatsPeriod.MONTHLY -> {
                             uiState.monthlyStats?.let { stats ->
                                 item { MonthlyStatsContent(stats, uiState.monthlyTrend) }
+
+                                // Phase 5: Goal Compliance Calendar
+                                if (uiState.goalComplianceData.isNotEmpty()) {
+                                    item {
+                                        GoalComplianceCalendar(
+                                            complianceData = uiState.goalComplianceData,
+                                            showCurrentMonth = true
+                                        )
+                                    }
+                                }
+
+                                // Phase 5: Comparative Analytics (for monthly view)
+                                uiState.comparativeAnalytics?.let { comparative ->
+                                    item {
+                                        ComparativeAnalyticsCard(analytics = comparative)
+                                    }
+                                }
 
                                 // Stacked Bar Chart
                                 item {
@@ -243,7 +304,8 @@ fun StatsScreen(
                                         GoalProgressChart(
                                             sessions = uiState.monthlySessions,
                                             period = ChartPeriod.MONTHLY,
-                                            dailyGoalMinutes = null // TODO: Add goal data to ViewModel
+                                            dailyGoalMinutes = uiState.goalProgress
+                                                .firstOrNull()?.goal?.dailyLimitMinutes
                                         )
                                     }
                                 }

@@ -11,7 +11,10 @@ import dev.sadakat.thinkfast.domain.model.InterventionType
 import dev.sadakat.thinkfast.domain.model.OverallAnalytics
 import dev.sadakat.thinkfast.domain.model.UserChoice
 import dev.sadakat.thinkfast.domain.repository.AppInterventionStats
+import dev.sadakat.thinkfast.domain.repository.ContextEffectivenessStats as DomainContextEffectivenessStats
+import dev.sadakat.thinkfast.domain.repository.DailyEffectivenessStat as DomainDailyEffectivenessStat
 import dev.sadakat.thinkfast.domain.repository.InterventionResultRepository
+import dev.sadakat.thinkfast.domain.repository.TimeWindowStats as DomainTimeWindowStats
 
 /**
  * Implementation of InterventionResultRepository using Room database
@@ -111,5 +114,59 @@ class InterventionResultRepositoryImpl(
 
     override suspend fun getTotalResultCount(): Int {
         return resultDao.getTotalResultCount()
+    }
+
+    // ========== Phase 3: Intervention Effectiveness Queries ==========
+
+    override suspend fun getEffectivenessByTimeWindow(
+        startTimestamp: Long,
+        endTimestamp: Long
+    ): List<DomainTimeWindowStats> {
+        return resultDao.getEffectivenessByTimeWindow(startTimestamp, endTimestamp)
+            .map { daoStats ->
+                DomainTimeWindowStats(
+                    timeWindow = daoStats.timeWindow,
+                    total = daoStats.total,
+                    goBackCount = daoStats.goBackCount,
+                    avgDecisionTimeMs = daoStats.avgDecisionTimeMs
+                )
+            }
+    }
+
+    override suspend fun getEffectivenessByContext(
+        startTimestamp: Long,
+        endTimestamp: Long,
+        contextFilter: String
+    ): List<DomainContextEffectivenessStats> {
+        return resultDao.getEffectivenessByContext(startTimestamp, endTimestamp, contextFilter)
+            .map { daoStats ->
+                DomainContextEffectivenessStats(
+                    contentType = daoStats.contentType,
+                    total = daoStats.total,
+                    goBackCount = daoStats.goBackCount,
+                    avgDecisionTimeMs = daoStats.avgDecisionTimeMs
+                )
+            }
+    }
+
+    override suspend fun getResultsInRange(
+        startTimestamp: Long,
+        endTimestamp: Long
+    ): List<InterventionResult> {
+        return resultDao.getResultsInRange(startTimestamp, endTimestamp).toDomain()
+    }
+
+    override suspend fun getEffectivenessTrendByDay(
+        startTimestamp: Long,
+        endTimestamp: Long
+    ): List<DomainDailyEffectivenessStat> {
+        return resultDao.getEffectivenessTrendByDay(startTimestamp, endTimestamp)
+            .map { daoStats ->
+                DomainDailyEffectivenessStat(
+                    day = daoStats.day,
+                    total = daoStats.total,
+                    goBackCount = daoStats.goBackCount
+                )
+            }
     }
 }

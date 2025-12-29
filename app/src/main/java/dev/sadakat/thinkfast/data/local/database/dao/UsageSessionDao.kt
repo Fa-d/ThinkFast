@@ -91,4 +91,65 @@ interface UsageSessionDao {
 
     @Query("SELECT * FROM usage_sessions WHERE date = :date ORDER BY startTimestamp DESC")
     fun observeSessionsByDate(date: String): Flow<List<UsageSessionEntity>>
+
+    // Phase 2: Behavioral pattern queries
+
+    /**
+     * Get sessions that occurred during late night hours (22:00 - 05:00)
+     */
+    @Query("""
+        SELECT * FROM usage_sessions
+        WHERE date >= :startDate AND date <= :endDate
+        AND (
+            CAST(strftime('%H', datetime(startTimestamp/1000, 'unixepoch', 'localtime')) AS INTEGER) >= 22
+            OR CAST(strftime('%H', datetime(startTimestamp/1000, 'unixepoch', 'localtime')) AS INTEGER) <= 5
+        )
+        ORDER BY startTimestamp DESC
+    """)
+    suspend fun getLateNightSessions(startDate: String, endDate: String): List<UsageSessionEntity>
+
+    /**
+     * Get sessions by day of week (0=Sunday, 1=Monday, etc.)
+     * Useful for weekend vs weekday analysis
+     */
+    @Query("""
+        SELECT * FROM usage_sessions
+        WHERE date >= :startDate AND date <= :endDate
+        AND CAST(strftime('%w', date) AS INTEGER) IN (:daysOfWeek)
+        ORDER BY startTimestamp DESC
+    """)
+    suspend fun getSessionsByDayOfWeek(
+        startDate: String,
+        endDate: String,
+        daysOfWeek: List<Int>  // 0=Sunday, 6=Saturday
+    ): List<UsageSessionEntity>
+
+    /**
+     * Get sessions longer than specified duration (for binge detection)
+     */
+    @Query("""
+        SELECT * FROM usage_sessions
+        WHERE date >= :startDate AND date <= :endDate
+        AND duration >= :minDurationMillis
+        ORDER BY duration DESC
+    """)
+    suspend fun getLongSessions(
+        startDate: String,
+        endDate: String,
+        minDurationMillis: Long
+    ): List<UsageSessionEntity>
+
+    /**
+     * Get all sessions grouped by hour of day (for peak time analysis)
+     * Returns sessions with their hour extracted
+     */
+    @Query("""
+        SELECT
+            *,
+            CAST(strftime('%H', datetime(startTimestamp/1000, 'unixepoch', 'localtime')) AS INTEGER) as hourOfDay
+        FROM usage_sessions
+        WHERE date >= :startDate AND date <= :endDate
+        ORDER BY startTimestamp ASC
+    """)
+    suspend fun getSessionsWithHourOfDay(startDate: String, endDate: String): List<UsageSessionEntity>
 }

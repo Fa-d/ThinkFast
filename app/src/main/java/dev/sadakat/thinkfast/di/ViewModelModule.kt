@@ -29,7 +29,13 @@ val viewModelModule = module {
             getWeeklyStatisticsUseCase = get(),
             getMonthlyStatisticsUseCase = get(),
             getSessionBreakdownUseCase = get(),
-            calculateTrendsUseCase = get()
+            calculateTrendsUseCase = get(),
+            getGoalProgressUseCase = get(),
+            generateSmartInsightUseCase = get(),
+            calculateBehavioralInsightsUseCase = get(),
+            calculateInterventionInsightsUseCase = get(),
+            generatePredictiveInsightsUseCase = get(),
+            calculateComparativeAnalyticsUseCase = get()
         )
     }
     viewModel {

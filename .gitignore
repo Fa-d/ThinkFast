@@ -35,3 +35,4 @@ keystore.properties
 /.idea/
 /.kotlin/
 /app/earlyAdopter/release/app-earlyAdopter-release.aab
+/app/production/release/app-production-release.aab

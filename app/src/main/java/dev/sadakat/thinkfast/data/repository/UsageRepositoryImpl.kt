@@ -215,4 +215,30 @@ class UsageRepositoryImpl(
 
         return ((shortestSession?.duration ?: 300_000) / 1000 / 60).toInt()  // Default 5 minutes
     }
+
+    // ========== Phase 2: Behavioral Pattern Queries ==========
+
+    override suspend fun getLateNightSessions(startDate: String, endDate: String): List<UsageSession> {
+        return sessionDao.getLateNightSessions(startDate, endDate).toDomain()
+    }
+
+    override suspend fun getSessionsByDayOfWeek(
+        startDate: String,
+        endDate: String,
+        daysOfWeek: List<Int>
+    ): List<UsageSession> {
+        return sessionDao.getSessionsByDayOfWeek(startDate, endDate, daysOfWeek).toDomain()
+    }
+
+    override suspend fun getLongSessions(
+        startDate: String,
+        endDate: String,
+        minDurationMillis: Long
+    ): List<UsageSession> {
+        return sessionDao.getLongSessions(startDate, endDate, minDurationMillis).toDomain()
+    }
+
+    override suspend fun getSessionsWithHourOfDay(startDate: String, endDate: String): List<UsageSession> {
+        return sessionDao.getSessionsWithHourOfDay(startDate, endDate).toDomain()
+    }
 }

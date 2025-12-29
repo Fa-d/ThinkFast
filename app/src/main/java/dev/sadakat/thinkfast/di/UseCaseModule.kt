@@ -7,6 +7,11 @@ import dev.sadakat.thinkfast.domain.usecase.apps.RemoveTrackedAppUseCase
 import dev.sadakat.thinkfast.domain.usecase.goals.GetGoalProgressUseCase
 import dev.sadakat.thinkfast.domain.usecase.goals.SetGoalUseCase
 import dev.sadakat.thinkfast.domain.usecase.goals.UpdateStreakUseCase
+import dev.sadakat.thinkfast.domain.usecase.insights.CalculateBehavioralInsightsUseCase
+import dev.sadakat.thinkfast.domain.usecase.insights.CalculateComparativeAnalyticsUseCase
+import dev.sadakat.thinkfast.domain.usecase.insights.CalculateInterventionInsightsUseCase
+import dev.sadakat.thinkfast.domain.usecase.insights.GeneratePredictiveInsightsUseCase
+import dev.sadakat.thinkfast.domain.usecase.insights.GenerateSmartInsightUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.CalculateTrendsUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.GetDailyStatisticsUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.GetMonthlyStatisticsUseCase
@@ -36,4 +41,18 @@ val useCaseModule = module {
     factory { AddTrackedAppUseCase(trackedAppsRepository = get(), context = androidContext()) }
     factory { RemoveTrackedAppUseCase(trackedAppsRepository = get(), goalRepository = get()) }
     factory { GetTrackedAppsWithDetailsUseCase(trackedAppsRepository = get(), context = androidContext()) }
+
+    // Phase 5: Smart Insights use cases
+    factory { CalculateBehavioralInsightsUseCase(usageRepository = get()) }
+    factory { CalculateInterventionInsightsUseCase(interventionResultRepository = get()) }
+    factory { GeneratePredictiveInsightsUseCase(usageRepository = get(), goalRepository = get(), getGoalProgressUseCase = get()) }
+    factory { CalculateComparativeAnalyticsUseCase(usageRepository = get(), goalRepository = get()) }
+    factory {
+        GenerateSmartInsightUseCase(
+            calculateBehavioralInsightsUseCase = get(),
+            calculateInterventionInsightsUseCase = get(),
+            generatePredictiveInsightsUseCase = get(),
+            calculateComparativeAnalyticsUseCase = get()
+        )
+    }
 }

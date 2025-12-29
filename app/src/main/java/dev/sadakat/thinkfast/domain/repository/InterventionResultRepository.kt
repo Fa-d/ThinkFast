@@ -96,6 +96,79 @@ interface InterventionResultRepository {
      * Get total count of recorded results
      */
     suspend fun getTotalResultCount(): Int
+
+    // ========== Phase 3: Intervention Effectiveness Queries ==========
+
+    /**
+     * Get effectiveness by time window with date range filter
+     */
+    suspend fun getEffectivenessByTimeWindow(
+        startTimestamp: Long,
+        endTimestamp: Long
+    ): List<TimeWindowStats>
+
+    /**
+     * Get effectiveness for specific contexts
+     */
+    suspend fun getEffectivenessByContext(
+        startTimestamp: Long,
+        endTimestamp: Long,
+        contextFilter: String  // 'LATE_NIGHT', 'WEEKEND', 'QUICK_REOPEN', or 'ALL'
+    ): List<ContextEffectivenessStats>
+
+    /**
+     * Get all intervention results in a date range
+     */
+    suspend fun getResultsInRange(
+        startTimestamp: Long,
+        endTimestamp: Long
+    ): List<InterventionResult>
+
+    /**
+     * Get effectiveness trend over time (by day)
+     */
+    suspend fun getEffectivenessTrendByDay(
+        startTimestamp: Long,
+        endTimestamp: Long
+    ): List<DailyEffectivenessStat>
+}
+
+/**
+ * Stats by time window (Phase 3)
+ */
+data class TimeWindowStats(
+    val timeWindow: String,
+    val total: Int,
+    val goBackCount: Int,
+    val avgDecisionTimeMs: Double?
+) {
+    val successRate: Double
+        get() = if (total > 0) (goBackCount.toDouble() / total) * 100 else 0.0
+}
+
+/**
+ * Stats by context (Phase 3)
+ */
+data class ContextEffectivenessStats(
+    val contentType: String,
+    val total: Int,
+    val goBackCount: Int,
+    val avgDecisionTimeMs: Double?
+) {
+    val successRate: Double
+        get() = if (total > 0) (goBackCount.toDouble() / total) * 100 else 0.0
+}
+
+/**
+ * Daily effectiveness stat for trend analysis (Phase 3)
+ */
+data class DailyEffectivenessStat(
+    val day: String,
+    val total: Int,
+    val goBackCount: Int
+) {
+    val successRate: Double
+        get() = if (total > 0) (goBackCount.toDouble() / total) * 100 else 0.0
 }
 
 /**

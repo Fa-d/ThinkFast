@@ -191,4 +191,35 @@ interface UsageRepository {
      * Returns null if using automatic calculation
      */
     suspend fun getFrictionLevelOverride(): dev.sadakat.thinkfast.domain.intervention.FrictionLevel?
+
+    // ========== Phase 2: Behavioral Pattern Queries ==========
+
+    /**
+     * Get sessions that occurred during late night hours (22:00 - 05:00)
+     */
+    suspend fun getLateNightSessions(startDate: String, endDate: String): List<UsageSession>
+
+    /**
+     * Get sessions by day of week (0=Sunday, 1=Monday, etc.)
+     * Useful for weekend vs weekday analysis
+     */
+    suspend fun getSessionsByDayOfWeek(
+        startDate: String,
+        endDate: String,
+        daysOfWeek: List<Int>
+    ): List<UsageSession>
+
+    /**
+     * Get sessions longer than specified duration (for binge detection)
+     */
+    suspend fun getLongSessions(
+        startDate: String,
+        endDate: String,
+        minDurationMillis: Long
+    ): List<UsageSession>
+
+    /**
+     * Get all sessions with their hour of day extracted
+     */
+    suspend fun getSessionsWithHourOfDay(startDate: String, endDate: String): List<UsageSession>
 }
