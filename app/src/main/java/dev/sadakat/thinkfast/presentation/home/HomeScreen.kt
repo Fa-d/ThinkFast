@@ -37,6 +37,10 @@ import dev.sadakat.thinkfast.presentation.navigation.Screen
 import dev.sadakat.thinkfast.service.UsageMonitorService
 import dev.sadakat.thinkfast.ui.components.AchievementBadge
 import dev.sadakat.thinkfast.ui.components.CompactCelebrationCard
+import dev.sadakat.thinkfast.ui.components.RecoveryCompleteDialog
+import dev.sadakat.thinkfast.ui.components.RecoveryProgressCard
+import dev.sadakat.thinkfast.ui.components.StreakBrokenRecoveryDialog
+import dev.sadakat.thinkfast.ui.components.StreakFreezeCard
 import dev.sadakat.thinkfast.ui.components.StreakMilestoneCelebration
 import dev.sadakat.thinkfast.ui.components.rememberFadeInAnimation
 import dev.sadakat.thinkfast.ui.theme.ProgressColors
@@ -65,12 +69,16 @@ fun HomeScreen(
         // Initial load
         viewModel.loadTodaySummary(isRefresh = false)
         viewModel.checkServiceStatus(context)
+        viewModel.loadFreezeStatus()      // Broken Streak Recovery
+        viewModel.loadRecoveryStatus()    // Broken Streak Recovery
 
         // Refresh every 30 seconds without showing loading spinner
         while (true) {
             delay(30000)
             viewModel.loadTodaySummary(isRefresh = true)
             viewModel.checkServiceStatus(context)
+            viewModel.loadFreezeStatus()      // Refresh freeze status
+            viewModel.loadRecoveryStatus()    // Refresh recovery status
             hasAllPermissions = PermissionHelper.hasAllRequiredPermissions(context)
         }
     }
@@ -89,6 +97,27 @@ fun HomeScreen(
         streakDays = uiState.currentStreak,
         onDismiss = { viewModel.dismissStreakCelebration() }
     )
+
+    // Streak Broken Recovery Dialog (Broken Streak Recovery feature)
+    uiState.activeRecovery?.let { recovery ->
+        StreakBrokenRecoveryDialog(
+            show = uiState.showStreakBrokenDialog,
+            previousStreak = recovery.previousStreak,
+            targetApp = recovery.targetApp,
+            onDismiss = { viewModel.dismissStreakBrokenDialog() }
+        )
+    }
+
+    // Recovery Complete Dialog (Broken Streak Recovery feature)
+    uiState.completedRecovery?.let { completed ->
+        RecoveryCompleteDialog(
+            show = uiState.showRecoveryCompleteDialog,
+            previousStreak = completed.previousStreak,
+            daysToRecover = completed.currentRecoveryDays,
+            targetApp = completed.targetApp,
+            onDismiss = { viewModel.dismissRecoveryCompleteDialog() }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -120,9 +149,13 @@ fun HomeScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(contentPadding),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                .padding(paddingValues),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 12.dp,
+                bottom = contentPadding.calculateBottomPadding() + 12.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Today at a Glance Card
@@ -153,6 +186,34 @@ fun HomeScreen(
                         backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
                         textColor = MaterialTheme.colorScheme.onTertiaryContainer
                     )
+                }
+            }
+
+            // Recovery Progress Card (Broken Streak Recovery feature)
+            uiState.activeRecovery?.let { recovery ->
+                if (!recovery.isRecoveryComplete) {
+                    item {
+                        RecoveryProgressCard(
+                            recovery = recovery,
+                            onDismiss = { viewModel.dismissRecoveryCard() }
+                        )
+                    }
+                }
+            }
+
+            // Streak Freeze Card (Broken Streak Recovery feature)
+            if (uiState.showFreezeButton) {
+                uiState.freezeStatus?.let { freezeStatus ->
+                    uiState.progressPercentage?.let { percentage ->
+                        item {
+                            StreakFreezeCard(
+                                freezeStatus = freezeStatus,
+                                currentStreak = uiState.currentStreak,
+                                percentageUsed = percentage,
+                                onActivateFreeze = { viewModel.activateStreakFreeze() }
+                            )
+                        }
+                    }
                 }
             }
 

@@ -36,3 +36,6 @@ keystore.properties
 /.kotlin/
 /app/earlyAdopter/release/app-earlyAdopter-release.aab
 /app/production/release/app-production-release.aab
+/docs/CROSS_DEVICE_SYNC_IMPLEMENTATION_PLAN.md
+/docs/PREMIUM_FEATURES_RESEARCH_REPORT.md
+/docs/USER_RETENTION_AND_MONETIZATION_RECOMMENDATIONS.md

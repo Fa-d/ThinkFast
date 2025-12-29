@@ -18,9 +18,12 @@ object NotificationHelper {
 
     private const val CHANNEL_ACHIEVEMENTS = "achievements_channel"
     private const val CHANNEL_STREAKS = "streaks_channel"
+    private const val CHANNEL_STREAK_RECOVERY = "streak_recovery_channel"
 
     private const val NOTIFICATION_ID_DAILY_ACHIEVEMENT = 1000
     private const val NOTIFICATION_ID_STREAK_MILESTONE = 2000
+    private const val NOTIFICATION_ID_STREAK_BROKEN = 3000
+    private const val NOTIFICATION_ID_RECOVERY_PROGRESS = 4000
 
     /**
      * Create notification channels (must be called on app start)
@@ -51,8 +54,20 @@ object NotificationHelper {
                 vibrationPattern = longArrayOf(0, 40, 50, 50, 50, 60, 50, 80) // Celebration pattern
             }
 
+            // Streak recovery notifications channel
+            val recoveryChannel = NotificationChannel(
+                CHANNEL_STREAK_RECOVERY,
+                "Streak Recovery",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications when streaks break and recovery progress"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 40, 60, 40)
+            }
+
             notificationManager.createNotificationChannel(achievementChannel)
             notificationManager.createNotificationChannel(streakChannel)
+            notificationManager.createNotificationChannel(recoveryChannel)
         }
     }
 
@@ -176,5 +191,123 @@ object NotificationHelper {
      */
     fun isStreakMilestone(streak: Int): Boolean {
         return streak in listOf(1, 3, 7, 14, 30) || (streak > 30 && streak % 30 == 0)
+    }
+
+    /**
+     * Show notification when a streak breaks
+     * Broken Streak Recovery feature
+     */
+    fun showStreakBrokenNotification(
+        context: Context,
+        targetApp: String,
+        previousStreak: Int
+    ) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val appName = when (targetApp) {
+            "com.facebook.katana" -> "Facebook"
+            "com.instagram.android" -> "Instagram"
+            else -> "App"
+        }
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_STREAK_RECOVERY)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("💔 Streak Ended")
+            .setContentText("Your $previousStreak-day $appName streak ended, but you can bounce back!")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("Your $previousStreak-day $appName streak was amazing! Don't give up—you're just 1 day away from starting your comeback. We'll celebrate your recovery even more! 🔄")
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID_STREAK_BROKEN + targetApp.hashCode(), notification)
+    }
+
+    /**
+     * Show notification for recovery milestone progress
+     * Broken Streak Recovery feature
+     */
+    fun showRecoveryMilestoneNotification(
+        context: Context,
+        targetApp: String,
+        daysRecovered: Int,
+        targetDays: Int
+    ) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val appName = when (targetApp) {
+            "com.facebook.katana" -> "Facebook"
+            "com.instagram.android" -> "Instagram"
+            else -> "App"
+        }
+
+        val remaining = targetDays - daysRecovered
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_STREAK_RECOVERY)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("🔄 Recovery Progress: Day $daysRecovered")
+            .setContentText("Just $remaining more ${if (remaining == 1) "day" else "days"} until you're back on track!")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("Great job! You've stayed on track for $daysRecovered ${if (daysRecovered == 1) "day" else "days"}. Keep going—only $remaining more ${if (remaining == 1) "day" else "days"} until you're back on track! 💪")
+            )
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID_RECOVERY_PROGRESS + targetApp.hashCode(), notification)
+    }
+
+    /**
+     * Show notification when recovery is complete
+     * Broken Streak Recovery feature
+     */
+    fun showRecoveryCompleteNotification(
+        context: Context,
+        targetApp: String,
+        previousStreak: Int,
+        daysToRecover: Int
+    ) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val appName = when (targetApp) {
+            "com.facebook.katana" -> "Facebook"
+            "com.instagram.android" -> "Instagram"
+            else -> "App"
+        }
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_STREAK_RECOVERY)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("🎉 You're Back on Track!")
+            .setContentText("Amazing comeback! You recovered in just $daysToRecover ${if (daysToRecover == 1) "day" else "days"}!")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("Incredible resilience! You broke your $previousStreak-day $appName streak but got back on track in just $daysToRecover ${if (daysToRecover == 1) "day" else "days"}. This shows real commitment to your goals! 💪🎉")
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID_RECOVERY_PROGRESS + targetApp.hashCode(), notification)
     }
 }

@@ -16,9 +16,19 @@ import org.koin.dsl.module
  * Phase G: Added InterventionResultRepository and AnalyticsViewModel
  * Phase 1.1: Added OnboardingViewModel
  * Phase 1.2: Added HomeViewModel
+ * Broken Streak Recovery: Added freeze and recovery use cases to HomeViewModel
  */
 val viewModelModule = module {
-    viewModel { HomeViewModel(usageRepository = get(), goalRepository = get()) }
+    viewModel {
+        HomeViewModel(
+            usageRepository = get(),
+            goalRepository = get(),
+            getStreakFreezeStatusUseCase = get(),
+            activateStreakFreezeUseCase = get(),
+            getRecoveryProgressUseCase = get(),
+            streakRecoveryRepository = get()
+        )
+    }
     viewModel { OnboardingViewModel(goalRepository = get()) }
     viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get()) }
     viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), settingsRepository = get()) }

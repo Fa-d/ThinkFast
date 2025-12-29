@@ -17,6 +17,12 @@ import dev.sadakat.thinkfast.domain.usecase.stats.GetDailyStatisticsUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.GetMonthlyStatisticsUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.GetSessionBreakdownUseCase
 import dev.sadakat.thinkfast.domain.usecase.stats.GetWeeklyStatisticsUseCase
+import dev.sadakat.thinkfast.domain.usecase.streaks.ActivateStreakFreezeUseCase
+import dev.sadakat.thinkfast.domain.usecase.streaks.GetRecoveryProgressUseCase
+import dev.sadakat.thinkfast.domain.usecase.streaks.GetStreakFreezeStatusUseCase
+import dev.sadakat.thinkfast.domain.usecase.streaks.ResetMonthlyFreezesUseCase
+import dev.sadakat.thinkfast.domain.usecase.streaks.UpdateStreakWithRecoveryUseCase
+import dev.sadakat.thinkfast.util.NotificationHelper
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -53,6 +59,22 @@ val useCaseModule = module {
             calculateInterventionInsightsUseCase = get(),
             generatePredictiveInsightsUseCase = get(),
             calculateComparativeAnalyticsUseCase = get()
+        )
+    }
+
+    // Broken Streak Recovery use cases
+    factory { ActivateStreakFreezeUseCase(freezePreferences = get()) }
+    factory { GetStreakFreezeStatusUseCase(freezePreferences = get()) }
+    factory { ResetMonthlyFreezesUseCase(freezePreferences = get()) }
+    factory { GetRecoveryProgressUseCase(streakRecoveryRepository = get()) }
+    factory {
+        UpdateStreakWithRecoveryUseCase(
+            goalRepository = get(),
+            usageRepository = get(),
+            streakRecoveryRepository = get(),
+            freezePreferences = get(),
+            notificationHelper = NotificationHelper,
+            context = androidContext()
         )
     }
 }

@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -377,4 +379,258 @@ fun StreakMilestoneCelebration(
         streakDays = streakDays,
         onDismiss = onDismiss
     )
+}
+
+/**
+ * Streak broken recovery dialog (Broken Streak Recovery feature)
+ * Shown once when streak breaks (on next app open)
+ */
+@Composable
+fun StreakBrokenRecoveryDialog(
+    show: Boolean,
+    previousStreak: Int,
+    targetApp: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+
+    val appName = remember(targetApp) {
+        when (targetApp) {
+            "com.facebook.katana" -> "Facebook"
+            "com.instagram.android" -> "Instagram"
+            else -> "App"
+        }
+    }
+
+    LaunchedEffect(show) {
+        if (show) {
+            // Trigger warning haptic feedback
+            HapticFeedback.warning(context)
+
+            // Auto-dismiss after 4 seconds
+            delay(4000)
+            onDismiss()
+        }
+    }
+
+    if (show) {
+        Dialog(onDismissRequest = onDismiss) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Animated emoji
+                    AnimatedEmoji(emoji = "💔", size = 80.sp)
+
+                    // Title
+                    Text(
+                        text = "Streak Ended",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+
+                    // Message
+                    Text(
+                        text = "Your $previousStreak-day $appName streak was amazing! Don't give up—you're just 1 day away from starting your comeback.",
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                        lineHeight = 22.sp
+                    )
+
+                    // Recovery badge
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .background(
+                                color = ProgressColors.Approaching.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .padding(horizontal = 20.dp, vertical = 10.dp)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🔄",
+                                fontSize = 24.sp
+                            )
+                            Text(
+                                text = "Recovery Mode Active",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+
+                    // Button
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(
+                            text = "Let's Get Back on Track",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Recovery complete dialog (Broken Streak Recovery feature)
+ * Shown when recovery target is reached
+ */
+@Composable
+fun RecoveryCompleteDialog(
+    show: Boolean,
+    previousStreak: Int,
+    daysToRecover: Int,
+    targetApp: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+
+    val appName = remember(targetApp) {
+        when (targetApp) {
+            "com.facebook.katana" -> "Facebook"
+            "com.instagram.android" -> "Instagram"
+            else -> "App"
+        }
+    }
+
+    LaunchedEffect(show) {
+        if (show) {
+            // Trigger success haptic feedback
+            HapticFeedback.celebration(context)
+
+            // Auto-dismiss after 4 seconds
+            delay(4000)
+            onDismiss()
+        }
+    }
+
+    if (show) {
+        Dialog(onDismissRequest = onDismiss) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Animated emoji
+                    AnimatedEmoji(emoji = "🎉", size = 80.sp)
+
+                    // Title
+                    Text(
+                        text = "You're Back on Track!",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+
+                    // Message
+                    Text(
+                        text = "You recovered in just $daysToRecover ${if (daysToRecover == 1) "day" else "days"}! This shows incredible resilience.",
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        lineHeight = 22.sp
+                    )
+
+                    // Stats badge
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .background(
+                                color = ProgressColors.OnTrack.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .padding(horizontal = 20.dp, vertical = 12.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "💪",
+                                    fontSize = 24.sp
+                                )
+                                Text(
+                                    text = "Comeback Complete",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ProgressColors.OnTrack
+                                )
+                            }
+                            Text(
+                                text = "Previous streak: $previousStreak ${if (previousStreak == 1) "day" else "days"}",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
+                    // Button
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ProgressColors.OnTrack
+                        )
+                    ) {
+                        Text(
+                            text = "Keep Going!",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

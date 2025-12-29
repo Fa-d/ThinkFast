@@ -4,23 +4,39 @@ import android.app.ActivityManager
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.sadakat.thinkfast.domain.model.StreakFreezeStatus
+import dev.sadakat.thinkfast.domain.model.StreakRecovery
 import dev.sadakat.thinkfast.domain.repository.GoalRepository
+import dev.sadakat.thinkfast.domain.repository.StreakRecoveryRepository
 import dev.sadakat.thinkfast.domain.repository.UsageRepository
+import dev.sadakat.thinkfast.domain.usecase.streaks.ActivateStreakFreezeUseCase
+import dev.sadakat.thinkfast.domain.usecase.streaks.GetRecoveryProgressUseCase
+import dev.sadakat.thinkfast.domain.usecase.streaks.GetStreakFreezeStatusUseCase
 import dev.sadakat.thinkfast.service.UsageMonitorService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
  * ViewModel for Home Screen
  * Phase 1.2: Enhanced with "Today at a Glance" card showing usage, goals, and streaks
+ * Broken Streak Recovery: Added freeze and recovery support
  */
 class HomeViewModel(
     private val usageRepository: UsageRepository,
-    private val goalRepository: GoalRepository
+    private val goalRepository: GoalRepository,
+    private val getStreakFreezeStatusUseCase: GetStreakFreezeStatusUseCase,
+    private val activateStreakFreezeUseCase: ActivateStreakFreezeUseCase,
+    private val getRecoveryProgressUseCase: GetRecoveryProgressUseCase,
+    private val streakRecoveryRepository: StreakRecoveryRepository
 ) : ViewModel() {
+
+    private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -110,6 +126,9 @@ class HomeViewModel(
                     hasGoalsSet = combinedGoalMinutes != null
                 )
 
+                // Update freeze button visibility based on new usage data
+                updateFreezeButtonVisibility()
+
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -159,6 +178,149 @@ class HomeViewModel(
     }
 
     /**
+     * Load streak freeze status (Broken Streak Recovery feature)
+     */
+    fun loadFreezeStatus() {
+        viewModelScope.launch {
+            try {
+                // Use first tracked app with a goal (simplified for combined tracking)
+                val targetApp = "com.facebook.katana" // Default to Facebook
+                val freezeStatus = getStreakFreezeStatusUseCase.invoke(targetApp)
+                _uiState.value = _uiState.value.copy(freezeStatus = freezeStatus)
+
+                // Determine if freeze button should be shown
+                updateFreezeButtonVisibility()
+            } catch (e: Exception) {
+                // Silently fail - freeze feature is optional
+            }
+        }
+    }
+
+    /**
+     * Load active recovery progress (Broken Streak Recovery feature)
+     * Loads recovery for all tracked apps and shows the first active one
+     */
+    fun loadRecoveryStatus() {
+        viewModelScope.launch {
+            try {
+                // Check both tracked apps for active recovery
+                val facebookRecovery = getRecoveryProgressUseCase.invoke("com.facebook.katana")
+                val instagramRecovery = getRecoveryProgressUseCase.invoke("com.instagram.android")
+
+                // Use first non-null, non-complete recovery
+                val activeRecovery = when {
+                    facebookRecovery != null && !facebookRecovery.isRecoveryComplete -> facebookRecovery
+                    instagramRecovery != null && !instagramRecovery.isRecoveryComplete -> instagramRecovery
+                    else -> null
+                }
+
+                _uiState.value = _uiState.value.copy(activeRecovery = activeRecovery)
+
+                // Check if we should show streak broken dialog
+                if (activeRecovery != null && !activeRecovery.notificationShown) {
+                    _uiState.value = _uiState.value.copy(showStreakBrokenDialog = true)
+                }
+
+                // Check if recovery was just completed (show celebration)
+                val justCompleted = (facebookRecovery?.isRecoveryComplete == true &&
+                                    facebookRecovery.recoveryCompletedDate == dateFormatter.format(Date())) ||
+                                   (instagramRecovery?.isRecoveryComplete == true &&
+                                    instagramRecovery.recoveryCompletedDate == dateFormatter.format(Date()))
+
+                if (justCompleted) {
+                    val completedRecovery = facebookRecovery ?: instagramRecovery
+                    if (completedRecovery != null) {
+                        _uiState.value = _uiState.value.copy(
+                            showRecoveryCompleteDialog = true,
+                            completedRecovery = completedRecovery
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                // Silently fail - recovery feature is optional
+            }
+        }
+    }
+
+    /**
+     * Activate streak freeze for today (Broken Streak Recovery feature)
+     */
+    fun activateStreakFreeze() {
+        viewModelScope.launch {
+            try {
+                val currentDate = dateFormatter.format(Date())
+                // Use first tracked app with a goal (simplified for combined tracking)
+                val targetApp = "com.facebook.katana" // Default to Facebook
+
+                val result = activateStreakFreezeUseCase.invoke(targetApp, currentDate)
+
+                when (result) {
+                    is ActivateStreakFreezeUseCase.Result.Success -> {
+                        // Reload freeze status to update UI
+                        loadFreezeStatus()
+                    }
+                    is ActivateStreakFreezeUseCase.Result.Error -> {
+                        _uiState.value = _uiState.value.copy(
+                            errorMessage = result.message
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to activate freeze: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /**
+     * Dismiss streak broken dialog
+     */
+    fun dismissStreakBrokenDialog() {
+        viewModelScope.launch {
+            try {
+                // Mark notification as shown so dialog doesn't appear again
+                _uiState.value.activeRecovery?.let { recovery ->
+                    streakRecoveryRepository.markNotificationShown(recovery.targetApp)
+                }
+            } catch (e: Exception) {
+                // Silently fail
+            }
+        }
+        _uiState.value = _uiState.value.copy(showStreakBrokenDialog = false)
+    }
+
+    /**
+     * Dismiss recovery complete dialog
+     */
+    fun dismissRecoveryCompleteDialog() {
+        _uiState.value = _uiState.value.copy(showRecoveryCompleteDialog = false)
+    }
+
+    /**
+     * Dismiss recovery progress card
+     */
+    fun dismissRecoveryCard() {
+        _uiState.value = _uiState.value.copy(activeRecovery = null)
+    }
+
+    /**
+     * Update freeze button visibility based on current state
+     * Show when: percentageUsed >= 80 && !isOverLimit && has goals && has streak
+     */
+    private fun updateFreezeButtonVisibility() {
+        val state = _uiState.value
+        val shouldShow = state.hasGoalsSet &&
+                        state.currentStreak > 0 &&
+                        state.progressPercentage != null &&
+                        state.progressPercentage >= 80 &&
+                        !state.isOverLimit &&
+                        state.freezeStatus != null
+
+        _uiState.value = _uiState.value.copy(showFreezeButton = shouldShow)
+    }
+
+    /**
      * Show goal achieved badge when user is on track
      */
     fun updateGoalAchievedBadge() {
@@ -201,5 +363,12 @@ data class HomeUiState(
     val errorMessage: String? = null,
     // Celebration states (Phase 1.5)
     val showStreakCelebration: Boolean = false,
-    val showGoalAchievedBadge: Boolean = false
+    val showGoalAchievedBadge: Boolean = false,
+    // Broken Streak Recovery states
+    val freezeStatus: StreakFreezeStatus? = null,
+    val activeRecovery: StreakRecovery? = null,
+    val showFreezeButton: Boolean = false,
+    val showStreakBrokenDialog: Boolean = false,
+    val showRecoveryCompleteDialog: Boolean = false,
+    val completedRecovery: StreakRecovery? = null
 )

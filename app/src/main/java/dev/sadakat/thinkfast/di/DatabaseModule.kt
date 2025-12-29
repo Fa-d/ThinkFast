@@ -3,6 +3,7 @@ package dev.sadakat.thinkfast.di
 import androidx.room.Room
 import dev.sadakat.thinkfast.BuildConfig
 import dev.sadakat.thinkfast.data.local.database.MIGRATION_1_2
+import dev.sadakat.thinkfast.data.local.database.MIGRATION_2_3
 import dev.sadakat.thinkfast.data.local.database.ThinkFastDatabase
 import dev.sadakat.thinkfast.data.seed.callback.SeedDatabaseCallback
 import dev.sadakat.thinkfast.util.Constants
@@ -13,8 +14,10 @@ val databaseModule = module {
     single {
         val builder = Room.databaseBuilder(
             androidContext(), ThinkFastDatabase::class.java, Constants.DATABASE_NAME
-        ).addMigrations(MIGRATION_1_2)  // Phase G: Add migration
-            .fallbackToDestructiveMigration()  // Fallback for development
+        ).addMigrations(
+            MIGRATION_1_2,  // Phase G: Add intervention results table
+            MIGRATION_2_3   // Broken Streak Recovery: Add streak recovery table
+        ).fallbackToDestructiveMigration()  // Fallback for development
 
         // Only add seed callback for non-production builds
         if (BuildConfig.USER_PERSONA != "PRODUCTION") {
@@ -29,4 +32,5 @@ val databaseModule = module {
     single { get<ThinkFastDatabase>().dailyStatsDao() }
     single { get<ThinkFastDatabase>().goalDao() }
     single { get<ThinkFastDatabase>().interventionResultDao() }  // Phase G
+    single { get<ThinkFastDatabase>().streakRecoveryDao() }  // Broken Streak Recovery
 }
