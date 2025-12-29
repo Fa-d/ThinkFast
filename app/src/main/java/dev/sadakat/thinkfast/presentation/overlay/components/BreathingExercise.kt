@@ -4,10 +4,17 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -424,11 +431,11 @@ fun BreathingExercise(
  * Compact breathing exercise for smaller spaces
  * (e.g., when shown in reminder overlay)
  *
- * Uses the same improved animation as the full breathing exercise:
- * - Natural EaseInOutCubic easing
- * - Smooth continuous animation
- * - Accurate timing representation
- * - Column layout for better vertical space utilization
+ * Phase 3.1 Enhanced with:
+ * - Tap to pause/resume control
+ * - Pause indicator overlay
+ * - Completion feedback with animation
+ * - Synchronized instruction text
  */
 @Composable
 fun CompactBreathingExercise(
@@ -440,36 +447,66 @@ fun CompactBreathingExercise(
     val config = remember(variant) { BreathingConfig.from(variant) }
 
     var currentPhaseIndex by remember { mutableIntStateOf(0) }
+    var cycleCount by remember { mutableIntStateOf(0) }
     var phaseStartTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var pausedTime by remember { mutableLongStateOf(0L) }
+    var isPaused by remember { mutableStateOf(false) }
+    var isCompleted by remember { mutableStateOf(false) }
+
     val currentPhaseConfig = config.phases[currentPhaseIndex]
+    val totalCycles = 3
 
     // Calculate time remaining for countdown
-    val timeElapsedInPhase = System.currentTimeMillis() - phaseStartTime
+    val timeElapsedInPhase = if (isPaused) {
+        pausedTime - phaseStartTime
+    } else {
+        System.currentTimeMillis() - phaseStartTime
+    }
     val timeRemainingInPhase = maxOf(0, currentPhaseConfig.durationMs - timeElapsedInPhase)
     val secondsRemaining = (timeRemainingInPhase / 1000f).toInt()
 
     // Update phase start time when phase changes
     LaunchedEffect(currentPhaseIndex) {
         phaseStartTime = System.currentTimeMillis()
+        pausedTime = 0L
     }
 
     // Smooth animation with natural easing
     val circleScale by animateFloatAsState(
-        targetValue = currentPhaseConfig.targetScale,
-        animationSpec = tween(
-            durationMillis = currentPhaseConfig.durationMs.toInt(),
-            easing = EaseInOutCubic
-        ),
+        targetValue = if (isPaused) currentPhaseConfig.targetScale else currentPhaseConfig.targetScale,
+        animationSpec = if (isPaused) {
+            spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+        } else {
+            tween(
+                durationMillis = currentPhaseConfig.durationMs.toInt(),
+                easing = EaseInOutCubic
+            )
+        },
         label = "compact_circle_scale"
     )
 
-    LaunchedEffect(currentPhaseIndex) {
-        delay(currentPhaseConfig.durationMs)
-        val nextIndex = (currentPhaseIndex + 1) % config.phases.size
-        if (nextIndex == 0) {
-            onComplete?.invoke()
+    // Phase progression logic
+    LaunchedEffect(currentPhaseIndex, isPaused) {
+        if (!isPaused && !isCompleted) {
+            delay(currentPhaseConfig.durationMs - timeElapsedInPhase)
+
+            val nextIndex = (currentPhaseIndex + 1) % config.phases.size
+            if (nextIndex == 0) {
+                // Completed one cycle
+                val nextCycle = cycleCount + 1
+                if (nextCycle >= totalCycles) {
+                    // Exercise complete
+                    isCompleted = true
+                    delay(1500) // Show completion message for 1.5s
+                    onComplete?.invoke()
+                } else {
+                    cycleCount = nextCycle
+                    currentPhaseIndex = nextIndex
+                }
+            } else {
+                currentPhaseIndex = nextIndex
+            }
         }
-        currentPhaseIndex = nextIndex
     }
 
     val accentColor = InterventionColors.Success
@@ -485,127 +522,215 @@ fun CompactBreathingExercise(
             .padding(vertical = 32.dp, horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Breathing circle container (larger for better visibility)
-        Box(
-            modifier = Modifier
-                .size(200.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            // Outer guide rings (subtle visual cue for target sizes)
-            config.phases.forEachIndexed { index, phase ->
-                val targetScale = phase.targetScale
-                val isCurrentPhase = index == currentPhaseIndex
+        // Synchronized instruction text
+        AnimatedContent(
+            targetState = if (isCompleted) "completed" else currentPhaseConfig.phase.getDisplayText(),
+            transitionSpec = {
+                fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+            },
+            label = "instruction_text"
+        ) { text ->
+            Text(
+                text = if (text == "completed") {
+                    "Great job! You completed 3 cycles"
+                } else {
+                    text
+                },
+                style = InterventionTypography.BreathingPhase.copy(
+                    fontSize = if (text == "completed") 20.sp else 18.sp,
+                    fontWeight = if (text == "completed") FontWeight.Bold else FontWeight.Medium
+                ),
+                color = if (text == "completed") accentColor else textColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+        }
 
-                // Show subtle guide for target scales
-                if (targetScale > 1.0f) {
+        if (!isCompleted) {
+            // Breathing circle container (larger for better visibility)
+            Box(
+                modifier = Modifier
+                    .size(200.dp)
+                    .padding(16.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        isPaused = !isPaused
+                        if (isPaused) {
+                            pausedTime = System.currentTimeMillis()
+                        } else {
+                            // Resume: adjust start time to account for pause duration
+                            val pauseDuration = System.currentTimeMillis() - pausedTime
+                            phaseStartTime += pauseDuration
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                // Outer guide rings (subtle visual cue for target sizes)
+                config.phases.forEachIndexed { index, phase ->
+                    val targetScale = phase.targetScale
+                    val isCurrentPhase = index == currentPhaseIndex
+
+                    // Show subtle guide for target scales
+                    if (targetScale > 1.0f) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .scale(targetScale)
+                                .alpha(if (isCurrentPhase) 0.12f else 0.06f)
+                                .background(
+                                    color = accentColor.copy(alpha = 0.15f),
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                }
+
+                // Main breathing circle
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .scale(circleScale)
+                        .background(
+                            color = accentColor.copy(alpha = 0.5f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Inner glow circle
+                    Box(
+                        modifier = Modifier
+                            .size(70.dp)
+                            .background(
+                                color = accentColor.copy(alpha = 0.3f),
+                                shape = CircleShape
+                            )
+                    )
+
+                    // Center circle with phase text or pause icon
+                    Box(
+                        modifier = Modifier
+                            .size(70.dp)
+                            .background(
+                                color = accentColor.copy(alpha = 0.95f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isPaused) {
+                            // Show pause icon
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = "Resume",
+                                tint = Color.White,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        } else {
+                            // Show phase text
+                            AnimatedContent(
+                                targetState = currentPhaseConfig.phase,
+                                transitionSpec = {
+                                    fadeIn(tween(200, easing = FastOutSlowInEasing)) togetherWith
+                                            fadeOut(tween(200, easing = FastOutSlowInEasing))
+                                },
+                                label = "compact_phase_text"
+                            ) { phase ->
+                                Text(
+                                    text = phase.getCenterText(),
+                                    style = InterventionTypography.InterventionMessage.copy(
+                                        fontSize = 26.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Pause indicator overlay
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isPaused,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .scale(targetScale)
-                            .alpha(if (isCurrentPhase) 0.12f else 0.06f)
                             .background(
-                                color = accentColor.copy(alpha = 0.15f),
+                                color = Color.Black.copy(alpha = 0.3f),
                                 shape = CircleShape
                             )
                     )
                 }
             }
 
-            // Main breathing circle
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .scale(circleScale)
-                    .background(
-                        color = accentColor.copy(alpha = 0.5f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Countdown timer and cycle counter
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Inner glow circle
-                Box(
-                    modifier = Modifier
-                        .size(70.dp)
-                        .background(
-                            color = accentColor.copy(alpha = 0.3f),
-                            shape = CircleShape
-                        )
-                )
-
-                // Center circle with phase text (clean, no emoji)
-                Box(
-                    modifier = Modifier
-                        .size(70.dp)
-                        .background(
-                            color = accentColor.copy(alpha = 0.95f),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AnimatedContent(
-                        targetState = currentPhaseConfig.phase,
-                        transitionSpec = {
-                            fadeIn(tween(200, easing = FastOutSlowInEasing)) togetherWith
-                                    fadeOut(tween(200, easing = FastOutSlowInEasing))
-                        },
-                        label = "compact_phase_text"
-                    ) { phase ->
-                        Text(
-                            text = phase.getCenterText(),
-                            style = InterventionTypography.InterventionMessage.copy(
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Phase label with countdown
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AnimatedContent(
-                targetState = currentPhaseConfig.phase,
-                transitionSpec = {
-                    fadeIn(tween(200)) togetherWith fadeOut(tween(200))
-                },
-                label = "compact_phase"
-            ) { phase ->
+                // Countdown timer
                 Text(
-                    text = phase.getDisplayText(),
-                    style = InterventionTypography.BreathingPhase.copy(fontSize = 22.sp),
-                    color = textColor
+                    text = if (isPaused) "PAUSED" else "${secondsRemaining + 1}s",
+                    style = InterventionTypography.InterventionSubtext.copy(fontSize = 16.sp),
+                    color = if (isPaused) accentColor else textColor.copy(alpha = 0.6f)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Cycle counter
+                Text(
+                    text = "Cycle ${cycleCount + 1}/$totalCycles",
+                    style = InterventionTypography.ButtonTextSmall.copy(fontSize = 14.sp),
+                    color = textColor.copy(alpha = 0.7f)
                 )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Countdown timer
+            // Breathing pattern name
             Text(
-                text = "(${secondsRemaining + 1}s)",
-                style = InterventionTypography.InterventionSubtext.copy(fontSize = 16.sp),
-                color = textColor.copy(alpha = 0.6f)
+                text = when (variant) {
+                    BreathingVariant.FOUR_SEVEN_EIGHT -> "4-7-8 Breathing"
+                    BreathingVariant.BOX_BREATHING -> "Box Breathing"
+                    BreathingVariant.CALM_BREATHING -> "Calm Breathing"
+                },
+                style = InterventionTypography.ButtonTextSmall.copy(fontSize = 13.sp),
+                color = textColor.copy(alpha = 0.5f)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Tap hint
+            Text(
+                text = "Tap circle to ${if (isPaused) "resume" else "pause"}",
+                style = InterventionTypography.ButtonTextSmall.copy(fontSize = 12.sp),
+                color = textColor.copy(alpha = 0.4f),
+                textAlign = TextAlign.Center
+            )
+        } else {
+            // Completion celebration
+            Spacer(modifier = Modifier.height(32.dp))
+            Text(
+                text = "✓",
+                fontSize = 80.sp,
+                color = accentColor,
+                modifier = Modifier
+                    .scale(
+                        animateFloatAsState(
+                            targetValue = 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            ),
+                            label = "completion_checkmark"
+                        ).value
+                    )
             )
         }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Breathing pattern name
-        Text(
-            text = when (variant) {
-                BreathingVariant.FOUR_SEVEN_EIGHT -> "4-7-8 Breathing"
-                BreathingVariant.BOX_BREATHING -> "Box Breathing"
-                BreathingVariant.CALM_BREATHING -> "Calm Breathing"
-            },
-            style = InterventionTypography.ButtonTextSmall.copy(fontSize = 14.sp),
-            color = textColor.copy(alpha = 0.7f)
-        )
     }
 }

@@ -14,20 +14,29 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,10 +69,28 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.sadakat.thinkfast.domain.model.InterventionContent
+import dev.sadakat.thinkfast.presentation.overlay.components.CelebrationScreen
 import dev.sadakat.thinkfast.presentation.overlay.components.CompactBreathingExercise
+import dev.sadakat.thinkfast.presentation.overlay.components.EnhancedActivitySuggestionContent
+import dev.sadakat.thinkfast.presentation.overlay.components.EnhancedGamificationContent
+import dev.sadakat.thinkfast.presentation.overlay.components.EnhancedQuoteContent
+import dev.sadakat.thinkfast.presentation.overlay.components.EnhancedUsageStatsContent
+import dev.sadakat.thinkfast.presentation.overlay.components.OverlayEntranceAnimation
+import dev.sadakat.thinkfast.presentation.overlay.components.getActivityTimeEstimate
 import dev.sadakat.thinkfast.ui.theme.InterventionColors
+import dev.sadakat.thinkfast.ui.theme.InterventionGradients
 import dev.sadakat.thinkfast.ui.theme.ThinkFastTheme
+import dev.sadakat.thinkfast.ui.theme.ResponsivePadding
+import dev.sadakat.thinkfast.ui.theme.ResponsiveFontSize
+import dev.sadakat.thinkfast.ui.theme.rememberAccessibilityState
+import dev.sadakat.thinkfast.ui.theme.AccessibleColors
+import dev.sadakat.thinkfast.ui.theme.adaptiveAnimationSpec
+import dev.sadakat.thinkfast.ui.theme.isLandscape
+import dev.sadakat.thinkfast.ui.theme.adaptiveColumnCount
+import dev.sadakat.thinkfast.ui.theme.MinimumTouchTarget
 import dev.sadakat.thinkfast.util.ErrorLogger
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import android.os.Handler
 import android.os.Looper
 import kotlinx.coroutines.CoroutineScope
@@ -135,32 +162,52 @@ class ReminderOverlayWindow(
             setContent {
                 ThinkFastTheme {
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                    var showCelebration by remember { mutableStateOf(false) }
 
-                    // Handle dismiss
+                    // Handle dismiss with celebration flow
                     LaunchedEffect(uiState.shouldDismiss) {
                         if (uiState.shouldDismiss) {
-                            // If user chose "Go Back", navigate to home screen
-                            if (uiState.userChoseGoBack) {
-                                goToHomeScreen()
+                            // If user chose "Go Back", show celebration first
+                            if (uiState.userChoseGoBack && !showCelebration) {
+                                showCelebration = true
+                            } else if (!uiState.userChoseGoBack) {
+                                // User chose "Proceed" - dismiss immediately
+                                dismiss()
+                                viewModel.onDismissHandled()
                             }
-                            dismiss()
-                            viewModel.onDismissHandled()
                         }
                     }
 
-                    ReminderOverlayContent(
-                        targetApp = targetApp,
-                        context = context,
-                        interventionContent = uiState.interventionContent,
-                        frictionLevel = uiState.interventionContext?.userFrictionLevel
-                            ?: dev.sadakat.thinkfast.domain.intervention.FrictionLevel.GENTLE,
-                        onGoBackClick = {
-                            handleGoBackClick(sessionId)
-                        },
-                        onProceedClick = {
-                            handleProceedClick(sessionId)
+                    // Phase 1.3: Enhanced entrance animation wrapper
+                    OverlayEntranceAnimation {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            // Main intervention content
+                            ReminderOverlayContent(
+                                targetApp = targetApp,
+                                context = context,
+                                interventionContent = uiState.interventionContent,
+                                frictionLevel = uiState.interventionContext?.userFrictionLevel
+                                    ?: dev.sadakat.thinkfast.domain.intervention.FrictionLevel.GENTLE,
+                                onGoBackClick = {
+                                    handleGoBackClick(sessionId)
+                                },
+                                onProceedClick = {
+                                    handleProceedClick(sessionId)
+                                }
+                            )
+
+                            // Celebration overlay (shown on top when user chooses "Go Back")
+                            if (showCelebration) {
+                                CelebrationScreen(
+                                    onComplete = {
+                                        goToHomeScreen()
+                                        dismiss()
+                                        viewModel.onDismissHandled()
+                                    }
+                                )
+                            }
                         }
-                    )
+                    }
                 }
             }
 
@@ -230,6 +277,11 @@ class ReminderOverlayWindow(
             windowManager.addView(overlayView, params)
             isShowing = true
 
+            // Phase 1.2: Haptic feedback on overlay appearance
+            overlayView?.performHapticFeedback(
+                android.view.HapticFeedbackConstants.LONG_PRESS
+            )
+
             // Move lifecycle to RESUMED
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
 
@@ -263,6 +315,11 @@ class ReminderOverlayWindow(
      * Handle proceed button click
      */
     private fun handleProceedClick(sessionId: Long) {
+        // Phase 1.2: Haptic feedback on button press
+        overlayView?.performHapticFeedback(
+            android.view.HapticFeedbackConstants.VIRTUAL_KEY
+        )
+
         CoroutineScope(Dispatchers.IO).launch {
             viewModel.onProceedClicked()
             // Note: dismiss() is called via LaunchedEffect when shouldDismiss becomes true
@@ -273,6 +330,11 @@ class ReminderOverlayWindow(
      * Handle go back button click (user chose NOT to proceed)
      */
     private fun handleGoBackClick(sessionId: Long) {
+        // Phase 1.2: Success haptic feedback pattern on "Go Back"
+        overlayView?.performHapticFeedback(
+            android.view.HapticFeedbackConstants.CONFIRM
+        )
+
         CoroutineScope(Dispatchers.IO).launch {
             viewModel.onGoBackClicked()
             // Note: dismiss() is called via LaunchedEffect when shouldDismiss becomes true
@@ -400,6 +462,10 @@ private fun ReminderOverlayContent(
 ) {
     val isDarkTheme = isSystemInDarkTheme()
 
+    // Phase 4: Accessibility state
+    val a11yState = rememberAccessibilityState()
+    val isLandscapeMode = isLandscape()
+
     // Get actual app name from package name using PackageManager
     val appName = remember(targetApp) {
         try {
@@ -414,87 +480,187 @@ private fun ReminderOverlayContent(
 
     // Animation states
     var visible by remember { mutableStateOf(false) }
+
+    // Phase 4: Reduce motion support
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(300),
+        animationSpec = adaptiveAnimationSpec(
+            normalSpec = tween(300),
+            reducedSpec = tween(0)
+        ),
         label = "alpha"
     )
     val scale by animateFloatAsState(
         targetValue = if (visible) 1f else 0.95f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+        animationSpec = adaptiveAnimationSpec(
+            normalSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            ),
+            reducedSpec = tween(0)
         ),
         label = "scale"
     )
 
-    // Background color based on content type (dark theme aware)
-    val backgroundColor by animateColorAsState(
-        targetValue = getBackgroundColor(interventionContent, isDarkTheme),
-        animationSpec = tween(300),
-        label = "backgroundColor"
-    )
+    val backgroundGradient = remember(interventionContent, isDarkTheme) {
+        InterventionGradients.getGradientForContent(
+            interventionContent?.javaClass?.simpleName,
+            isDarkTheme
+        )
+    }
 
-    // Text colors (dark theme aware)
-    val textColor = getTextColor(isDarkTheme)
-    val secondaryTextColor = getSecondaryTextColor(isDarkTheme)
+    // Phase 4: High-contrast text colors (accessibility aware)
+    // IMPORTANT: All gradients use dark backgrounds, so we ALWAYS use light text
+    // regardless of system theme to ensure readability
+    val baseTextColor = InterventionColors.InterventionTextPrimaryDark  // Always use light text
+    val baseSecondaryTextColor = InterventionColors.InterventionTextSecondaryDark  // Always use light text
+    val textColor = AccessibleColors.text(
+        normalColor = baseTextColor,
+        highContrastColor = Color.White  // High contrast mode: pure white
+    )
+    val secondaryTextColor = AccessibleColors.text(
+        normalColor = baseSecondaryTextColor,
+        highContrastColor = Color.White  // High contrast mode: pure white
+    )
 
     LaunchedEffect(interventionContent) {
         visible = true
     }
 
-    Column(
+    // Phase 4: Accessibility semantic description
+    val contentDescription = remember(appName, interventionContent) {
+        buildString {
+            append("Intervention screen for $appName. ")
+            when (interventionContent) {
+                is InterventionContent.ReflectionQuestion -> append("Reflection question: ${interventionContent.question}")
+                is InterventionContent.TimeAlternative -> append("Time alternatives suggested for your usage")
+                is InterventionContent.BreathingExercise -> append("Breathing exercise to help you pause")
+                is InterventionContent.UsageStats -> append("Your usage statistics")
+                is InterventionContent.EmotionalAppeal -> append("Mindfulness message: ${interventionContent.message}")
+                is InterventionContent.Quote -> append("Inspirational quote from ${interventionContent.author}")
+                is InterventionContent.Gamification -> append("Challenge: ${interventionContent.challenge}")
+                is InterventionContent.ActivitySuggestion -> append("Suggested activity: ${interventionContent.suggestion}")
+                null -> append("Mindfulness reminder")
+            }
+            append(". Two options: Go Back to home screen, or Proceed to app.")
+        }
+    }
+
+    // Phase 4: Landscape layout support - two-column on tablets in landscape
+    val useLandscapeLayout = isLandscapeMode && adaptiveColumnCount() > 1
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(backgroundGradient) // Use gradient instead of solid color
+            .windowInsetsPadding(WindowInsets.safeDrawing) // Avoid system bars, notches, camera holes
             .alpha(alpha)
             .scale(scale)
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(ResponsivePadding.overlay()) // Phase 4: Responsive padding
+            .semantics { this.contentDescription = contentDescription }, // Phase 4: TalkBack
+        contentAlignment = Alignment.Center
     ) {
-        // App name (always shown) - resolved using PackageManager
-        Text(
-            text = appName,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = textColor,
-            textAlign = TextAlign.Center
-        )
+        if (useLandscapeLayout) {
+            // Phase 4: Two-column landscape layout for tablets
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left column: Content
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    Text(
+                        text = appName,
+                        fontSize = ResponsiveFontSize.appName(),
+                        fontWeight = FontWeight.Medium,
+                        color = textColor.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center
+                    )
 
-        Spacer(modifier = Modifier.height(48.dp))
+                    interventionContent?.let { content ->
+                        InterventionContentRenderer(
+                            content = content,
+                            textColor = textColor,
+                            secondaryTextColor = secondaryTextColor
+                        )
+                    }
+                }
 
-        // Dynamic content based on intervention type
-        interventionContent?.let { content ->
-            InterventionContentRenderer(
-                content = content,
-                textColor = textColor,
-                secondaryTextColor = secondaryTextColor
-            )
+                // Right column: Actions
+                Column(
+                    modifier = Modifier.weight(0.7f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    InterventionActionButtons(
+                        contentType = interventionContent?.javaClass?.simpleName,
+                        frictionLevel = frictionLevel,
+                        onGoBackClick = onGoBackClick,
+                        onProceedClick = onProceedClick,
+                        textColor = textColor,
+                        secondaryTextColor = secondaryTextColor,
+                        isDarkTheme = isDarkTheme
+                    )
+
+                    Text(
+                        text = "This overlay helps you build mindful usage habits",
+                        fontSize = 14.sp,
+                        color = secondaryTextColor.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            // Standard portrait/phone layout
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = appName,
+                    fontSize = ResponsiveFontSize.appName(),
+                    fontWeight = FontWeight.Medium,
+                    color = textColor.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.weight(0.3f))
+
+                interventionContent?.let { content ->
+                    InterventionContentRenderer(
+                        content = content,
+                        textColor = textColor,
+                        secondaryTextColor = secondaryTextColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(0.2f))
+
+                InterventionActionButtons(
+                    contentType = interventionContent?.javaClass?.simpleName,
+                    frictionLevel = frictionLevel,
+                    onGoBackClick = onGoBackClick,
+                    onProceedClick = onProceedClick,
+                    textColor = textColor,
+                    secondaryTextColor = secondaryTextColor,
+                    isDarkTheme = isDarkTheme
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "This overlay helps you build mindful usage habits",
+                    fontSize = 14.sp,
+                    color = secondaryTextColor.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.height(64.dp))
-
-        // Action buttons with progressive friction
-        InterventionActionButtons(
-            contentType = interventionContent?.javaClass?.simpleName,
-            frictionLevel = frictionLevel,
-            onGoBackClick = onGoBackClick,
-            onProceedClick = onProceedClick,
-            textColor = textColor,
-            secondaryTextColor = secondaryTextColor,
-            isDarkTheme = isDarkTheme
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Small notice text
-        Text(
-            text = "This overlay helps you build mindful usage habits",
-            fontSize = 14.sp,
-            color = secondaryTextColor.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center
-        )
     }
 }
 
@@ -626,6 +792,7 @@ private fun BreathingExerciseContent(
 
 /**
  * Usage stats content
+ * Phase 2.5: Enhanced with visual progress indicators
  */
 @Composable
 private fun UsageStatsContent(
@@ -633,45 +800,29 @@ private fun UsageStatsContent(
     textColor: Color,
     secondaryTextColor: Color
 ) {
-    Text(
-        text = content.message,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Medium,
-        color = textColor,
-        textAlign = TextAlign.Center,
-        lineHeight = 26.sp
+    // Show header message if present
+    if (content.message.isNotEmpty()) {
+        Text(
+            text = content.message,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium,
+            color = textColor,
+            textAlign = TextAlign.Center,
+            lineHeight = 26.sp
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    // Use enhanced stats visualization
+    EnhancedUsageStatsContent(
+        todayMinutes = content.todayMinutes,
+        yesterdayMinutes = content.yesterdayMinutes,
+        weekAvgMinutes = content.weekAverage,
+        goalMinutes = content.goalMinutes,
+        textColor = textColor,
+        secondaryTextColor = secondaryTextColor
     )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Row(
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        StatItem("Today", "${content.todayMinutes}m", textColor, secondaryTextColor)
-        content.yesterdayMinutes.let { StatItem("Yesterday", "${it}m", textColor, secondaryTextColor) }
-        content.weekAverage.let { StatItem("Week Avg", "${it}m", textColor, secondaryTextColor) }
-    }
-}
-
-@Composable
-private fun StatItem(label: String, value: String, textColor: Color, secondaryTextColor: Color) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = value,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-            color = textColor
-        )
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            color = secondaryTextColor
-        )
-    }
 }
 
 /**
@@ -703,7 +854,8 @@ private fun EmotionalAppealContent(
 }
 
 /**
- * Quote content
+ * Quote content with decorative styling
+ * Phase 3.4: Enhanced with large quotation marks and better typography
  */
 @Composable
 private fun QuoteContent(
@@ -711,29 +863,17 @@ private fun QuoteContent(
     textColor: Color,
     secondaryTextColor: Color
 ) {
-    Text(
-        text = """"${content.quote}"""",
-        fontSize = 22.sp,
-        fontWeight = FontWeight.Medium,
-        fontFamily = FontFamily.Serif,
-        color = textColor,
-        textAlign = TextAlign.Center,
-        lineHeight = 32.sp
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text(
-        text = "— ${content.author}",
-        fontSize = 16.sp,
-        color = secondaryTextColor,
-        textAlign = TextAlign.Center,
-        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+    EnhancedQuoteContent(
+        quote = content.quote,
+        author = content.author,
+        textColor = textColor,
+        secondaryTextColor = secondaryTextColor
     )
 }
 
 /**
- * Gamification content
+ * Gamification content with progress visualization
+ * Phase 3.2: Enhanced with circular progress ring and milestones
  */
 @Composable
 private fun GamificationContent(
@@ -741,27 +881,19 @@ private fun GamificationContent(
     textColor: Color,
     secondaryTextColor: Color
 ) {
-    Text(
-        text = "🏆 ${content.challenge}",
-        fontSize = 24.sp,
-        fontWeight = FontWeight.Bold,
-        color = textColor,
-        textAlign = TextAlign.Center
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text(
-        text = content.reward,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Medium,
-        color = secondaryTextColor,
-        textAlign = TextAlign.Center
+    EnhancedGamificationContent(
+        challenge = content.challenge,
+        reward = content.reward,
+        currentProgress = content.currentProgress,
+        target = content.target,
+        textColor = textColor,
+        secondaryTextColor = secondaryTextColor
     )
 }
 
 /**
- * Activity suggestion content
+ * Activity suggestion content with interactivity
+ * Phase 3.3: Enhanced with tap interactions and completion button
  */
 @Composable
 private fun ActivitySuggestionContent(
@@ -769,33 +901,16 @@ private fun ActivitySuggestionContent(
     textColor: Color,
     secondaryTextColor: Color
 ) {
-    // Large emoji
-    Text(
-        text = content.emoji,
-        fontSize = 72.sp,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(bottom = 24.dp)
-    )
-
-    // Header text
-    Text(
-        text = "Instead, try this:",
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Medium,
-        color = secondaryTextColor,
-        textAlign = TextAlign.Center
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    // Activity suggestion
-    Text(
-        text = content.suggestion,
-        fontSize = 24.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = textColor,
-        textAlign = TextAlign.Center,
-        lineHeight = 32.sp
+    EnhancedActivitySuggestionContent(
+        suggestion = content.suggestion,
+        emoji = content.emoji,
+        timeEstimate = getActivityTimeEstimate(content.suggestion),
+        textColor = textColor,
+        secondaryTextColor = secondaryTextColor,
+        onActivityCompleted = {
+            // User marked activity as completed - positive reinforcement
+            // Could track this in analytics later
+        }
     )
 }
 
@@ -813,12 +928,10 @@ private fun InterventionActionButtons(
     secondaryTextColor: Color,
     isDarkTheme: Boolean
 ) {
-    // Get theme-aware button colors
-    val (goBackColor, proceedColor) = if (isDarkTheme) {
-        Pair(InterventionColors.GoBackButtonDark, InterventionColors.ProceedButtonDark)
-    } else {
-        Pair(InterventionColors.GoBackButton, InterventionColors.ProceedButton)
-    }
+    // Button colors: ALWAYS use light colors since all gradient backgrounds are dark
+    // Ignoring system theme to ensure proper contrast
+    val goBackColor = InterventionColors.GoBackButtonDark  // Light green
+    val proceedColor = InterventionColors.ProceedButtonDark  // Light gray
 
     var showButtons by remember { mutableStateOf(frictionLevel.delayMs == 0L) }
     var countdown by remember { mutableStateOf((frictionLevel.delayMs / 1000).toInt()) }
@@ -891,44 +1004,94 @@ private fun InterventionActionButtons(
             )
         }
     } else {
-        // Show buttons after delay (or immediately for GENTLE)
+        // Phase 2.2 & 3.5: Enhanced button design with micro-interactions
+        // Micro-interaction: Scale down on press for tactile feedback
+        val goBackInteractionSource = remember { MutableInteractionSource() }
+        val proceedInteractionSource = remember { MutableInteractionSource() }
+
+        val goBackPressed by goBackInteractionSource.collectIsPressedAsState()
+        val proceedPressed by proceedInteractionSource.collectIsPressedAsState()
+
+        // Phase 4: Reduce motion support for button animations
+        val goBackScale by animateFloatAsState(
+            targetValue = if (goBackPressed) 0.95f else 1f,
+            animationSpec = adaptiveAnimationSpec(
+                normalSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                ),
+                reducedSpec = tween(0)
+            ),
+            label = "go_back_scale"
+        )
+
+        val proceedScale by animateFloatAsState(
+            targetValue = if (proceedPressed) 0.95f else 1f,
+            animationSpec = adaptiveAnimationSpec(
+                normalSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                ),
+                reducedSpec = tween(0)
+            ),
+            label = "proceed_scale"
+        )
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Go Back button (prominent green)
+            // Go Back button - 60% width, filled, with home icon
+            // Phase 4: 64dp height meets minimum touch target (48dp)
             Button(
                 onClick = onGoBackClick,
                 modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
+                    .weight(0.6f) // 60% width
+                    .height(64.dp) // Phase 4: Meets accessibility touch target
+                    .scale(goBackScale) // Phase 3.5: Scale on press
+                    .semantics {
+                        contentDescription = "Go Back button. Returns to home screen instead of opening the app."
+                    },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = goBackColor
-                )
+                ),
+                interactionSource = goBackInteractionSource
             ) {
+                Icon(
+                    imageVector = Icons.Filled.Home,
+                    contentDescription = null, // Described by button semantics
+                    tint = Color.White
+                )
+                Spacer(modifier = Modifier.size(8.dp))
                 Text(
                     text = "Go Back",
-                    fontSize = 18.sp,
+                    fontSize = ResponsiveFontSize.button(), // Phase 4: Responsive text
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White
                 )
             }
 
-            // Proceed button (neutral gray)
-            Button(
+            // Proceed button - 40% width, outlined, less prominent
+            // Phase 4: 64dp height meets minimum touch target (48dp)
+            OutlinedButton(
                 onClick = onProceedClick,
                 modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = proceedColor
-                )
+                    .weight(0.4f) // 40% width
+                    .height(64.dp) // Phase 4: Meets accessibility touch target
+                    .scale(proceedScale) // Phase 3.5: Scale on press
+                    .semantics {
+                        contentDescription = "Proceed button. Opens the app you were trying to access."
+                    },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = proceedColor
+                ),
+                interactionSource = proceedInteractionSource
             ) {
                 Text(
                     text = "Proceed",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    fontSize = ResponsiveFontSize.button(), // Phase 4: Responsive text
+                    fontWeight = FontWeight.Medium,
+                    color = proceedColor
                 )
             }
         }

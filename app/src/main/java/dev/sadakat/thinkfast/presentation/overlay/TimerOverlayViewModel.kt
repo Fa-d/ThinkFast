@@ -247,15 +247,20 @@ class TimerOverlayViewModel(
                 )
             )
 
-            // Brief delay to show celebration, then dismiss
-            kotlinx.coroutines.delay(1500)
-
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                showCelebration = false,
-                shouldDismiss = true
-            )
+            // Note: Celebration screen will call onCelebrationComplete after 1.5s
         }
+    }
+
+    /**
+     * Called when celebration animation completes
+     * Phase 1.1: Triggered by CelebrationScreen onComplete callback
+     */
+    fun onCelebrationComplete() {
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            showCelebration = false,
+            shouldDismiss = true
+        )
     }
 
     /**

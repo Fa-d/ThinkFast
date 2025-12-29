@@ -41,6 +41,8 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.sadakat.thinkfast.presentation.overlay.components.BreathingExercise
+import dev.sadakat.thinkfast.presentation.overlay.components.CelebrationScreen
+import dev.sadakat.thinkfast.presentation.overlay.components.OverlayEntranceAnimation
 import dev.sadakat.thinkfast.ui.theme.InterventionColors
 import dev.sadakat.thinkfast.ui.theme.InterventionTypography
 import dev.sadakat.thinkfast.ui.theme.ThinkFastTheme
@@ -194,6 +196,11 @@ class TimerOverlayWindow(
             windowManager.addView(overlayView, params)
             isShowing = true
 
+            // Phase 1.2: Haptic feedback on overlay appearance
+            overlayView?.performHapticFeedback(
+                android.view.HapticFeedbackConstants.LONG_PRESS
+            )
+
             // Move lifecycle to RESUMED
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
 
@@ -278,6 +285,7 @@ fun TimerOverlayScreen(
     onGoBackToHome: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val view = androidx.compose.ui.platform.LocalView.current
 
     LaunchedEffect(uiState.shouldDismiss) {
         if (uiState.shouldDismiss) {
@@ -305,7 +313,12 @@ fun TimerOverlayScreen(
         when {
             // Show celebration when requested (takes priority over loading)
             uiState.showCelebration -> {
-                CelebrationScreen(isDarkTheme = isDarkTheme)
+                CelebrationScreen(
+                    onComplete = {
+                        // Celebration will show for 1.5s, then dismiss and go home
+                        viewModel.onCelebrationComplete()
+                    }
+                )
             }
             // Show loading spinner during initial load
             uiState.isLoading -> {
@@ -326,8 +339,20 @@ fun TimerOverlayScreen(
                             todaysTotalUsage = uiState.todaysTotalUsage,
                             timerAlertMinutes = uiState.timerAlertMinutes,
                             frictionLevel = uiState.frictionLevel,
-                            onProceed = { viewModel.onProceedClicked() },
-                            onGoBack = { viewModel.onGoBackClicked() },
+                            onProceed = {
+                                // Phase 1.2: Haptic feedback on button press
+                                view.performHapticFeedback(
+                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                )
+                                viewModel.onProceedClicked()
+                            },
+                            onGoBack = {
+                                // Phase 1.2: Success haptic feedback on "Go Back"
+                                view.performHapticFeedback(
+                                    android.view.HapticFeedbackConstants.CONFIRM
+                                )
+                                viewModel.onGoBackClicked()
+                            },
                             isDarkTheme = isDarkTheme
                         )
                     }
@@ -858,53 +883,6 @@ private fun InterventionButtons(
     }
 }
 
-@Composable
-private fun CelebrationScreen(isDarkTheme: Boolean) {
-    val scale by rememberInfiniteTransition(label = "celebration").animateFloat(
-        initialValue = 0.8f,
-        targetValue = 1.2f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "celebration_scale"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(InterventionColors.Success),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "🎉",
-                fontSize = 96.sp,
-                modifier = Modifier.scale(scale)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Great Choice!",
-                style = InterventionTypography.InterventionTitle,
-                color = Color.White,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "You chose to focus on what matters",
-                style = InterventionTypography.InterventionSubtext,
-                color = Color.White.copy(alpha = 0.9f),
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
 
 // Extension function for button press animation
 @Suppress("unused")
