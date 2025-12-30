@@ -5,17 +5,20 @@ import dev.sadakat.thinkfaster.data.mapper.toDomain
 import dev.sadakat.thinkfaster.data.mapper.toDomainContentStats
 import dev.sadakat.thinkfaster.data.mapper.toEntity
 import dev.sadakat.thinkfaster.domain.model.ContentEffectivenessStats
+import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.domain.model.InterventionResult
 import dev.sadakat.thinkfaster.domain.model.OverallAnalytics
 import dev.sadakat.thinkfaster.domain.repository.AppInterventionStats
 import dev.sadakat.thinkfaster.domain.repository.ContextEffectivenessStats as DomainContextEffectivenessStats
 import dev.sadakat.thinkfaster.domain.repository.DailyEffectivenessStat as DomainDailyEffectivenessStat
+import dev.sadakat.thinkfaster.domain.repository.FeedbackStats
 import dev.sadakat.thinkfaster.domain.repository.InterventionResultRepository
 import dev.sadakat.thinkfaster.domain.repository.TimeWindowStats as DomainTimeWindowStats
 
 /**
  * Implementation of InterventionResultRepository using Room database
  * Phase G: Effectiveness tracking
+ * Phase 1: Added feedback system methods
  */
 class InterventionResultRepositoryImpl(
     private val resultDao: InterventionResultDao
@@ -31,6 +34,52 @@ class InterventionResultRepositoryImpl(
         endedNormally: Boolean
     ) {
         resultDao.updateSessionOutcome(sessionId, finalDurationMs, endedNormally)
+    }
+
+    // ========== Phase 1: Feedback System Methods ==========
+
+    override suspend fun updateFeedback(
+        sessionId: Long,
+        feedback: InterventionFeedback,
+        timestamp: Long
+    ) {
+        resultDao.updateFeedback(sessionId, feedback.name, timestamp)
+    }
+
+    override suspend fun updateAudioActive(
+        sessionId: Long,
+        audioActive: Boolean
+    ) {
+        resultDao.updateAudioActive(sessionId, audioActive)
+    }
+
+    override suspend fun updateSnooze(
+        sessionId: Long,
+        snoozeDurationMs: Long
+    ) {
+        resultDao.updateSnooze(sessionId, snoozeDurationMs)
+    }
+
+    override suspend fun getFeedbackStats(): FeedbackStats {
+        val breakdown = resultDao.getFeedbackBreakdown()
+        val total = breakdown.sumOf { it.count }
+        val helpful = breakdown.find { it.feedback == "HELPFUL" }?.count ?: 0
+        val disruptive = breakdown.find { it.feedback == "DISRUPTIVE" }?.count ?: 0
+        val none = breakdown.find { it.feedback == "NONE" }?.count ?: 0
+
+        return FeedbackStats(
+            totalInterventions = total,
+            helpfulCount = helpful,
+            disruptiveCount = disruptive,
+            noFeedbackCount = none
+        )
+    }
+
+    override suspend fun getInterventionsWithFeedback(
+        startTime: Long,
+        endTime: Long
+    ): List<InterventionResult> {
+        return resultDao.getInterventionsWithFeedback(startTime, endTime).toDomain()
     }
 
     override suspend fun getResultBySession(sessionId: Long): InterventionResult? {

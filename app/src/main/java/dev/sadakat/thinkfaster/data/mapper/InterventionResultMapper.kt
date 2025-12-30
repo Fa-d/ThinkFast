@@ -2,6 +2,7 @@ package dev.sadakat.thinkfaster.data.mapper
 
 import dev.sadakat.thinkfaster.data.local.database.dao.ContentEffectivenessStats
 import dev.sadakat.thinkfaster.data.local.database.entities.InterventionResultEntity
+import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.domain.model.InterventionResult
 import dev.sadakat.thinkfaster.domain.model.InterventionType
 import dev.sadakat.thinkfaster.domain.model.UserChoice
@@ -9,6 +10,8 @@ import dev.sadakat.thinkfaster.domain.model.UserChoice
 /**
  * Mapper functions to convert between InterventionResultEntity and InterventionResult
  * Phase G: Effectiveness tracking
+ * Phase 1: Added feedback fields
+ *
  */
 
 /**
@@ -30,6 +33,13 @@ fun InterventionResultEntity.toDomain(): InterventionResult {
         currentSessionDurationMs = currentSessionDurationMs,
         userChoice = UserChoice.valueOf(userChoice),
         timeToShowDecisionMs = timeToShowDecisionMs,
+        // Phase 1: Feedback fields
+        userFeedback = InterventionFeedback.valueOf(userFeedback),
+        feedbackTimestamp = feedbackTimestamp,
+        audioActive = audioActive,
+        wasSnoozed = wasSnoozed,
+        snoozeDurationMs = snoozeDurationMs,
+        // Outcome
         finalSessionDurationMs = finalSessionDurationMs,
         sessionEndedNormally = sessionEndedNormally,
         timestamp = timestamp
@@ -55,6 +65,13 @@ fun InterventionResult.toEntity(): InterventionResultEntity {
         currentSessionDurationMs = currentSessionDurationMs,
         userChoice = userChoice.name,
         timeToShowDecisionMs = timeToShowDecisionMs,
+        // Phase 1: Feedback fields
+        userFeedback = userFeedback.name,
+        feedbackTimestamp = feedbackTimestamp,
+        audioActive = audioActive,
+        wasSnoozed = wasSnoozed,
+        snoozeDurationMs = snoozeDurationMs,
+        // Outcome
         finalSessionDurationMs = finalSessionDurationMs,
         sessionEndedNormally = sessionEndedNormally,
         timestamp = timestamp

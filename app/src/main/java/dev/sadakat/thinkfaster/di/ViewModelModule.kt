@@ -35,8 +35,8 @@ val viewModelModule = module {
         )
     }
     viewModel { OnboardingViewModel(goalRepository = get()) }
-    viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get()) }
-    viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), settingsRepository = get()) }
+    viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), interventionPreferences = get()) }
+    viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), settingsRepository = get(), interventionPreferences = get()) }
     viewModel { AnalyticsViewModel(resultRepository = get()) }
     viewModel {
         StatsViewModel(
@@ -60,7 +60,8 @@ val viewModelModule = module {
             settingsRepository = get(),
             usageRepository = get(),
             trackedAppsRepository = get(),
-            getTrackedAppsWithDetailsUseCase = get()
+            getTrackedAppsWithDetailsUseCase = get(),
+            interventionPreferences = get()
         )
     }
     viewModel {

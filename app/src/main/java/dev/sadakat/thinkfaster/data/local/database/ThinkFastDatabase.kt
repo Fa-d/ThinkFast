@@ -29,7 +29,7 @@ import dev.sadakat.thinkfaster.data.local.database.entities.UsageSessionEntity
         StreakRecoveryEntity::class,  // Broken Streak Recovery feature
         UserBaselineEntity::class  // First-Week Retention feature
     ],
-    version = 4,
+    version = 5,  // Phase 1: Bumped for feedback system
     exportSchema = true
 )
 abstract class ThinkFastDatabase : RoomDatabase() {
@@ -45,10 +45,15 @@ abstract class ThinkFastDatabase : RoomDatabase() {
 /**
  * Migration from version 1 to 2
  * Adds the intervention_results table for Phase G: Effectiveness Tracking
+ *
+ * NOTE: This creates the table with ALL columns including those added in later migrations.
+ * This ensures the schema matches InterventionResultEntity exactly, allowing Room to validate properly.
+ *
  */
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(database: SupportSQLiteDatabase) {
-        // Create intervention_results table
+        // Create intervention_results table with complete schema (includes Phase 1 columns)
+        // Using TEXT for nullable Booleans to match Room's handling of Boolean? columns
         database.execSQL(
             """
             CREATE TABLE IF NOT EXISTS intervention_results (
@@ -66,6 +71,11 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
                 currentSessionDurationMs INTEGER NOT NULL,
                 userChoice TEXT NOT NULL,
                 timeToShowDecisionMs INTEGER NOT NULL,
+                user_feedback TEXT NOT NULL DEFAULT 'NONE',
+                feedback_timestamp INTEGER,
+                audio_active INTEGER NOT NULL DEFAULT 0,
+                was_snoozed INTEGER NOT NULL DEFAULT 0,
+                snooze_duration_ms INTEGER,
                 finalSessionDurationMs INTEGER,
                 sessionEndedNormally INTEGER,
                 timestamp INTEGER NOT NULL
@@ -99,6 +109,13 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
             """
             CREATE INDEX IF NOT EXISTS index_intervention_results_timestamp
             ON intervention_results(timestamp)
+            """.trimIndent()
+        )
+
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_intervention_results_user_feedback
+            ON intervention_results(user_feedback)
             """.trimIndent()
         )
     }
@@ -156,6 +173,71 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
                 calculatedDate TEXT NOT NULL,
                 timestamp INTEGER NOT NULL
             )
+            """.trimIndent()
+        )
+    }
+}
+
+/**
+ * Migration from version 4 to 5
+ * Phase 1: Adds feedback and context fields to intervention_results table
+ * Enables ML-based timing optimization by collecting user feedback
+ *
+ * NOTE: This migration is now idempotent - it checks if columns exist before adding them.
+ * This handles cases where the table was created with MIGRATION_1_2 (which already includes these columns).
+ *
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Helper function to check if column exists
+        fun columnExists(tableName: String, columnName: String): Boolean {
+            val cursor = database.query("PRAGMA table_info($tableName)")
+            cursor.use {
+                while (it.moveToNext()) {
+                    if (it.getString(it.getColumnIndexOrThrow("name")) == columnName) {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+
+        // Add columns only if they don't already exist (idempotent)
+        if (!columnExists("intervention_results", "user_feedback")) {
+            database.execSQL(
+                "ALTER TABLE intervention_results ADD COLUMN user_feedback TEXT NOT NULL DEFAULT 'NONE'"
+            )
+        }
+
+        if (!columnExists("intervention_results", "feedback_timestamp")) {
+            database.execSQL(
+                "ALTER TABLE intervention_results ADD COLUMN feedback_timestamp INTEGER"
+            )
+        }
+
+        if (!columnExists("intervention_results", "audio_active")) {
+            database.execSQL(
+                "ALTER TABLE intervention_results ADD COLUMN audio_active INTEGER NOT NULL DEFAULT 0"
+            )
+        }
+
+        if (!columnExists("intervention_results", "was_snoozed")) {
+            database.execSQL(
+                "ALTER TABLE intervention_results ADD COLUMN was_snoozed INTEGER NOT NULL DEFAULT 0"
+            )
+        }
+
+        if (!columnExists("intervention_results", "snooze_duration_ms")) {
+            database.execSQL(
+                "ALTER TABLE intervention_results ADD COLUMN snooze_duration_ms INTEGER"
+            )
+        }
+
+        // Create index on user_feedback for analytics queries (idempotent with IF NOT EXISTS)
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_intervention_results_user_feedback
+            ON intervention_results(user_feedback)
             """.trimIndent()
         )
     }

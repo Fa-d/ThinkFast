@@ -5,6 +5,7 @@ import dev.sadakat.thinkfaster.BuildConfig
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_1_2
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_2_3
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_3_4
+import dev.sadakat.thinkfaster.data.local.database.MIGRATION_4_5
 import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
 import dev.sadakat.thinkfaster.data.seed.callback.SeedDatabaseCallback
 import dev.sadakat.thinkfaster.util.Constants
@@ -18,7 +19,8 @@ val databaseModule = module {
         ).addMigrations(
             MIGRATION_1_2,  // Phase G: Add intervention results table
             MIGRATION_2_3,  // Broken Streak Recovery: Add streak recovery table
-            MIGRATION_3_4   // First-Week Retention: Add user baseline table
+            MIGRATION_3_4,  // First-Week Retention: Add user baseline table
+            MIGRATION_4_5   // Phase 1: Add feedback and context fields for ML training
         ).fallbackToDestructiveMigration()  // Fallback for development
 
         // Only add seed callback for non-production builds

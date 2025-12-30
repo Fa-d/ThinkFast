@@ -1,11 +1,15 @@
 package dev.sadakat.thinkfaster.data.local.database.entities
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
  * Entity for tracking intervention effectiveness
  * Phase G: Tracks how users respond to interventions and measures outcomes
+ * Phase 1: Added user feedback and context for ML training
+ *
+ * The app now uses time-based and usage-pattern-based context for intervention timing.
  */
 @Entity(tableName = "intervention_results")
 data class InterventionResultEntity(
@@ -34,6 +38,23 @@ data class InterventionResultEntity(
     // User behavior
     val userChoice: String,               // "PROCEED" or "GO_BACK"
     val timeToShowDecisionMs: Long,       // How long user took to decide
+
+    // Phase 1: User feedback on intervention quality (for ML training)
+    @ColumnInfo(name = "user_feedback", defaultValue = "NONE")
+    val userFeedback: String = "NONE",    // "HELPFUL" | "DISRUPTIVE" | "NONE"
+
+    @ColumnInfo(name = "feedback_timestamp")
+    val feedbackTimestamp: Long? = null,
+
+    // Phase 1: Environmental context for ML training (privacy-safe)
+    @ColumnInfo(name = "audio_active", defaultValue = "0")
+    val audioActive: Boolean = false,     // Was phone call or media playing?
+
+    @ColumnInfo(name = "was_snoozed", defaultValue = "0")
+    val wasSnoozed: Boolean = false,      // Did user snooze this intervention?
+
+    @ColumnInfo(name = "snooze_duration_ms")
+    val snoozeDurationMs: Long? = null,   // How long was the snooze?
 
     // Outcome (optional - filled after session ends)
     val finalSessionDurationMs: Long?,    // Total session duration

@@ -1,4 +1,4 @@
-package dev.sadakat.thinkfast.seed
+package dev.sadakat.thinkfaster.seed
 
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
@@ -40,7 +40,7 @@ class NewUserSeedGenerator : BaseSeedGenerator(
     config = PersonaConfig(
         personaType = PersonaType.FRESH_INSTALL,
         daysSinceInstall = 1..7,
-        frictionLevel = dev.sadakat.thinkfast.domain.intervention.FrictionLevel.GENTLE,
+        frictionLevel = dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
         dailyUsageMinutes = 20..40,
         sessionsPerDay = 2..3,
         averageSessionMinutes = 5..15,
@@ -57,12 +57,12 @@ class NewUserSeedGenerator : BaseSeedGenerator(
             veryLate = 0.05   // 12am-6am: 5%
         ),
         weekendUsageMultiplier = 1.3,
-        interventionResponse = dev.sadakat.thinkfast.data.seed.config.InterventionResponsePattern(
+        interventionResponse = dev.sadakat.thinkfaster.data.seed.config.InterventionResponsePattern(
             proceedRate = 0.60,
             goBackRate = 0.30,
             dismissedRate = 0.10
         ),
-        decisionTimeDistribution = dev.sadakat.thinkfast.data.seed.config.DecisionTimeDistribution(
+        decisionTimeDistribution = dev.sadakat.thinkfaster.data.seed.config.DecisionTimeDistribution(
             instantRate = 0.70,
             quickRate = 0.20,
             moderateRate = 0.08,
@@ -246,10 +246,10 @@ class NewUserSeedGenerator : BaseSeedGenerator(
         val dailyStats = calculateDailyStats(sessions)
 
         // No intervention results for real new users (haven't seen interventions yet)
-        val interventionResults = emptyList<dev.sadakat.thinkfast.data.seed.model.InterventionResultData>()
+        val interventionResults = emptyList<dev.sadakat.thinkfaster.data.seed.model.InterventionResultData>()
 
         // Events are optional
-        val events = emptyList<dev.sadakat.thinkfast.data.seed.model.EventData>()
+        val events = emptyList<dev.sadakat.thinkfaster.data.seed.model.EventData>()
 
         val daysOfData = sessions.map { it.date }.distinct().size
 
@@ -331,10 +331,10 @@ class NewUserSeedGenerator : BaseSeedGenerator(
         val dailyStats = calculateDailyStats(sessionsWithQuickReopens)
 
         // No intervention results for synthetic new users
-        val interventionResults = emptyList<dev.sadakat.thinkfast.data.seed.model.InterventionResultData>()
+        val interventionResults = emptyList<dev.sadakat.thinkfaster.data.seed.model.InterventionResultData>()
 
         // No events
-        val events = emptyList<dev.sadakat.thinkfast.data.seed.model.EventData>()
+        val events = emptyList<dev.sadakat.thinkfaster.data.seed.model.EventData>()
 
         return SeedData(
             persona = PersonaType.FRESH_INSTALL,

@@ -26,7 +26,8 @@ class GoalViewModel(
     private val settingsRepository: SettingsRepository,
     private val usageRepository: UsageRepository,
     private val trackedAppsRepository: TrackedAppsRepository,
-    private val getTrackedAppsWithDetailsUseCase: GetTrackedAppsWithDetailsUseCase
+    private val getTrackedAppsWithDetailsUseCase: GetTrackedAppsWithDetailsUseCase,
+    private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GoalUiState())
@@ -36,6 +37,7 @@ class GoalViewModel(
         loadGoalProgress()
         loadSettings()
         loadFrictionLevel()
+        loadWorkingMode()  // Phase 2: Load working mode state
         observeTrackedApps()
     }
 
@@ -339,6 +341,62 @@ class GoalViewModel(
             }
         )
     }
+
+    // ========== Phase 2: Working Mode ==========
+
+    /**
+     * Load working mode state
+     */
+    private fun loadWorkingMode() {
+        viewModelScope.launch {
+            try {
+                val isEnabled = interventionPreferences.isWorkingModeEnabled()
+                val remainingMinutes = interventionPreferences.getSnoozeRemainingMinutes()
+
+                _uiState.value = _uiState.value.copy(
+                    workingModeEnabled = isEnabled,
+                    workingModeRemainingMinutes = remainingMinutes
+                )
+            } catch (e: Exception) {
+                // Silently fail - not critical
+            }
+        }
+    }
+
+    /**
+     * Toggle "I'm Working" mode (2-hour snooze)
+     */
+    fun setWorkingMode(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                interventionPreferences.setWorkingMode(enabled)
+
+                // Update UI state
+                val remainingMinutes = if (enabled) {
+                    interventionPreferences.getSnoozeRemainingMinutes()
+                } else {
+                    0
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    workingModeEnabled = enabled,
+                    workingModeRemainingMinutes = remainingMinutes,
+                    successMessage = if (enabled)
+                        "Working Mode enabled - 2 hours of focus time"
+                    else
+                        "Working Mode disabled"
+                )
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(3000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to update working mode"
+                )
+            }
+        }
+    }
 }
 
 /**
@@ -355,6 +413,8 @@ data class GoalUiState(
     val appSettings: AppSettings = AppSettings(),
     val frictionLevelOverride: FrictionLevel? = null,  // null = Auto mode
     val currentFrictionLevel: FrictionLevel = FrictionLevel.GENTLE,
+    val workingModeEnabled: Boolean = false,  // Phase 2: Working mode toggle
+    val workingModeRemainingMinutes: Int = 0,  // Phase 2: Remaining minutes
     val error: String? = null,
     val successMessage: String? = null
 )

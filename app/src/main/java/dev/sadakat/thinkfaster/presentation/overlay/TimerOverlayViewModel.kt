@@ -7,6 +7,7 @@ import dev.sadakat.thinkfaster.domain.intervention.FrictionLevel
 import dev.sadakat.thinkfaster.domain.intervention.InterventionContext
 import dev.sadakat.thinkfaster.domain.intervention.InterventionType
 import dev.sadakat.thinkfaster.domain.model.InterventionContent
+import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.domain.model.InterventionResult
 import dev.sadakat.thinkfaster.domain.model.InterventionType as DomainInterventionType
 import dev.sadakat.thinkfaster.domain.model.UsageEvent
@@ -35,7 +36,8 @@ class TimerOverlayViewModel(
     private val usageRepository: UsageRepository,
     private val resultRepository: InterventionResultRepository,
     private val analyticsManager: AnalyticsManager,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerOverlayState())
@@ -207,7 +209,8 @@ class TimerOverlayViewModel(
 
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                shouldDismiss = true
+                userMadeChoice = true,
+                showFeedbackPrompt = true  // Phase 1: Show feedback after choice
             )
         }
     }
@@ -254,12 +257,14 @@ class TimerOverlayViewModel(
     /**
      * Called when celebration animation completes
      * Phase 1.1: Triggered by CelebrationScreen onComplete callback
+     * Phase 1: Now shows feedback prompt after celebration
      */
     fun onCelebrationComplete() {
         _uiState.value = _uiState.value.copy(
             isLoading = false,
             showCelebration = false,
-            shouldDismiss = true
+            userMadeChoice = true,
+            showFeedbackPrompt = true  // Phase 1: Show feedback after celebration
         )
     }
 
@@ -315,6 +320,125 @@ class TimerOverlayViewModel(
         _uiState.value = _uiState.value.copy(shouldDismiss = false, userChoseGoBack = false)
     }
 
+    // ========== Phase 1: Feedback System Methods ==========
+
+    /**
+     * Called when user provides feedback (thumbs up or thumbs down)
+     * Records feedback to database and triggers overlay dismissal
+     */
+    fun onFeedbackReceived(feedback: InterventionFeedback) {
+        val currentState = _uiState.value
+        if (currentState.sessionId == null) return
+
+        viewModelScope.launch {
+            try {
+                resultRepository.updateFeedback(
+                    sessionId = currentState.sessionId,
+                    feedback = feedback,
+                    timestamp = System.currentTimeMillis()
+                )
+
+                // Dismiss overlay after feedback with smooth transition
+                _uiState.value = _uiState.value.copy(
+                    shouldDismiss = true,
+                    showFeedbackPrompt = false
+                )
+
+                // Log feedback event for analytics
+                usageRepository.insertEvent(
+                    UsageEvent(
+                        sessionId = currentState.sessionId,
+                        eventType = "EVENT_FEEDBACK_PROVIDED",
+                        timestamp = System.currentTimeMillis(),
+                        metadata = "Feedback: ${feedback.name} | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
+                    )
+                )
+
+                dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                    "Feedback recorded: $feedback",
+                    context = "TimerOverlayViewModel.onFeedbackReceived"
+                )
+            } catch (e: Exception) {
+                dev.sadakat.thinkfaster.util.ErrorLogger.error(
+                    e,
+                    message = "Failed to save feedback",
+                    context = "TimerOverlayViewModel.onFeedbackReceived"
+                )
+                // Still dismiss even if save failed - don't trap user
+                _uiState.value = _uiState.value.copy(
+                    shouldDismiss = true,
+                    showFeedbackPrompt = false
+                )
+            }
+        }
+    }
+
+    /**
+     * Called when user skips feedback prompt
+     * Dismisses overlay without recording feedback
+     */
+    fun onSkipFeedback() {
+        _uiState.value = _uiState.value.copy(
+            shouldDismiss = true,
+            showFeedbackPrompt = false
+        )
+
+        dev.sadakat.thinkfaster.util.ErrorLogger.info(
+            "User skipped feedback",
+            context = "TimerOverlayViewModel.onSkipFeedback"
+        )
+    }
+
+    // ========== Phase 2: Snooze Functionality ==========
+
+    /**
+     * Called when user clicks snooze button
+     * Sets 10-minute snooze and dismisses overlay
+     */
+    fun onSnoozeClicked() {
+        val currentState = _uiState.value
+        if (currentState.sessionId == null) return
+
+        viewModelScope.launch {
+            try {
+                // Set 10-minute snooze
+                val tenMinutesInMs = 10 * 60 * 1000L
+                val snoozeUntil = System.currentTimeMillis() + tenMinutesInMs
+
+                interventionPreferences.setSnoozeUntil(snoozeUntil)
+
+                // Track dismissal for working mode suggestion
+                interventionPreferences.incrementDismissalCount()
+
+                // Dismiss overlay
+                _uiState.value = _uiState.value.copy(shouldDismiss = true)
+
+                // Log snooze event
+                usageRepository.insertEvent(
+                    UsageEvent(
+                        sessionId = currentState.sessionId,
+                        eventType = "EVENT_INTERVENTION_SNOOZED",
+                        timestamp = System.currentTimeMillis(),
+                        metadata = "Snoozed for 10 minutes | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
+                    )
+                )
+
+                dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                    "Intervention snoozed for 10 minutes",
+                    context = "TimerOverlayViewModel.onSnoozeClicked"
+                )
+            } catch (e: Exception) {
+                dev.sadakat.thinkfaster.util.ErrorLogger.error(
+                    e,
+                    message = "Failed to set snooze",
+                    context = "TimerOverlayViewModel.onSnoozeClicked"
+                )
+                // Still dismiss even if snooze failed - don't trap user
+                _uiState.value = _uiState.value.copy(shouldDismiss = true)
+            }
+        }
+    }
+
     /**
      * Format duration in milliseconds to human-readable format
      */
@@ -337,6 +461,7 @@ class TimerOverlayViewModel(
 /**
  * UI state for the timer overlay screen
  * Phase G: Enhanced with full context-aware intervention support
+ * Phase 1: Added feedback UI state
  */
 data class TimerOverlayState(
     val sessionId: Long? = null,
@@ -355,5 +480,8 @@ data class TimerOverlayState(
     val isLoading: Boolean = true,
     val shouldDismiss: Boolean = false,
     val showCelebration: Boolean = false,
-    val userChoseGoBack: Boolean = false
+    val userChoseGoBack: Boolean = false,
+    // Phase 1: Feedback UI state
+    val userMadeChoice: Boolean = false,  // User clicked Go Back or Proceed
+    val showFeedbackPrompt: Boolean = false  // Show feedback prompt after choice
 )

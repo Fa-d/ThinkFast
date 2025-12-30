@@ -50,10 +50,13 @@ class UsageMonitorService : Service() {
 
     private lateinit var appLaunchDetector: AppLaunchDetector
     private lateinit var sessionDetector: SessionDetector
+    private lateinit var contextDetector: ContextDetector
+    private lateinit var timingModel: dev.sadakat.thinkfaster.ml.TimingModel
 
     // WindowManager-based overlays
     private lateinit var reminderOverlay: ReminderOverlayWindow
     private lateinit var timerOverlay: TimerOverlayWindow
+    private lateinit var overlayManager: OverlayManager
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var monitoringJob: Job? = null
@@ -136,6 +139,10 @@ class UsageMonitorService : Service() {
                 }
             }
         )
+        contextDetector = ContextDetector(
+            context = this
+        )
+        timingModel = dev.sadakat.thinkfaster.ml.TimingModel(this)
 
         // Initialize WindowManager-based overlays
         // These will be created even without permission, but won't show until granted
@@ -143,7 +150,13 @@ class UsageMonitorService : Service() {
             // Callback when reminder overlay is dismissed
             onReminderOverlayDismissed()
         }
-        timerOverlay = TimerOverlayWindow(this)
+        timerOverlay = TimerOverlayWindow(this) {
+            // Callback when timer overlay is dismissed
+            onTimerOverlayDismissed()
+        }
+
+        // Initialize overlay manager for coordination
+        overlayManager = OverlayManager(this, reminderOverlay, timerOverlay)
 
         // Set up session detector callbacks
         setupSessionCallbacks()
@@ -166,6 +179,9 @@ class UsageMonitorService : Service() {
         serviceScope.launch {
             sessionDetector.initialize()
         }
+
+        // Initialize ML timing model
+        timingModel.initialize()
 
         // Observe tracked apps changes and invalidate cache when apps are added/removed
         serviceScope.launch {
@@ -215,12 +231,11 @@ class UsageMonitorService : Service() {
         // Stop monitoring
         monitoringJob?.cancel()
 
-        // Dismiss any showing overlays
+        // Dismiss any showing overlays via OverlayManager
         try {
-            reminderOverlay.dismiss()
-            timerOverlay.dismiss()
+            overlayManager.dismissAll()
         } catch (e: Exception) {
-            // Overlays might not be initialized
+            // OverlayManager might not be initialized
         }
 
         // Unregister receivers
@@ -229,6 +244,13 @@ class UsageMonitorService : Service() {
             unregisterReceiver(powerSaveReceiver)
         } catch (e: Exception) {
             // Receivers might not be registered
+        }
+
+        // Clean up ML model
+        try {
+            timingModel.cleanup()
+        } catch (e: Exception) {
+            // Model might not be initialized
         }
 
         // End any active session
@@ -498,6 +520,39 @@ class UsageMonitorService : Service() {
      * Show reminder overlay when app is first opened
      */
     private fun showReminderOverlay(sessionState: SessionDetector.SessionState) {
+        // Phase 2: Check if interventions are snoozed
+        val interventionPrefs = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences.getInstance(this)
+        if (interventionPrefs.isSnoozed()) {
+            val remainingMinutes = interventionPrefs.getSnoozeRemainingMinutes()
+            ErrorLogger.info(
+                "Skipping reminder overlay - snoozed for $remainingMinutes more minutes",
+                context = "UsageMonitorService.showReminderOverlay"
+            )
+            return
+        }
+
+        // Phase 3: Check context-based conditions
+        val contextResult = contextDetector.shouldShowInterventionType(
+            ContextDetector.InterventionType.REMINDER
+        )
+        if (!contextResult.shouldShowIntervention) {
+            ErrorLogger.info(
+                "Skipping reminder overlay - context check failed: ${contextResult.reason}",
+                context = "UsageMonitorService.showReminderOverlay"
+            )
+            return
+        }
+
+        // Phase 4: Check ML-based timing predictions
+        val mlPrediction = checkMLPrediction()
+        if (!mlPrediction.shouldShowIntervention) {
+            ErrorLogger.info(
+                "Skipping reminder overlay - ML prediction: effectiveness=${mlPrediction.effectivenessScore}, confidence=${mlPrediction.confidence}",
+                context = "UsageMonitorService.showReminderOverlay"
+            )
+            return
+        }
+
         // Check if overlay permission is granted
         if (!PermissionHelper.hasOverlayPermission(this)) {
             ErrorLogger.warning(
@@ -515,8 +570,8 @@ class UsageMonitorService : Service() {
         reminderOverlayShowing = true
         reminderOverlayShownTime = System.currentTimeMillis()
 
-        // Show WindowManager-based overlay (appears on top of current app)
-        reminderOverlay.show(
+        // Show WindowManager-based overlay via OverlayManager (prevents simultaneity)
+        overlayManager.showReminder(
             sessionId = sessionState.sessionId,
             targetApp = sessionState.targetApp
         )
@@ -528,6 +583,9 @@ class UsageMonitorService : Service() {
      */
     private fun onReminderOverlayDismissed() {
         reminderOverlayShowing = false
+
+        // Notify overlay manager that reminder was dismissed
+        overlayManager.onReminderDismissed()
 
         // Immediately check if the target app is still in foreground
         // This resumes session tracking and updates lastActiveTimestamp
@@ -551,6 +609,20 @@ class UsageMonitorService : Service() {
     }
 
     /**
+     * Called when timer overlay is dismissed
+     * Notify overlay manager to clear state
+     */
+    private fun onTimerOverlayDismissed() {
+        // Notify overlay manager that timer was dismissed
+        overlayManager.onTimerDismissed()
+
+        ErrorLogger.info(
+            "Timer overlay dismissed",
+            context = "UsageMonitorService.onTimerOverlayDismissed"
+        )
+    }
+
+    /**
      * Show timer overlay after configured duration
      */
     private fun showTimerOverlay(sessionState: SessionDetector.SessionState) {
@@ -558,6 +630,39 @@ class UsageMonitorService : Service() {
             "showTimerOverlay called for ${sessionState.targetApp}",
             context = "UsageMonitorService.showTimerOverlay"
         )
+
+        // Phase 2: Check if interventions are snoozed
+        val interventionPrefs = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences.getInstance(this)
+        if (interventionPrefs.isSnoozed()) {
+            val remainingMinutes = interventionPrefs.getSnoozeRemainingMinutes()
+            ErrorLogger.info(
+                "Skipping timer overlay - snoozed for $remainingMinutes more minutes",
+                context = "UsageMonitorService.showTimerOverlay"
+            )
+            return
+        }
+
+        // Phase 3: Check context-based conditions
+        val contextResult = contextDetector.shouldShowInterventionType(
+            ContextDetector.InterventionType.TIMER
+        )
+        if (!contextResult.shouldShowIntervention) {
+            ErrorLogger.info(
+                "Skipping timer overlay - context check failed: ${contextResult.reason}",
+                context = "UsageMonitorService.showTimerOverlay"
+            )
+            return
+        }
+
+        // Phase 4: Check ML-based timing predictions
+        val mlPrediction = checkMLPrediction()
+        if (!mlPrediction.shouldShowIntervention) {
+            ErrorLogger.info(
+                "Skipping timer overlay - ML prediction: effectiveness=${mlPrediction.effectivenessScore}, confidence=${mlPrediction.confidence}",
+                context = "UsageMonitorService.showTimerOverlay"
+            )
+            return
+        }
 
         // Check if overlay permission is granted
         if (!PermissionHelper.hasOverlayPermission(this)) {
@@ -576,12 +681,12 @@ class UsageMonitorService : Service() {
         // Track that timer overlay is being shown
         timerOverlayShownTime = System.currentTimeMillis()
 
-        // Show WindowManager-based overlay (appears on top of current app)
-        timerOverlay.show(
+        // Show WindowManager-based overlay via OverlayManager (prevents simultaneity)
+        overlayManager.showTimer(
             sessionId = sessionState.sessionId,
             targetApp = sessionState.targetApp,
-            sessionStartTime = sessionState.startTimestamp,
-            sessionDuration = sessionState.totalDuration
+            startTime = sessionState.startTimestamp,
+            duration = sessionState.totalDuration
         )
 
         ErrorLogger.info(
@@ -612,6 +717,30 @@ class UsageMonitorService : Service() {
         // Screen is back on - monitoring will resume automatically
         // Reset detector state to avoid stale data
         appLaunchDetector.reset()
+    }
+
+    /**
+     * Check ML prediction for intervention timing
+     */
+    private fun checkMLPrediction(): dev.sadakat.thinkfaster.ml.TimingModel.PredictionResult {
+        // Get recent usage statistics for ML features
+        val recentAverageDuration = 15f // TODO: Get from usage repository
+        val recentSessionCount = 5 // TODO: Get from usage repository
+        val timeSinceLastIntervention = 2f // TODO: Track last intervention time
+        val lastInterventionEffectiveness = 0.7f // TODO: Calculate from intervention results
+        val sessionFrequency = 2f // TODO: Calculate from usage repository
+
+        // Extract current time features
+        val features = timingModel.extractCurrentTimeFeatures(
+            recentAverageDuration = recentAverageDuration,
+            recentSessionCount = recentSessionCount,
+            timeSinceLastIntervention = timeSinceLastIntervention,
+            lastInterventionEffectiveness = lastInterventionEffectiveness,
+            sessionFrequency = sessionFrequency
+        )
+
+        // Get prediction
+        return timingModel.predict(features)
     }
 
     /**

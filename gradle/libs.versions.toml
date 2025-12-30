@@ -21,6 +21,9 @@ mpandroidchart = "3.1.0"
 firebaseBom = "33.0.0"
 googleServices = "4.4.2"
 firebaseCrashlytics = "3.0.2"
+# TensorFlow Lite
+tensorflowLite = "2.16.1"
+tensorflowLiteSupport = "0.5.0"
 # Testing
 mockk = "1.13.9"
 turbine = "1.1.0"
@@ -44,6 +47,8 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+# Material Icons Extended (includes additional icons like ThumbDown, ThumbUp, etc.)
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
 # Room
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
@@ -79,6 +84,10 @@ mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", versio
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-analytics-ktx = { group = "com.google.firebase", name = "firebase-analytics-ktx" }
 firebase-crashlytics-ktx = { group = "com.google.firebase", name = "firebase-crashlytics-ktx" }
+
+# TensorFlow Lite
+tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflowLite" }
+tensorflow-lite-support = { group = "org.tensorflow", name = "tensorflow-lite-support", version.ref = "tensorflowLiteSupport" }
 
 # Testing
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }

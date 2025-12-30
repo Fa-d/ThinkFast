@@ -8,11 +8,18 @@ import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -28,14 +35,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,6 +82,7 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.sadakat.thinkfaster.domain.model.InterventionContent
+import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.presentation.overlay.components.CelebrationScreen
 import dev.sadakat.thinkfaster.presentation.overlay.components.CompactBreathingExercise
 import dev.sadakat.thinkfaster.presentation.overlay.components.EnhancedActivitySuggestionContent
@@ -184,11 +201,28 @@ class ReminderOverlayWindow(
                                 interventionContent = uiState.interventionContent,
                                 frictionLevel = uiState.interventionContext?.userFrictionLevel
                                     ?: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
+                                showFeedbackPrompt = uiState.showFeedbackPrompt,
                                 onGoBackClick = {
                                     handleGoBackClick(sessionId)
                                 },
                                 onProceedClick = {
                                     handleProceedClick(sessionId)
+                                },
+                                onSnoozeClick = {  // Phase 2: Snooze callback
+                                    overlayView?.performHapticFeedback(
+                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                    )
+                                    viewModel.onSnoozeClicked()
+                                },
+                                onFeedbackReceived = { feedback ->
+                                    // Phase 1.2: Haptic feedback on thumbs up/down
+                                    overlayView?.performHapticFeedback(
+                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                    )
+                                    viewModel.onFeedbackReceived(feedback)
+                                },
+                                onSkipFeedback = {
+                                    viewModel.onSkipFeedback()
                                 }
                             )
 
@@ -392,47 +426,6 @@ class ReminderOverlayWindow(
  * Background colors for different intervention types
  * Dark theme aware
  */
-private fun getBackgroundColor(content: InterventionContent?, isDarkTheme: Boolean): Color {
-    return when (content) {
-        is InterventionContent.ReflectionQuestion -> if (isDarkTheme)
-            InterventionColors.ReflectionBackgroundDark
-        else
-            InterventionColors.ReflectionBackground
-        is InterventionContent.TimeAlternative -> if (isDarkTheme)
-            InterventionColors.TimerAlertBackgroundDark
-        else
-            InterventionColors.TimerAlertBackground
-        is InterventionContent.BreathingExercise -> if (isDarkTheme)
-            InterventionColors.BreathingBackgroundDark
-        else
-            InterventionColors.BreathingBackground
-        is InterventionContent.UsageStats -> if (isDarkTheme)
-            InterventionColors.StatsBackgroundDark
-        else
-            InterventionColors.StatsBackground
-        is InterventionContent.EmotionalAppeal -> if (isDarkTheme)
-            InterventionColors.EmotionalAppealBackgroundDark
-        else
-            InterventionColors.EmotionalAppealBackground
-        is InterventionContent.Quote -> if (isDarkTheme)
-            InterventionColors.QuoteBackgroundDark
-        else
-            InterventionColors.QuoteBackground
-        is InterventionContent.Gamification -> if (isDarkTheme)
-            InterventionColors.GamificationBackgroundDark
-        else
-            InterventionColors.GamificationBackground
-        is InterventionContent.ActivitySuggestion -> if (isDarkTheme)
-            InterventionColors.ActivitySuggestionBackgroundDark
-        else
-            InterventionColors.ActivitySuggestionBackground
-        null -> if (isDarkTheme)
-            InterventionColors.GentleReminderBackgroundDark
-        else
-            InterventionColors.GentleReminderBackground
-    }
-}
-
 private fun getTextColor(isDarkTheme: Boolean): Color {
     return if (isDarkTheme)
         InterventionColors.InterventionTextPrimaryDark
@@ -453,8 +446,12 @@ private fun ReminderOverlayContent(
     context: Context,
     interventionContent: InterventionContent?,
     frictionLevel: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel,
+    showFeedbackPrompt: Boolean,
     onGoBackClick: () -> Unit,
-    onProceedClick: () -> Unit
+    onProceedClick: () -> Unit,
+    onSnoozeClick: () -> Unit,  // Phase 2: Snooze functionality
+    onFeedbackReceived: (InterventionFeedback) -> Unit,
+    onSkipFeedback: () -> Unit
 ) {
     val isDarkTheme = isSystemInDarkTheme()
 
@@ -573,7 +570,12 @@ private fun ReminderOverlayContent(
                         text = appName,
                         fontSize = ResponsiveFontSize.appName(),
                         fontWeight = FontWeight.Medium,
-                        color = textColor.copy(alpha = 0.6f),
+                        color = textColor.copy(
+                            alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
+                                isPrimary = false,
+                                isOnGradient = true
+                            )
+                        ),
                         textAlign = TextAlign.Center
                     )
 
@@ -586,28 +588,108 @@ private fun ReminderOverlayContent(
                     }
                 }
 
-                // Right column: Actions
+                // Right column: Actions / Feedback
                 Column(
                     modifier = Modifier.weight(0.7f),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    InterventionActionButtons(
-                        contentType = interventionContent?.javaClass?.simpleName,
-                        frictionLevel = frictionLevel,
-                        onGoBackClick = onGoBackClick,
-                        onProceedClick = onProceedClick,
-                        textColor = textColor,
-                        secondaryTextColor = secondaryTextColor,
-                        isDarkTheme = isDarkTheme
-                    )
+                    // Phase 1: Show feedback prompt OR action buttons
+                    AnimatedVisibility(
+                        visible = showFeedbackPrompt,
+                        enter = slideInVertically(
+                            initialOffsetY = { it / 2 }
+                        ) + fadeIn(),
+                        exit = slideOutVertically(
+                            targetOffsetY = { it / 2 }
+                        ) + fadeOut()
+                    ) {
+                        FeedbackPrompt(
+                            onFeedback = onFeedbackReceived,
+                            onDismiss = onSkipFeedback,
+                            isDarkTheme = isDarkTheme
+                        )
+                    }
 
-                    Text(
-                        text = "This overlay helps you build mindful usage habits",
-                        fontSize = 14.sp,
-                        color = secondaryTextColor.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center
-                    )
+                    AnimatedVisibility(
+                        visible = !showFeedbackPrompt,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Phase 2: Snooze button
+                            OutlinedButton(
+                                onClick = onSnoozeClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                    containerColor = Color.White.copy(
+                                        alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalContainerAlpha(
+                                            isOnGradient = true,
+                                            baseAlpha = 0.15f
+                                        )
+                                    ),
+                                    contentColor = textColor.copy(
+                                        alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
+                                            isPrimary = false,
+                                            isOnGradient = true
+                                        )
+                                    )
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.5.dp,
+                                    textColor.copy(
+                                        alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalBorderAlpha(
+                                            isOnGradient = true
+                                        )
+                                    )
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Pause,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = textColor.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Snooze for 10 minutes",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            InterventionActionButtons(
+                                contentType = interventionContent?.javaClass?.simpleName,
+                                frictionLevel = frictionLevel,
+                                onGoBackClick = onGoBackClick,
+                                onProceedClick = onProceedClick,
+                                textColor = textColor,
+                                secondaryTextColor = secondaryTextColor,
+                                isDarkTheme = isDarkTheme
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "This overlay helps you build mindful usage habits",
+                                fontSize = 14.sp,
+                                color = secondaryTextColor.copy(
+                        alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
+                            isPrimary = false,
+                            isOnGradient = true
+                        )
+                    ),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             }
         } else {
@@ -621,7 +703,12 @@ private fun ReminderOverlayContent(
                     text = appName,
                     fontSize = ResponsiveFontSize.appName(),
                     fontWeight = FontWeight.Medium,
-                    color = textColor.copy(alpha = 0.6f),
+                    color = textColor.copy(
+                        alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
+                            isPrimary = false,
+                            isOnGradient = true
+                        )
+                    ),
                     textAlign = TextAlign.Center
                 )
 
@@ -637,24 +724,103 @@ private fun ReminderOverlayContent(
 
                 Spacer(modifier = Modifier.weight(0.2f))
 
-                InterventionActionButtons(
-                    contentType = interventionContent?.javaClass?.simpleName,
-                    frictionLevel = frictionLevel,
-                    onGoBackClick = onGoBackClick,
-                    onProceedClick = onProceedClick,
-                    textColor = textColor,
-                    secondaryTextColor = secondaryTextColor,
-                    isDarkTheme = isDarkTheme
-                )
+                // Phase 1: Show feedback prompt OR action buttons
+                AnimatedVisibility(
+                    visible = showFeedbackPrompt,
+                    enter = slideInVertically(
+                        initialOffsetY = { it / 2 }  // Slide up from 50% below
+                    ) + fadeIn(),
+                    exit = slideOutVertically(
+                        targetOffsetY = { it / 2 }
+                    ) + fadeOut()
+                ) {
+                    FeedbackPrompt(
+                        onFeedback = onFeedbackReceived,
+                        onDismiss = onSkipFeedback,
+                        isDarkTheme = isDarkTheme
+                    )
+                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                AnimatedVisibility(
+                    visible = !showFeedbackPrompt,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // Phase 2: Snooze button
+                        OutlinedButton(
+                            onClick = onSnoozeClick,
+                            modifier = Modifier
+                                .fillMaxWidth(0.85f)
+                                .height(48.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                containerColor = Color.White.copy(
+                                    alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalContainerAlpha(
+                                        isOnGradient = true,
+                                        baseAlpha = 0.15f
+                                    )
+                                ),
+                                contentColor = textColor.copy(
+                                    alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
+                                        isPrimary = false,
+                                        isOnGradient = true
+                                    )
+                                )
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                textColor.copy(
+                                    alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalBorderAlpha(
+                                        isOnGradient = true
+                                    )
+                                )
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Pause,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = textColor.copy(alpha = 0.8f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Snooze for 10 minutes",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
 
-                Text(
-                    text = "This overlay helps you build mindful usage habits",
-                    fontSize = 14.sp,
-                    color = secondaryTextColor.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center
-                )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        InterventionActionButtons(
+                            contentType = interventionContent?.javaClass?.simpleName,
+                            frictionLevel = frictionLevel,
+                            onGoBackClick = onGoBackClick,
+                            onProceedClick = onProceedClick,
+                            textColor = textColor,
+                            secondaryTextColor = secondaryTextColor,
+                            isDarkTheme = isDarkTheme
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "This overlay helps you build mindful usage habits",
+                            fontSize = 14.sp,
+                            color = secondaryTextColor.copy(
+                        alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
+                            isPrimary = false,
+                            isOnGradient = true
+                        )
+                    ),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
             }
         }
     }
@@ -924,10 +1090,20 @@ private fun InterventionActionButtons(
     secondaryTextColor: Color,
     isDarkTheme: Boolean
 ) {
-    // Button colors: ALWAYS use light colors since all gradient backgrounds are dark
-    // Ignoring system theme to ensure proper contrast
-    val goBackColor = InterventionColors.GoBackButtonDark  // Light green
-    val proceedColor = InterventionColors.ProceedButtonDark  // Light gray
+    // Button colors: Use contrast-checked colors for gradient backgrounds
+    // Approximate gradient mid-point for contrast checking
+    val backgroundAverage = Color(0xFF283593)  // Approximate mid-point of dark gradients
+
+    val goBackColor = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.ensureButtonContrast(
+        buttonColor = InterventionColors.GoBackButtonDark,  // Light green
+        backgroundColor = backgroundAverage,
+        minContrast = 3.0f
+    )
+    val proceedColor = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.ensureButtonContrast(
+        buttonColor = InterventionColors.ProceedButtonDark,  // Light gray
+        backgroundColor = backgroundAverage,
+        minContrast = 3.0f
+    )
 
     var showButtons by remember { mutableStateOf(frictionLevel.delayMs == 0L) }
     var countdown by remember { mutableStateOf((frictionLevel.delayMs / 1000).toInt()) }
@@ -1088,6 +1264,188 @@ private fun InterventionActionButtons(
                     fontSize = ResponsiveFontSize.button(), // Phase 4: Responsive text
                     fontWeight = FontWeight.Medium,
                     color = proceedColor
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Phase 1: Feedback prompt with excellent UX
+ * Shows after user makes their choice (Go Back or Proceed)
+ * Smooth slide-up animation with haptic feedback
+ */
+@Composable
+private fun FeedbackPrompt(
+    onFeedback: (InterventionFeedback) -> Unit,
+    onDismiss: () -> Unit,
+    isDarkTheme: Boolean
+) {
+    // Phase 1: Interaction sources for button press feedback
+    val helpfulInteractionSource = remember { MutableInteractionSource() }
+    val disruptiveInteractionSource = remember { MutableInteractionSource() }
+
+    val helpfulPressed by helpfulInteractionSource.collectIsPressedAsState()
+    val disruptivePressed by disruptiveInteractionSource.collectIsPressedAsState()
+
+    // Scale animation on press for tactile feel
+    val helpfulScale by animateFloatAsState(
+        targetValue = if (helpfulPressed) 0.90f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "helpful_scale"
+    )
+
+    val disruptiveScale by animateFloatAsState(
+        targetValue = if (disruptivePressed) 0.90f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "disruptive_scale"
+    )
+
+    // Text colors - always use light text on dark backgrounds
+    val textColor = InterventionColors.InterventionTextPrimaryDark
+    val secondaryTextColor = InterventionColors.InterventionTextSecondaryDark
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(
+                alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalContainerAlpha(
+                    isOnGradient = true,
+                    baseAlpha = 0.18f
+                )
+            )  // Enhanced visibility for gradients
+        ),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Question text
+            Text(
+                text = "Was this intervention well-timed?",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                color = textColor,
+                textAlign = TextAlign.Center,
+                lineHeight = 24.sp
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Your feedback helps us show interventions at better times",
+                fontSize = 14.sp,
+                color = secondaryTextColor.copy(
+                        alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
+                            isPrimary = false,
+                            isOnGradient = true
+                        )
+                    ),
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Thumbs up/down buttons
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Thumbs up button (Helpful)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    OutlinedIconButton(
+                        onClick = {
+                            onFeedback(InterventionFeedback.HELPFUL)
+                        },
+                        modifier = Modifier
+                            .size(80.dp)
+                            .scale(helpfulScale),
+                        colors = IconButtonDefaults.outlinedIconButtonColors(
+                            containerColor = Color(0xFF4CAF50).copy(alpha = 0.15f),  // Light green tint
+                            contentColor = Color(0xFF81C784)  // Lighter green for icon
+                        ),
+                        interactionSource = helpfulInteractionSource
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ThumbUp,
+                            contentDescription = "Helpful - intervention was well-timed",
+                            tint = Color(0xFF81C784),  // Light green
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Helpful",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = textColor.copy(alpha = 0.8f)
+                    )
+                }
+
+                // Thumbs down button (Disruptive)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    OutlinedIconButton(
+                        onClick = {
+                            onFeedback(InterventionFeedback.DISRUPTIVE)
+                        },
+                        modifier = Modifier
+                            .size(80.dp)
+                            .scale(disruptiveScale),
+                        colors = IconButtonDefaults.outlinedIconButtonColors(
+                            containerColor = Color(0xFFF44336).copy(alpha = 0.15f),  // Light red tint
+                            contentColor = Color(0xFFE57373)  // Lighter red for icon
+                        ),
+                        interactionSource = disruptiveInteractionSource
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ThumbDown,
+                            contentDescription = "Disruptive - intervention was poorly-timed",
+                            tint = Color(0xFFE57373),  // Light red
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Disruptive",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = textColor.copy(alpha = 0.8f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Skip button - subtle, less prominent
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics {
+                    contentDescription = "Skip feedback"
+                }
+            ) {
+                Text(
+                    text = "Skip",
+                    fontSize = 14.sp,
+                    color = secondaryTextColor.copy(alpha = 0.6f),
+                    fontWeight = FontWeight.Normal
                 )
             }
         }

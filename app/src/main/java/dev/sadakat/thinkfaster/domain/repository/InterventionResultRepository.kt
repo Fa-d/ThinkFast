@@ -1,12 +1,14 @@
 package dev.sadakat.thinkfaster.domain.repository
 
 import dev.sadakat.thinkfaster.domain.model.ContentEffectivenessStats
+import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.domain.model.InterventionResult
 import dev.sadakat.thinkfaster.domain.model.OverallAnalytics
 
 /**
  * Repository interface for intervention result tracking
  * Phase G: Effectiveness tracking and analytics
+ * Phase 1: Added feedback methods for ML training
  */
 interface InterventionResultRepository {
 
@@ -25,6 +27,53 @@ interface InterventionResultRepository {
         finalDurationMs: Long,
         endedNormally: Boolean
     )
+
+    // ========== Phase 1: Feedback System Methods ==========
+
+    /**
+     * Update user feedback for an intervention
+     * @param sessionId The session ID of the intervention
+     * @param feedback The user's feedback (HELPFUL or DISRUPTIVE)
+     * @param timestamp When the feedback was provided
+     */
+    suspend fun updateFeedback(
+        sessionId: Long,
+        feedback: InterventionFeedback,
+        timestamp: Long
+    )
+
+    /**
+     * Update audio active context for an intervention
+     * Used to record if audio/call was active when intervention was shown
+     *
+     */
+    suspend fun updateAudioActive(
+        sessionId: Long,
+        audioActive: Boolean
+    )
+
+    /**
+     * Update snooze information for an intervention
+     */
+    suspend fun updateSnooze(
+        sessionId: Long,
+        snoozeDurationMs: Long
+    )
+
+    /**
+     * Get feedback statistics for analytics
+     * @return Stats showing helpful vs disruptive feedback rates
+     */
+    suspend fun getFeedbackStats(): FeedbackStats
+
+    /**
+     * Get interventions with feedback in a date range
+     * Used for ML model training
+     */
+    suspend fun getInterventionsWithFeedback(
+        startTime: Long,
+        endTime: Long
+    ): List<InterventionResult>
 
     /**
      * Get results for a specific session
@@ -128,6 +177,31 @@ interface InterventionResultRepository {
         startTimestamp: Long,
         endTimestamp: Long
     ): List<DailyEffectivenessStat>
+}
+
+/**
+ * Phase 1: Feedback statistics for analytics
+ */
+data class FeedbackStats(
+    val totalInterventions: Int,
+    val helpfulCount: Int,
+    val disruptiveCount: Int,
+    val noFeedbackCount: Int
+) {
+    val helpfulRate: Double
+        get() = if (totalInterventions > 0) (helpfulCount.toDouble() / totalInterventions) * 100 else 0.0
+
+    val disruptiveRate: Double
+        get() = if (totalInterventions > 0) (disruptiveCount.toDouble() / totalInterventions) * 100 else 0.0
+
+    val feedbackRate: Double
+        get() = if (totalInterventions > 0) ((helpfulCount + disruptiveCount).toDouble() / totalInterventions) * 100 else 0.0
+
+    val satisfactionRate: Double
+        get() {
+            val totalWithFeedback = helpfulCount + disruptiveCount
+            return if (totalWithFeedback > 0) (helpfulCount.toDouble() / totalWithFeedback) * 100 else 0.0
+        }
 }
 
 /**

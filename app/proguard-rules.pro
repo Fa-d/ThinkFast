@@ -19,3 +19,31 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# WorkManager - Fix WakeLock verification warning
+-keep class androidx.work.** { *; }
+-keep class * extends androidx.work.Worker
+-keep class * extends androidx.work.CoroutineWorker
+-keepclassmembers class * extends androidx.work.Worker {
+    public <init>(android.content.Context,androidx.work.WorkerParameters);
+}
+-keepclassmembers class * extends androidx.work.CoroutineWorker {
+    public <init>(android.content.Context,androidx.work.WorkerParameters);
+}
+
+# PowerManager WakeLock - Prevent lock verification issues
+-keep class android.os.PowerManager$WakeLock { *; }
+-keepclassmembers class android.os.PowerManager$WakeLock {
+    void release(int);
+}
+
+# Keep WorkManager ListenableWorker
+-keep public class * extends androidx.work.ListenableWorker {
+    public <init>(...);
+}
+
+# Koin - Dependency injection
+-keep class org.koin.** { *; }
+-keepclassmembers class * {
+    @org.koin.core.annotation.* <methods>;
+}

@@ -249,3 +249,129 @@ fun talkBackDelay(normalDelay: Long): Long {
         normalDelay
     }
 }
+
+/**
+ * Enhanced contrast utilities for gradient backgrounds
+ * Provides optimal alpha values and contrast checking for overlays
+ */
+object GradientContrastUtils {
+
+    /**
+     * Calculate optimal alpha for container elements on gradient backgrounds
+     * Returns higher alpha for better visibility on complex backgrounds
+     *
+     * @param isOnGradient Whether the element is on a gradient background
+     * @param baseAlpha The baseline alpha value (default 0.15f)
+     * @return Optimal alpha value (0.0f to 1.0f)
+     */
+    fun getOptimalContainerAlpha(
+        isOnGradient: Boolean,
+        baseAlpha: Float = 0.15f
+    ): Float {
+        return if (isOnGradient) {
+            // Increase alpha on gradients for better visibility
+            // 10% -> 25%, 15% -> 35-37%, 18% -> 40-45%
+            minOf(baseAlpha * 2.5f, 0.45f)
+        } else {
+            baseAlpha
+        }
+    }
+
+    /**
+     * Get optimal border alpha for outlined elements on gradients
+     *
+     * @param isOnGradient Whether the element is on a gradient background
+     * @param baseAlpha The baseline alpha value (default 0.3f)
+     * @return Optimal alpha value for borders
+     */
+    fun getOptimalBorderAlpha(
+        isOnGradient: Boolean,
+        baseAlpha: Float = 0.3f
+    ): Float {
+        return if (isOnGradient) {
+            // Increase border visibility on gradients
+            // 30% -> 60%
+            minOf(baseAlpha * 2.0f, 0.7f)
+        } else {
+            baseAlpha
+        }
+    }
+
+    /**
+     * Get optimal text alpha on gradients
+     * Ensures readability without fully opaque text
+     *
+     * @param isPrimary Whether this is primary text (vs secondary/hint)
+     * @param isOnGradient Whether the text is on a gradient background
+     * @return Optimal alpha value for text
+     */
+    fun getOptimalTextAlpha(
+        isPrimary: Boolean,
+        isOnGradient: Boolean
+    ): Float {
+        return when {
+            isPrimary && isOnGradient -> 0.95f  // Primary text on gradient: 95%
+            isPrimary -> 1.0f                    // Primary on solid: 100%
+            isOnGradient -> 0.85f                // Secondary on gradient: 85%
+            else -> 0.7f                         // Secondary on solid: 70%
+        }
+    }
+
+    /**
+     * Ensure button meets minimum contrast ratio for WCAG AA compliance
+     * Returns adjusted color if needed
+     *
+     * @param buttonColor The original button color
+     * @param backgroundColor The background color to check against
+     * @param minContrast Minimum contrast ratio (default 3.0f for large text)
+     * @return Color adjusted to meet minimum contrast if needed
+     */
+    fun ensureButtonContrast(
+        buttonColor: Color,
+        backgroundColor: Color,
+        minContrast: Float = 3.0f  // WCAG AA for large text
+    ): Color {
+        val currentContrast = calculateContrastRatio(buttonColor, backgroundColor)
+        return if (currentContrast < minContrast) {
+            // Lighten or darken button color to meet contrast
+            if (backgroundColor.luminance() > 0.5f) {
+                // Light background - darken button
+                buttonColor.copy(
+                    red = buttonColor.red * 0.7f,
+                    green = buttonColor.green * 0.7f,
+                    blue = buttonColor.blue * 0.7f
+                )
+            } else {
+                // Dark background - lighten button
+                buttonColor.copy(
+                    red = minOf(buttonColor.red * 1.3f, 1f),
+                    green = minOf(buttonColor.green * 1.3f, 1f),
+                    blue = minOf(buttonColor.blue * 1.3f, 1f)
+                )
+            }
+        } else {
+            buttonColor
+        }
+    }
+
+    /**
+     * Calculate WCAG contrast ratio between two colors
+     */
+    private fun calculateContrastRatio(color1: Color, color2: Color): Float {
+        val lum1 = color1.luminance()
+        val lum2 = color2.luminance()
+        val lighter = maxOf(lum1, lum2)
+        val darker = minOf(lum1, lum2)
+        return (lighter + 0.05f) / (darker + 0.05f)
+    }
+
+    /**
+     * Calculate relative luminance of a color
+     */
+    private fun Color.luminance(): Float {
+        val r = if (red <= 0.03928f) red / 12.92f else Math.pow(((red + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
+        val g = if (green <= 0.03928f) green / 12.92f else Math.pow(((green + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
+        val b = if (blue <= 0.03928f) blue / 12.92f else Math.pow(((blue + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
+        return 0.2126f * r + 0.7152f * g + 0.0722f * b
+    }
+}

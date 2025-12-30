@@ -3,6 +3,9 @@ package dev.sadakat.thinkfaster.domain.model
 /**
  * Domain model for intervention result tracking
  * Phase G: Measures intervention effectiveness
+ * Phase 1: Added user feedback and context for ML training
+ *
+ * The app now uses time-based and usage-pattern-based context for intervention timing.
  */
 data class InterventionResult(
     val id: Long = 0,
@@ -23,6 +26,15 @@ data class InterventionResult(
     // User behavior
     val userChoice: UserChoice,
     val timeToShowDecisionMs: Long,
+
+    // Phase 1: User feedback on intervention quality
+    val userFeedback: InterventionFeedback = InterventionFeedback.NONE,
+    val feedbackTimestamp: Long? = null,
+
+    // Phase 1: Privacy-safe environmental context for ML training
+    val audioActive: Boolean = false,        // Was phone call or media playing?
+    val wasSnoozed: Boolean = false,         // Did user snooze this intervention?
+    val snoozeDurationMs: Long? = null,      // How long was the snooze?
 
     // Outcome (optional - filled after session ends)
     val finalSessionDurationMs: Long? = null,
@@ -45,6 +57,16 @@ enum class UserChoice {
     PROCEED,    // User chose to continue to the app
     GO_BACK,    // User chose not to proceed (successful intervention!)
     DISMISSED   // Overlay was dismissed without explicit choice
+}
+
+/**
+ * User feedback on intervention helpfulness
+ * Phase 1: Feedback System for learning optimal timing
+ */
+enum class InterventionFeedback {
+    HELPFUL,     // User clicked thumbs up - intervention was well-timed
+    DISRUPTIVE,  // User clicked thumbs down - intervention was poorly-timed
+    NONE         // No feedback provided (user skipped)
 }
 
 /**

@@ -11,10 +11,19 @@ import android.view.WindowManager
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +48,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.presentation.overlay.components.BreathingExercise
 import dev.sadakat.thinkfaster.presentation.overlay.components.CelebrationScreen
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
@@ -58,7 +68,8 @@ import org.koin.core.component.inject
  * Phase D implementation with full dynamic content support
  */
 class TimerOverlayWindow(
-    private val context: Context
+    private val context: Context,
+    private val onDismissCallback: (() -> Unit)? = null
 ) : KoinComponent, LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -247,6 +258,9 @@ class TimerOverlayWindow(
             windowManager.removeView(overlayView)
             overlayView = null
             isShowing = false
+
+            // Invoke dismiss callback to notify service
+            onDismissCallback?.invoke()
         } catch (e: Exception) {
             ErrorLogger.error(
                 e,
@@ -296,14 +310,30 @@ fun TimerOverlayScreen(
 
     val isDarkTheme = isSystemInDarkTheme()
 
-    // Get styling based on content type
-    val style = uiState.interventionContent?.let {
-        InterventionStyling.getStyleForContent(it, isDarkTheme)
+    // Get gradient background based on content type (matching ReminderOverlay)
+    val backgroundGradient = remember(uiState.interventionContent, isDarkTheme) {
+        dev.sadakat.thinkfaster.ui.theme.InterventionGradients.getGradientForContent(
+            uiState.interventionContent?.javaClass?.simpleName,
+            isDarkTheme
+        )
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = style?.backgroundColor ?: InterventionStyling.getUrgentAlertBackground(isDarkTheme)
+    // Create a style object with gradient-compatible colors
+    val style = object {
+        val backgroundColor = Color(0xFF283593)  // Approximate gradient mid-point
+        val textColor = dev.sadakat.thinkfaster.ui.theme.AccessibleColors.text(
+            normalColor = dev.sadakat.thinkfaster.ui.theme.InterventionColors.InterventionTextPrimaryDark,
+            highContrastColor = Color.White
+        )
+        val accentColor = Color(0xFF64B5F6)  // Light blue for dark gradients
+        val primaryTextStyle = dev.sadakat.thinkfaster.ui.theme.InterventionTypography.InterventionMessage
+        val secondaryTextStyle = dev.sadakat.thinkfaster.ui.theme.InterventionTypography.InterventionTitle
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundGradient)
     ) {
         when {
             // Show celebration when requested (takes priority over loading)
@@ -334,6 +364,7 @@ fun TimerOverlayScreen(
                             todaysTotalUsage = uiState.todaysTotalUsage,
                             timerAlertMinutes = uiState.timerAlertMinutes,
                             frictionLevel = uiState.frictionLevel,
+                            showFeedbackPrompt = uiState.showFeedbackPrompt,
                             onProceed = {
                                 // Phase 1.2: Haptic feedback on button press
                                 view.performHapticFeedback(
@@ -347,6 +378,22 @@ fun TimerOverlayScreen(
                                     android.view.HapticFeedbackConstants.CONFIRM
                                 )
                                 viewModel.onGoBackClicked()
+                            },
+                            onSnoozeClick = {  // Phase 2: Snooze callback
+                                view.performHapticFeedback(
+                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                )
+                                viewModel.onSnoozeClicked()
+                            },
+                            onFeedbackReceived = { feedback ->
+                                // Phase 1.2: Haptic feedback on thumbs up/down
+                                view.performHapticFeedback(
+                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                )
+                                viewModel.onFeedbackReceived(feedback)
+                            },
+                            onSkipFeedback = {
+                                viewModel.onSkipFeedback()
                             },
                             isDarkTheme = isDarkTheme
                         )
@@ -375,8 +422,12 @@ private fun DynamicInterventionContent(
     todaysTotalUsage: String,
     timerAlertMinutes: Int,
     frictionLevel: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel,
+    showFeedbackPrompt: Boolean,
     onProceed: () -> Unit,
     onGoBack: () -> Unit,
+    onSnoozeClick: () -> Unit,  // Phase 2: Snooze functionality
+    onFeedbackReceived: (InterventionFeedback) -> Unit,
+    onSkipFeedback: () -> Unit,
     isDarkTheme: Boolean
 ) {
     val style = InterventionStyling.getStyleForContent(content, isDarkTheme)
@@ -399,7 +450,6 @@ private fun DynamicInterventionContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(style.backgroundColor)
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
@@ -452,13 +502,87 @@ private fun DynamicInterventionContent(
             }
         }
 
-        // Bottom section: Buttons
-        InterventionButtons(
-            frictionLevel = frictionLevel,
-            onProceed = onProceed,
-            onGoBack = onGoBack,
-            isDarkTheme = isDarkTheme
-        )
+        // Bottom section: Buttons / Feedback
+        // Phase 1: Show feedback prompt OR action buttons
+        AnimatedVisibility(
+            visible = showFeedbackPrompt,
+            enter = slideInVertically(
+                initialOffsetY = { it / 2 }  // Slide up from 50% below
+            ) + fadeIn(),
+            exit = slideOutVertically(
+                targetOffsetY = { it / 2 }
+            ) + fadeOut()
+        ) {
+            FeedbackPrompt(
+                onFeedback = onFeedbackReceived,
+                onDismiss = onSkipFeedback,
+                isDarkTheme = isDarkTheme
+            )
+        }
+
+        AnimatedVisibility(
+            visible = !showFeedbackPrompt,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Phase 2: Snooze button
+                OutlinedButton(
+                    onClick = onSnoozeClick,
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .height(48.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.White.copy(
+                            alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalContainerAlpha(
+                                isOnGradient = true,
+                                baseAlpha = 0.15f
+                            )
+                        ),
+                        contentColor = style.textColor.copy(
+                            alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
+                                isPrimary = false,
+                                isOnGradient = true
+                            )
+                        )
+                    ),
+                    border = BorderStroke(
+                        1.5.dp,
+                        style.textColor.copy(
+                            alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalBorderAlpha(
+                                isOnGradient = true
+                            )
+                        )
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Pause,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = style.textColor.copy(alpha = 0.8f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Snooze for 10 minutes",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                InterventionButtons(
+                    frictionLevel = frictionLevel,
+                    onProceed = onProceed,
+                    onGoBack = onGoBack,
+                    isDarkTheme = isDarkTheme
+                )
+            }
+        }
     }
 }
 
@@ -473,7 +597,6 @@ private fun ReflectionQuestionContent(
     ) {
         Text(
             text = content.question,
-            style = style.primaryTextStyle,
             color = style.textColor,
             textAlign = TextAlign.Center
         )
@@ -482,7 +605,6 @@ private fun ReflectionQuestionContent(
 
         Text(
             text = content.subtext,
-            style = style.secondaryTextStyle,
             color = style.textColor.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
         )
@@ -543,7 +665,6 @@ private fun TimeAlternativeContent(
 
                     Text(
                         text = alternative.activity,
-                        style = style.primaryTextStyle,
                         color = style.textColor,
                         fontSize = 18.sp,
                         lineHeight = 24.sp
@@ -643,7 +764,6 @@ private fun EmotionalAppealContent(
     ) {
         Text(
             text = content.message,
-            style = style.primaryTextStyle,
             color = style.accentColor,
             textAlign = TextAlign.Center
         )
@@ -652,7 +772,6 @@ private fun EmotionalAppealContent(
 
         Text(
             text = content.subtext,
-            style = style.secondaryTextStyle,
             color = style.textColor.copy(alpha = 0.8f),
             textAlign = TextAlign.Center
         )
@@ -678,7 +797,6 @@ private fun QuoteContent(
 
         Text(
             text = content.quote,
-            style = style.primaryTextStyle,
             color = style.textColor,
             textAlign = TextAlign.Center
         )
@@ -687,7 +805,6 @@ private fun QuoteContent(
 
         Text(
             text = "— ${content.author}",
-            style = style.secondaryTextStyle,
             color = style.textColor.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
         )
@@ -712,7 +829,6 @@ private fun GamificationContent(
 
         Text(
             text = content.challenge,
-            style = style.primaryTextStyle,
             color = style.textColor,
             textAlign = TextAlign.Center
         )
@@ -721,7 +837,6 @@ private fun GamificationContent(
 
         Text(
             text = content.reward,
-            style = style.secondaryTextStyle,
             color = style.accentColor,
             textAlign = TextAlign.Center
         )
@@ -760,7 +875,6 @@ private fun ActivitySuggestionContent(
         // Header text
         Text(
             text = "Instead, try this:",
-            style = style.secondaryTextStyle,
             color = style.textColor.copy(alpha = 0.8f),
             textAlign = TextAlign.Center
         )
@@ -770,7 +884,6 @@ private fun ActivitySuggestionContent(
         // Activity suggestion
         Text(
             text = content.suggestion,
-            style = style.primaryTextStyle,
             color = style.textColor,
             textAlign = TextAlign.Center
         )
@@ -784,7 +897,21 @@ private fun InterventionButtons(
     onGoBack: () -> Unit,
     isDarkTheme: Boolean
 ) {
-    val (goBackColor, proceedColor) = InterventionStyling.getButtonColors(isDarkTheme)
+    // Button colors: Use contrast-checked colors for gradient backgrounds
+    val (baseGoBackColor, baseProceedColor) = InterventionStyling.getButtonColors(isDarkTheme)
+
+    val backgroundAverage = Color(0xFF283593)  // Approximate mid-point of dark gradients
+
+    val goBackColor = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.ensureButtonContrast(
+        buttonColor = baseGoBackColor,
+        backgroundColor = backgroundAverage,
+        minContrast = 3.0f
+    )
+    val proceedColor = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.ensureButtonContrast(
+        buttonColor = baseProceedColor,
+        backgroundColor = backgroundAverage,
+        minContrast = 3.0f
+    )
 
     var showButtons by remember { mutableStateOf(frictionLevel.delayMs == 0L) }
     var countdown by remember { mutableStateOf(frictionLevel.delayMs / 1000) }
@@ -900,4 +1027,181 @@ private fun LinearProgressIndicator(
         strokeCap = strokeCap,
         drawStopIndicator = {},
     )
+}
+
+/**
+ * Phase 1: Feedback prompt with excellent UX
+ * Shows after user makes their choice (Go Back or Proceed)
+ * Smooth slide-up animation with haptic feedback
+ */
+@Composable
+private fun FeedbackPrompt(
+    onFeedback: (InterventionFeedback) -> Unit,
+    onDismiss: () -> Unit,
+    isDarkTheme: Boolean
+) {
+    // Phase 1: Interaction sources for button press feedback
+    val helpfulInteractionSource = remember { MutableInteractionSource() }
+    val disruptiveInteractionSource = remember { MutableInteractionSource() }
+
+    val helpfulPressed by helpfulInteractionSource.collectIsPressedAsState()
+    val disruptivePressed by disruptiveInteractionSource.collectIsPressedAsState()
+
+    // Scale animation on press for tactile feel
+    val helpfulScale by animateFloatAsState(
+        targetValue = if (helpfulPressed) 0.90f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "helpful_scale"
+    )
+
+    val disruptiveScale by animateFloatAsState(
+        targetValue = if (disruptivePressed) 0.90f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "disruptive_scale"
+    )
+
+    // Text colors - always use light text on dark backgrounds
+    val textColor = InterventionColors.InterventionTextPrimaryDark
+    val secondaryTextColor = InterventionColors.InterventionTextSecondaryDark
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(
+                alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalContainerAlpha(
+                    isOnGradient = true,
+                    baseAlpha = 0.18f
+                )
+            )  // Enhanced visibility for gradients
+        ),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Question text
+            Text(
+                text = "Was this intervention well-timed?",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                color = textColor,
+                textAlign = TextAlign.Center,
+                lineHeight = 24.sp
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Your feedback helps us show interventions at better times",
+                fontSize = 14.sp,
+                color = secondaryTextColor.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Thumbs up/down buttons
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Thumbs up button (Helpful)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    OutlinedIconButton(
+                        onClick = {
+                            onFeedback(InterventionFeedback.HELPFUL)
+                        },
+                        modifier = Modifier
+                            .size(80.dp)
+                            .scale(helpfulScale),
+                        colors = IconButtonDefaults.outlinedIconButtonColors(
+                            containerColor = Color(0xFF4CAF50).copy(alpha = 0.15f),  // Light green tint
+                            contentColor = Color(0xFF81C784)  // Lighter green for icon
+                        ),
+                        interactionSource = helpfulInteractionSource
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ThumbUp,
+                            contentDescription = "Helpful - intervention was well-timed",
+                            tint = Color(0xFF81C784),  // Light green
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Helpful",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = textColor.copy(alpha = 0.8f)
+                    )
+                }
+
+                // Thumbs down button (Disruptive)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    OutlinedIconButton(
+                        onClick = {
+                            onFeedback(InterventionFeedback.DISRUPTIVE)
+                        },
+                        modifier = Modifier
+                            .size(80.dp)
+                            .scale(disruptiveScale),
+                        colors = IconButtonDefaults.outlinedIconButtonColors(
+                            containerColor = Color(0xFFF44336).copy(alpha = 0.15f),  // Light red tint
+                            contentColor = Color(0xFFE57373)  // Lighter red for icon
+                        ),
+                        interactionSource = disruptiveInteractionSource
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Close,
+                            contentDescription = "Disruptive - intervention was poorly-timed",
+                            tint = Color(0xFFE57373),  // Light red
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Disruptive",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = textColor.copy(alpha = 0.8f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Skip button - subtle, less prominent
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics {
+                    contentDescription = "Skip feedback"
+                }
+            ) {
+                Text(
+                    text = "Skip",
+                    fontSize = 14.sp,
+                    color = secondaryTextColor.copy(alpha = 0.6f),
+                    fontWeight = FontWeight.Normal
+                )
+            }
+        }
+    }
 }

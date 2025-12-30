@@ -31,6 +31,61 @@ interface InterventionResultDao {
         endedNormally: Boolean
     )
 
+    // ========== Phase 1: Feedback System Queries ==========
+
+    @Query("""
+        UPDATE intervention_results
+        SET user_feedback = :feedback,
+            feedback_timestamp = :timestamp
+        WHERE sessionId = :sessionId
+    """)
+    suspend fun updateFeedback(
+        sessionId: Long,
+        feedback: String,
+        timestamp: Long
+    )
+
+    @Query("""
+        UPDATE intervention_results
+        SET audio_active = :audioActive
+        WHERE sessionId = :sessionId
+    """)
+    suspend fun updateAudioActive(
+        sessionId: Long,
+        audioActive: Boolean
+    )
+
+    @Query("""
+        UPDATE intervention_results
+        SET was_snoozed = 1,
+            snooze_duration_ms = :snoozeDurationMs
+        WHERE sessionId = :sessionId
+    """)
+    suspend fun updateSnooze(
+        sessionId: Long,
+        snoozeDurationMs: Long
+    )
+
+    @Query("""
+        SELECT user_feedback as feedback,
+               COUNT(*) as count
+        FROM intervention_results
+        GROUP BY user_feedback
+    """)
+    suspend fun getFeedbackBreakdown(): List<FeedbackStat>
+
+    @Query("""
+        SELECT * FROM intervention_results
+        WHERE timestamp >= :startTime
+          AND timestamp <= :endTime
+          AND user_feedback != 'NONE'
+        ORDER BY timestamp DESC
+    """)
+    suspend fun getInterventionsWithFeedback(
+        startTime: Long,
+        endTime: Long
+    ): List<InterventionResultEntity>
+
     @Query("SELECT * FROM intervention_results WHERE id = :id")
     suspend fun getResultById(id: Long): InterventionResultEntity?
 
@@ -195,6 +250,14 @@ data class ContentEffectivenessStats(
  */
 data class UserChoiceStat(
     val userChoice: String,
+    val count: Int
+)
+
+/**
+ * Phase 1: Stats for user feedback
+ */
+data class FeedbackStat(
+    val feedback: String,  // "HELPFUL" | "DISRUPTIVE" | "NONE"
     val count: Int
 )
 

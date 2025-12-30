@@ -108,11 +108,141 @@ class InterventionPreferences(context: Context) {
         return daysDiff.toInt()
     }
 
+    // ========== Phase 2: Snooze Functionality ==========
+
+    /**
+     * Set snooze until timestamp
+     * @param until Timestamp in milliseconds when snooze expires
+     */
+    fun setSnoozeUntil(until: Long) {
+        prefs.edit().putLong(KEY_SNOOZE_UNTIL, until).apply()
+    }
+
+    /**
+     * Get snooze expiration timestamp
+     * @return Timestamp when snooze expires, or 0 if not snoozed
+     */
+    fun getSnoozeUntil(): Long {
+        return prefs.getLong(KEY_SNOOZE_UNTIL, 0L)
+    }
+
+    /**
+     * Check if interventions are currently snoozed
+     */
+    fun isSnoozed(): Boolean {
+        val snoozeUntil = getSnoozeUntil()
+        if (snoozeUntil == 0L) return false
+
+        val now = System.currentTimeMillis()
+        if (now >= snoozeUntil) {
+            // Snooze expired - clear it
+            clearSnooze()
+            return false
+        }
+
+        return true
+    }
+
+    /**
+     * Clear snooze
+     */
+    fun clearSnooze() {
+        prefs.edit().putLong(KEY_SNOOZE_UNTIL, 0L).apply()
+    }
+
+    /**
+     * Get remaining snooze time in minutes
+     * @return Minutes remaining, or 0 if not snoozed
+     */
+    fun getSnoozeRemainingMinutes(): Int {
+        if (!isSnoozed()) return 0
+        val snoozeUntil = getSnoozeUntil()
+        val now = System.currentTimeMillis()
+        val remainingMs = snoozeUntil - now
+        return (remainingMs / 1000 / 60).toInt()
+    }
+
+    /**
+     * Enable/disable "I'm working" mode (2 hour snooze)
+     */
+    fun setWorkingMode(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_WORKING_MODE, enabled).apply()
+
+        if (enabled) {
+            // Set 2-hour snooze
+            val twoHoursInMs = 2 * 60 * 60 * 1000L
+            setSnoozeUntil(System.currentTimeMillis() + twoHoursInMs)
+        } else {
+            clearSnooze()
+        }
+    }
+
+    /**
+     * Check if working mode is enabled
+     */
+    fun isWorkingModeEnabled(): Boolean {
+        return prefs.getBoolean(KEY_WORKING_MODE, false)
+    }
+
+    /**
+     * Track frequent dismissals to auto-suggest working mode
+     */
+    fun incrementDismissalCount() {
+        val count = prefs.getInt(KEY_DISMISSAL_COUNT, 0)
+        val today = getCurrentDate()
+        val lastDate = prefs.getString(KEY_LAST_DISMISSAL_DATE, "")
+
+        if (today == lastDate) {
+            // Same day - increment
+            prefs.edit().putInt(KEY_DISMISSAL_COUNT, count + 1).apply()
+        } else {
+            // New day - reset
+            prefs.edit()
+                .putInt(KEY_DISMISSAL_COUNT, 1)
+                .putString(KEY_LAST_DISMISSAL_DATE, today)
+                .apply()
+        }
+    }
+
+    /**
+     * Get dismissal count for today
+     */
+    fun getDismissalCountToday(): Int {
+        val today = getCurrentDate()
+        val lastDate = prefs.getString(KEY_LAST_DISMISSAL_DATE, "")
+        return if (today == lastDate) {
+            prefs.getInt(KEY_DISMISSAL_COUNT, 0)
+        } else {
+            0
+        }
+    }
+
+    /**
+     * Check if we should suggest working mode (3+ dismissals today)
+     */
+    fun shouldSuggestWorkingMode(): Boolean {
+        return getDismissalCountToday() >= 3 && !isWorkingModeEnabled()
+    }
+
+    /**
+     * Get current date string for dismissal tracking
+     */
+    private fun getCurrentDate(): String {
+        return java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+    }
+
     companion object {
         private const val PREFS_NAME = "intervention_preferences"
         private const val KEY_FRICTION_OVERRIDE = "friction_level_override"
         private const val KEY_LOCKED_MODE = "locked_mode_enabled"
         private const val KEY_INSTALL_DATE = "install_date"
+
+        // Phase 2: Snooze functionality keys
+        private const val KEY_SNOOZE_UNTIL = "snooze_until"
+        private const val KEY_WORKING_MODE = "working_mode_enabled"
+        private const val KEY_DISMISSAL_COUNT = "dismissal_count_today"
+        private const val KEY_LAST_DISMISSAL_DATE = "last_dismissal_date"
 
         @Volatile
         private var instance: InterventionPreferences? = null
