@@ -31,7 +31,14 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import dev.sadakat.thinkfaster.presentation.navigation.Screen
 import dev.sadakat.thinkfaster.service.UsageMonitorService
+import dev.sadakat.thinkfaster.domain.model.QuickWinType
+import dev.sadakat.thinkfaster.ui.components.BaselineComparisonCard
 import dev.sadakat.thinkfaster.ui.components.CompactCelebrationCard
+import dev.sadakat.thinkfaster.ui.components.DayOneCelebration
+import dev.sadakat.thinkfaster.ui.components.DayTwoCelebration
+import dev.sadakat.thinkfaster.ui.components.FirstSessionCelebration
+import dev.sadakat.thinkfaster.ui.components.FirstUnderGoalCelebration
+import dev.sadakat.thinkfaster.ui.components.QuestProgressCard
 import dev.sadakat.thinkfaster.ui.components.RecoveryCompleteDialog
 import dev.sadakat.thinkfaster.ui.components.RecoveryProgressCard
 import dev.sadakat.thinkfaster.ui.components.StreakBrokenRecoveryDialog
@@ -114,6 +121,38 @@ fun HomeScreen(
         )
     }
 
+    // Quick Win Celebrations (First-Week Retention feature)
+    when (uiState.quickWinToShow) {
+        QuickWinType.FIRST_SESSION -> {
+            FirstSessionCelebration(
+                show = true,
+                onDismiss = { viewModel.dismissQuickWin(QuickWinType.FIRST_SESSION) }
+            )
+        }
+        QuickWinType.FIRST_UNDER_GOAL -> {
+            FirstUnderGoalCelebration(
+                show = true,
+                goalMinutes = uiState.goalMinutes ?: 60,
+                onDismiss = { viewModel.dismissQuickWin(QuickWinType.FIRST_UNDER_GOAL) }
+            )
+        }
+        QuickWinType.DAY_ONE_COMPLETE -> {
+            DayOneCelebration(
+                show = true,
+                usageMinutes = uiState.totalUsageMinutes,
+                goalMinutes = uiState.goalMinutes ?: 60,
+                onDismiss = { viewModel.dismissQuickWin(QuickWinType.DAY_ONE_COMPLETE) }
+            )
+        }
+        QuickWinType.DAY_TWO_COMPLETE -> {
+            DayTwoCelebration(
+                show = true,
+                onDismiss = { viewModel.dismissQuickWin(QuickWinType.DAY_TWO_COMPLETE) }
+            )
+        }
+        null -> { /* No quick win to show */ }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -168,6 +207,30 @@ fun HomeScreen(
                         navController.navigate(Screen.ManageApps.route)
                     }
                 )
+            }
+
+            // Quest Progress Card (First-Week Retention: Days 1-7)
+            if (uiState.showQuestCard) {
+                uiState.questStatus?.let { quest ->
+                    item {
+                        QuestProgressCard(
+                            quest = quest,
+                            onDismiss = { viewModel.dismissQuestCard() }
+                        )
+                    }
+                }
+            }
+
+            // Baseline Comparison Card (First-Week Retention: Day 3+)
+            if (uiState.showBaselineCard) {
+                uiState.userBaseline?.let { baseline ->
+                    item {
+                        BaselineComparisonCard(
+                            baseline = baseline,
+                            todayUsageMinutes = uiState.totalUsageMinutes
+                        )
+                    }
+                }
             }
 
             // Goal Achievement Badge (Phase 1.5)

@@ -3,8 +3,10 @@ package dev.sadakat.thinkfaster.data.repository
 import android.content.Context
 import android.content.SharedPreferences
 import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
+import dev.sadakat.thinkfaster.data.preferences.NotificationPreferences
 import dev.sadakat.thinkfaster.domain.model.AppSettings
 import dev.sadakat.thinkfaster.domain.repository.SettingsRepository
+import dev.sadakat.thinkfaster.util.WorkManagerHelper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,10 +14,11 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Implementation of SettingsRepository using SharedPreferences
  */
-class SettingsRepositoryImpl(context: Context) : SettingsRepository {
+class SettingsRepositoryImpl(private val context: Context) : SettingsRepository {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val interventionPreferences: InterventionPreferences = InterventionPreferences.getInstance(context)
+    private val notificationPreferences: NotificationPreferences by lazy { NotificationPreferences(context) }
 
     // State flow for reactive settings updates
     private val _settingsFlow = MutableStateFlow(loadSettings())
@@ -46,6 +49,45 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
         // InterventionPreferences.setLockedMode() automatically sets friction level to LOCKED
         interventionPreferences.setLockedMode(enabled)
 
+        _settingsFlow.value = loadSettings()
+    }
+
+    override suspend fun setMotivationalNotificationsEnabled(enabled: Boolean) {
+        // Update notification preferences
+        notificationPreferences.setMotivationalNotificationsEnabled(enabled)
+
+        // Schedule or cancel workers based on enabled state
+        if (enabled) {
+            WorkManagerHelper.scheduleMorningNotification(context)
+            WorkManagerHelper.scheduleEveningNotification(context)
+            WorkManagerHelper.scheduleStreakMonitor(context)
+        } else {
+            WorkManagerHelper.cancelMotivationalNotifications(context)
+        }
+
+        // Refresh settings flow
+        _settingsFlow.value = loadSettings()
+    }
+
+    override suspend fun setMorningNotificationTime(hour: Int, minute: Int) {
+        // Update notification preferences
+        notificationPreferences.setMorningTime(hour, minute)
+
+        // Reschedule morning notification worker with new time
+        WorkManagerHelper.scheduleMorningNotification(context)
+
+        // Refresh settings flow
+        _settingsFlow.value = loadSettings()
+    }
+
+    override suspend fun setEveningNotificationTime(hour: Int, minute: Int) {
+        // Update notification preferences
+        notificationPreferences.setEveningTime(hour, minute)
+
+        // Reschedule evening notification worker with new time
+        WorkManagerHelper.scheduleEveningNotification(context)
+
+        // Refresh settings flow
         _settingsFlow.value = loadSettings()
     }
 
@@ -83,7 +125,13 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
         return AppSettings(
             timerAlertMinutes = prefs.getInt(KEY_TIMER_ALERT_MINUTES, DEFAULT_TIMER_MINUTES),
             alwaysShowReminder = prefs.getBoolean(KEY_ALWAYS_SHOW_REMINDER, DEFAULT_ALWAYS_SHOW_REMINDER),
-            lockedMode = actualLockedMode
+            lockedMode = actualLockedMode,
+            // Push Notification Strategy: Load notification settings
+            motivationalNotificationsEnabled = notificationPreferences.isMotivationalNotificationsEnabled(),
+            morningNotificationHour = notificationPreferences.getMorningHour(),
+            morningNotificationMinute = notificationPreferences.getMorningMinute(),
+            eveningNotificationHour = notificationPreferences.getEveningHour(),
+            eveningNotificationMinute = notificationPreferences.getEveningMinute()
         )
     }
 

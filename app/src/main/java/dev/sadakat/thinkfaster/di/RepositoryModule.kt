@@ -1,6 +1,7 @@
 package dev.sadakat.thinkfaster.di
 
 import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
+import dev.sadakat.thinkfaster.data.preferences.NotificationPreferences
 import dev.sadakat.thinkfaster.data.preferences.OnboardingQuestPreferences
 import dev.sadakat.thinkfaster.data.preferences.StreakFreezePreferences
 import dev.sadakat.thinkfaster.data.repository.GoalRepositoryImpl
@@ -44,6 +45,11 @@ val repositoryModule = module {
     // OnboardingQuestPreferences (singleton) - First-Week Retention
     single {
         OnboardingQuestPreferences(androidContext())
+    }
+
+    // NotificationPreferences (singleton) - Push Notification Strategy
+    single {
+        NotificationPreferences(androidContext())
     }
 
     // UsageRepository

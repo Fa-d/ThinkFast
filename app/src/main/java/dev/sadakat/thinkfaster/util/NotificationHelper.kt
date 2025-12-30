@@ -19,6 +19,7 @@ object NotificationHelper {
     private const val CHANNEL_ACHIEVEMENTS = "achievements_channel"
     private const val CHANNEL_STREAKS = "streaks_channel"
     private const val CHANNEL_STREAK_RECOVERY = "streak_recovery_channel"
+    private const val CHANNEL_MOTIVATIONAL = "motivational_channel"
 
     private const val NOTIFICATION_ID_DAILY_ACHIEVEMENT = 1000
     private const val NOTIFICATION_ID_STREAK_MILESTONE = 2000
@@ -26,6 +27,9 @@ object NotificationHelper {
     private const val NOTIFICATION_ID_RECOVERY_PROGRESS = 4000
     private const val NOTIFICATION_ID_QUEST_DAY = 5000
     private const val NOTIFICATION_ID_QUEST_COMPLETE = 5010
+    private const val NOTIFICATION_ID_MORNING_INTENTION = 6000
+    private const val NOTIFICATION_ID_EVENING_REVIEW = 6001
+    private const val NOTIFICATION_ID_STREAK_WARNING = 6002
 
     /**
      * Create notification channels (must be called on app start)
@@ -67,9 +71,21 @@ object NotificationHelper {
                 vibrationPattern = longArrayOf(0, 40, 60, 40)
             }
 
+            // Motivational notifications channel (Push Notification Strategy)
+            val motivationalChannel = NotificationChannel(
+                CHANNEL_MOTIVATIONAL,
+                "Motivational Reminders",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Daily motivation and streak reminders"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 30, 50, 60) // Success pattern
+            }
+
             notificationManager.createNotificationChannel(achievementChannel)
             notificationManager.createNotificationChannel(streakChannel)
             notificationManager.createNotificationChannel(recoveryChannel)
+            notificationManager.createNotificationChannel(motivationalChannel)
         }
     }
 
@@ -374,5 +390,112 @@ object NotificationHelper {
             .build()
 
         notificationManager.notify(NOTIFICATION_ID_QUEST_COMPLETE, notification)
+    }
+
+    /**
+     * Show morning intention notification
+     * Push Notification Strategy: Daily motivation to set intentions
+     */
+    fun showMorningIntentionNotification(
+        context: Context,
+        title: String,
+        message: String,
+        currentStreak: Int
+    ) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_MOTIVATIONAL)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("$message\n\n🔥 Current streak: $currentStreak ${if (currentStreak == 1) "day" else "days"}")
+            )
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID_MORNING_INTENTION, notification)
+    }
+
+    /**
+     * Show evening review notification
+     * Push Notification Strategy: Daily usage summary with weekly progress
+     */
+    fun showEveningReviewNotification(
+        context: Context,
+        title: String,
+        message: String
+    ) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_MOTIVATIONAL)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText(message)
+            )
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID_EVENING_REVIEW, notification)
+    }
+
+    /**
+     * Show streak warning notification
+     * Push Notification Strategy: Urgent warnings when streak is at risk
+     */
+    fun showStreakWarningNotification(
+        context: Context,
+        title: String,
+        message: String,
+        streakDays: Int
+    ) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_STREAKS)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("$message\n\nDon't lose your progress! Open the app to check your usage.")
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID_STREAK_WARNING, notification)
     }
 }

@@ -1,5 +1,6 @@
 package dev.sadakat.thinkfaster.presentation.settings
 
+import android.app.TimePickerDialog
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,16 +12,18 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import dev.sadakat.thinkfaster.domain.model.AppSettings
 import dev.sadakat.thinkfaster.domain.model.GoalProgress
 import dev.sadakat.thinkfaster.presentation.navigation.Screen
 import org.koin.androidx.compose.koinViewModel
@@ -446,6 +449,14 @@ fun SettingsScreen(
                         )
                     }
                 }
+            }
+
+            // Push Notification Strategy: Clickable card that opens bottom sheet
+            item {
+                NotificationSettingsCard(
+                    appSettings = uiState.appSettings,
+                    viewModel = viewModel
+                )
             }
 
             // Friction Level selector
@@ -1172,5 +1183,289 @@ private fun FrictionLevelOption(
             )
         }
     }
+}
+
+/**
+ * Notification settings card that opens a bottom sheet
+ * Push Notification Strategy: Main entry point for notification settings
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NotificationSettingsCard(
+    appSettings: AppSettings,
+    viewModel: GoalViewModel
+) {
+    var showBottomSheet by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showBottomSheet = true },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(text = "🔔", fontSize = 24.sp)
+                    Text(
+                        text = "Daily Reminders",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (appSettings.motivationalNotificationsEnabled) {
+                        "Enabled • ${appSettings.getMorningTimeFormatted()} & ${appSettings.getEveningTimeFormatted()}"
+                    } else {
+                        "Tap to configure notification times"
+                    },
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "Open settings",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+
+    // Bottom sheet with notification settings
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            NotificationSettingsBottomSheet(
+                appSettings = appSettings,
+                viewModel = viewModel,
+                onDismiss = { showBottomSheet = false }
+            )
+        }
+    }
+}
+
+/**
+ * Bottom sheet content for notification settings
+ */
+@Composable
+private fun NotificationSettingsBottomSheet(
+    appSettings: AppSettings,
+    viewModel: GoalViewModel,
+    onDismiss: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "🔔 Daily Reminders",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Stay on track with daily notifications",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Enable/Disable toggle
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Enable Notifications",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "2-3 reminders per day max",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = appSettings.motivationalNotificationsEnabled,
+                    onCheckedChange = { viewModel.setMotivationalNotificationsEnabled(it) }
+                )
+            }
+        }
+
+        // Time pickers (only show if enabled)
+        if (appSettings.motivationalNotificationsEnabled) {
+            Text(
+                text = "Notification Times",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            NotificationTimeRow(
+                title = "Morning Intention",
+                emoji = "🌅",
+                description = "Start your day with intention",
+                currentTime = appSettings.getMorningTimeFormatted(),
+                onTimeSelected = { hour, minute ->
+                    viewModel.setMorningNotificationTime(hour, minute)
+                }
+            )
+
+            NotificationTimeRow(
+                title = "Evening Review",
+                emoji = "🌙",
+                description = "Reflect on your progress",
+                currentTime = appSettings.getEveningTimeFormatted(),
+                onTimeSelected = { hour, minute ->
+                    viewModel.setEveningNotificationTime(hour, minute)
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/**
+ * Compact time picker row for bottom sheet
+ */
+@Composable
+private fun NotificationTimeRow(
+    title: String,
+    emoji: String,
+    description: String,
+    currentTime: String,
+    onTimeSelected: (hour: Int, minute: Int) -> Unit
+) {
+    val context = LocalContext.current
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showTimePicker = true },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(text = emoji, fontSize = 32.sp)
+                Column {
+                    Text(
+                        text = title,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = description,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = currentTime,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Tap to change",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+
+    // Show Android time picker dialog
+    if (showTimePicker) {
+        DisposableEffect(Unit) {
+            val (hour, minute) = parseTime(currentTime)
+            val dialog = TimePickerDialog(
+                context,
+                { _, selectedHour, selectedMinute ->
+                    onTimeSelected(selectedHour, selectedMinute)
+                },
+                hour,
+                minute,
+                false // 12-hour format
+            )
+            dialog.setOnDismissListener { showTimePicker = false }
+            dialog.show()
+            onDispose { dialog.dismiss() }
+        }
+    }
+}
+
+/**
+ * Parse time string in format "HH:MM AM/PM" to hour and minute
+ */
+private fun parseTime(timeString: String): Pair<Int, Int> {
+    val parts = timeString.split(" ")
+    val timeParts = parts[0].split(":")
+    var hour = timeParts[0].toInt()
+    val minute = timeParts[1].toInt()
+    val amPm = parts[1]
+
+    // Convert to 24-hour format
+    if (amPm == "PM" && hour != 12) {
+        hour += 12
+    } else if (amPm == "AM" && hour == 12) {
+        hour = 0
+    }
+
+    return Pair(hour, minute)
 }
 

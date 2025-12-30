@@ -211,6 +211,72 @@ class GoalViewModel(
     }
 
     /**
+     * Push Notification Strategy: Toggle daily reminder notifications
+     */
+    fun setMotivationalNotificationsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsRepository.setMotivationalNotificationsEnabled(enabled)
+                _uiState.value = _uiState.value.copy(
+                    successMessage = if (enabled) "Daily reminders enabled" else "Daily reminders disabled"
+                )
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to update notification settings"
+                )
+            }
+        }
+    }
+
+    /**
+     * Push Notification Strategy: Update morning notification time
+     */
+    fun setMorningNotificationTime(hour: Int, minute: Int) {
+        viewModelScope.launch {
+            try {
+                settingsRepository.setMorningNotificationTime(hour, minute)
+                _uiState.value = _uiState.value.copy(
+                    successMessage = "Morning notification time updated"
+                )
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to update morning notification time"
+                )
+            }
+        }
+    }
+
+    /**
+     * Push Notification Strategy: Update evening notification time
+     */
+    fun setEveningNotificationTime(hour: Int, minute: Int) {
+        viewModelScope.launch {
+            try {
+                settingsRepository.setEveningNotificationTime(hour, minute)
+                _uiState.value = _uiState.value.copy(
+                    successMessage = "Evening notification time updated"
+                )
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to update evening notification time"
+                )
+            }
+        }
+    }
+
+    /**
      * Load current friction level and override
      */
     private fun loadFrictionLevel() {

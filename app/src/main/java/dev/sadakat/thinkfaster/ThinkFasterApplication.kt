@@ -7,12 +7,14 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
+import dev.sadakat.thinkfaster.data.preferences.NotificationPreferences
 import dev.sadakat.thinkfaster.di.analyticsModule
 import dev.sadakat.thinkfaster.di.databaseModule
 import dev.sadakat.thinkfaster.di.repositoryModule
 import dev.sadakat.thinkfaster.di.useCaseModule
 import dev.sadakat.thinkfaster.di.viewModelModule
 import dev.sadakat.thinkfaster.util.NotificationHelper
+import dev.sadakat.thinkfaster.util.WorkManagerHelper
 import dev.sadakat.thinkfaster.worker.AchievementWorker
 import dev.sadakat.thinkfaster.worker.DailyStatsAggregatorWorker
 import dev.sadakat.thinkfaster.worker.DataCleanupWorker
@@ -145,6 +147,15 @@ class ThinkFasterApplication : Application(), KoinComponent {
             ExistingPeriodicWorkPolicy.KEEP,
             achievementRequest
         )
+
+        // Schedule motivational notifications (Push Notification Strategy)
+        // Only schedule if user has enabled motivational notifications
+        val notificationPrefs = NotificationPreferences(this)
+        if (notificationPrefs.isMotivationalNotificationsEnabled()) {
+            WorkManagerHelper.scheduleMorningNotification(this)
+            WorkManagerHelper.scheduleEveningNotification(this)
+            WorkManagerHelper.scheduleStreakMonitor(this)
+        }
 
         // Schedule daily analytics upload (runs every 24 hours when connected to WiFi and charging)
         analyticsManager.scheduleDailyUpload()

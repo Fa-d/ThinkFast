@@ -110,4 +110,29 @@ val useCaseModule = module {
             context = androidContext()
         )
     }
+
+    // Notification use cases
+    factory {
+        dev.sadakat.thinkfaster.domain.usecase.notifications.GenerateMorningNotificationUseCase(
+            goalRepository = get()
+        )
+    }
+    factory {
+        dev.sadakat.thinkfaster.domain.usecase.notifications.GenerateEveningNotificationUseCase(
+            usageRepository = get(),
+            goalRepository = get()
+        )
+    }
+    factory {
+        dev.sadakat.thinkfaster.domain.usecase.notifications.CheckStreakAtRiskUseCase(
+            usageRepository = get(),
+            goalRepository = get()
+        )
+    }
+    factory {
+        dev.sadakat.thinkfaster.domain.usecase.notifications.GenerateStreakWarningNotificationUseCase(
+            goalRepository = get(),
+            usageRepository = get()
+        )
+    }
 }
