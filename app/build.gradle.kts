@@ -10,15 +10,15 @@ plugins {
 }
 
 android {
-    namespace = "dev.sadakat.thinkfast"
+    namespace = "dev.sadakat.thinkfaster"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "dev.sadakat.thinkfast"
+        applicationId = "dev.sadakat.thinkfaster"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 1
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

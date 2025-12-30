@@ -8,27 +8,27 @@ import dev.sadakat.thinkfaster.data.seed.model.SeedData
 import dev.sadakat.thinkfaster.data.seed.model.SeedMetadata
 
 /**
- * Over-Limit Struggler Persona (Days 28)
+ * Compulsive Reopener Persona (Days 18)
  *
  * Characteristics:
- * - FIRM friction (5s delay)
- * - 90-120 min/day, 10-15 sessions
- * - Goal: 45 min/day (but using 150-200% of goal)
- * - 30-40% extended sessions (15+ min)
- * - 60% PROCEED rate (struggling to comply)
- * - Many isOverGoal intervention contexts
- * - 5-10 day streak (struggling but trying)
+ * - MODERATE friction (3s delay)
+ * - 80-120 min/day, 20-30 sessions
+ * - 60% quick reopen rate (sessions <2 min apart)
+ * - Many short sessions (habit override)
+ * - 70% PROCEED rate (can't resist reopening)
+ * - 80% instant decisions (<2s - habitual)
+ * - 8-12 day streak (decent but not great)
  *
- * Goal: Test over-goal warnings and time alternative content effectiveness.
- * This user has set goals but consistently exceeds them.
+ * Goal: Test quick reopen detection and intervention content effectiveness.
+ * This user compulsively reopens apps immediately after closing.
  */
-class OverLimitStrugglerSeedGenerator : BaseSeedGenerator(
-    config = PersonaConfigurations.OVER_LIMIT_STRUGGLER
+class CompulsiveReopenerSeedGenerator : BaseSeedGenerator(
+    config = PersonaConfigurations.COMPULSIVE_REOPENER
 ) {
 
     override suspend fun seedDatabase(database: ThinkFastDatabase) {
         val targetApps = listOf(FACEBOOK_PACKAGE, INSTAGRAM_PACKAGE)
-        val days = 28  // 28 days of data
+        val days = 18  // 18 days of data
 
         // Generate sessions
         val sessions = generateSessions(
@@ -37,18 +37,17 @@ class OverLimitStrugglerSeedGenerator : BaseSeedGenerator(
             targetApps = targetApps
         )
 
-        // Apply quick reopen pattern (25% - moderate)
+        // Apply quick reopen pattern (60% - very high!)
+        // This will create many sessions <2 min apart
         val sessionsWithQuickReopens = applyQuickReopenPattern(sessions)
 
         // Detect quick reopens
         val quickReopenMap = detectQuickReopens(sessionsWithQuickReopens)
 
-        // Generate goals (set 28 days ago)
-        // The generateGoals() method will create lower goals (45 min)
-        // because goalComplianceRate > 1.5 (user is over-limit)
+        // Generate goals (set 18 days ago)
         val goals = generateGoals(
             targetApps = targetApps,
-            startDaysAgo = 28
+            startDaysAgo = 18
         )
 
         // Calculate daily stats
@@ -58,7 +57,7 @@ class OverLimitStrugglerSeedGenerator : BaseSeedGenerator(
         val events = generateEvents(sessionsWithQuickReopens)
 
         // Generate intervention results
-        // Many will have isOverGoal context, triggering time alternative content
+        // Many will have quickReopen=true, triggering reflection/emotional content
         val interventionGenerator = InterventionResultGenerator(config, random)
         val interventionResults = interventionGenerator.generateForSessions(
             sessions = sessionsWithQuickReopens,
@@ -77,7 +76,7 @@ class OverLimitStrugglerSeedGenerator : BaseSeedGenerator(
             metadata = SeedMetadata(
                 daysOfData = days,
                 targetApps = targetApps,
-                description = "Over-limit struggler - 90-120 min/day vs 45 min goal (150-200%), FIRM friction, 60% PROCEED, struggling"
+                description = "Compulsive reopener - 60% quick reopen rate, 20-30 sessions/day, MODERATE friction, 80% instant decisions"
             )
         )
 
