@@ -313,6 +313,9 @@ class ReminderOverlayViewModel(
                 // Track dismissal for working mode suggestion
                 interventionPreferences.incrementDismissalCount()
 
+                // Track analytics - intervention snoozed
+                analyticsManager.trackInterventionSnoozed(snoozeDurationMinutes)
+
                 // Dismiss overlay
                 _uiState.value = _uiState.value.copy(shouldDismiss = true)
 

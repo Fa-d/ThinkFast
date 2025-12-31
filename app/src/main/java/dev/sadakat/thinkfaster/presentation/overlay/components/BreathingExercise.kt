@@ -133,6 +133,8 @@ fun BreathingExercise(
     instruction: String = "Let's take a moment to breathe together",
     onComplete: (() -> Unit)? = null,
     isDarkTheme: Boolean = false,
+    textColor: Color = InterventionColors.InterventionTextPrimaryDark,
+    secondaryTextColor: Color = InterventionColors.InterventionTextSecondaryDark,
     modifier: Modifier = Modifier
 ) {
     val config = remember(variant) { BreathingConfig.from(variant) }
@@ -208,11 +210,6 @@ fun BreathingExercise(
         InterventionColors.BreathingBackgroundDark
     else
         InterventionColors.BreathingBackground
-
-    val textColor = if (isDarkTheme)
-        InterventionColors.InterventionTextPrimaryDark
-    else
-        InterventionColors.InterventionTextPrimary
 
     val accentColor = InterventionColors.Success
 
@@ -381,7 +378,7 @@ fun BreathingExercise(
                 Text(
                     text = "(${secondsRemaining + 1}s)",
                     style = InterventionTypography.InterventionSubtext.copy(fontSize = 18.sp),
-                    color = textColor.copy(alpha = 0.6f),
+                    color = textColor.copy(alpha = 0.95f),
                     textAlign = TextAlign.Center
                 )
             }
@@ -396,7 +393,7 @@ fun BreathingExercise(
                     BreathingVariant.CALM_BREATHING -> "Calm Breathing"
                 },
                 style = InterventionTypography.InterventionSubtext,
-                color = textColor.copy(alpha = 0.7f),
+                color = textColor.copy(alpha = 0.95f),
                 textAlign = TextAlign.Center
             )
 
@@ -410,7 +407,7 @@ fun BreathingExercise(
                 Text(
                     text = "Cycle ${cycleCount + 1} of $totalCycles",
                     style = InterventionTypography.ButtonTextSmall,
-                    color = textColor.copy(alpha = 0.6f),
+                    color = textColor.copy(alpha = 0.95f),
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
@@ -442,6 +439,8 @@ fun CompactBreathingExercise(
     variant: BreathingVariant = BreathingVariant.FOUR_SEVEN_EIGHT,
     onComplete: (() -> Unit)? = null,
     isDarkTheme: Boolean = false,
+    textColor: Color = InterventionColors.InterventionTextPrimaryDark,
+    secondaryTextColor: Color = InterventionColors.InterventionTextSecondaryDark,
     modifier: Modifier = Modifier
 ) {
     val config = remember(variant) { BreathingConfig.from(variant) }
@@ -510,10 +509,6 @@ fun CompactBreathingExercise(
     }
 
     val accentColor = InterventionColors.Success
-    val textColor = if (isDarkTheme)
-        InterventionColors.InterventionTextPrimaryDark
-    else
-        InterventionColors.InterventionTextPrimary
 
     // Column layout for better vertical presentation
     Column(
@@ -677,7 +672,7 @@ fun CompactBreathingExercise(
                 Text(
                     text = if (isPaused) "PAUSED" else "${secondsRemaining + 1}s",
                     style = InterventionTypography.InterventionSubtext.copy(fontSize = 16.sp),
-                    color = if (isPaused) accentColor else textColor.copy(alpha = 0.6f)
+                    color = if (isPaused) accentColor else textColor.copy(alpha = 0.95f)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -686,7 +681,7 @@ fun CompactBreathingExercise(
                 Text(
                     text = "Cycle ${cycleCount + 1}/$totalCycles",
                     style = InterventionTypography.ButtonTextSmall.copy(fontSize = 14.sp),
-                    color = textColor.copy(alpha = 0.7f)
+                    color = textColor.copy(alpha = 0.95f)
                 )
             }
 
@@ -700,7 +695,7 @@ fun CompactBreathingExercise(
                     BreathingVariant.CALM_BREATHING -> "Calm Breathing"
                 },
                 style = InterventionTypography.ButtonTextSmall.copy(fontSize = 13.sp),
-                color = textColor.copy(alpha = 0.5f)
+                color = textColor.copy(alpha = 0.85f)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -709,7 +704,7 @@ fun CompactBreathingExercise(
             Text(
                 text = "Tap circle to ${if (isPaused) "resume" else "pause"}",
                 style = InterventionTypography.ButtonTextSmall.copy(fontSize = 12.sp),
-                color = textColor.copy(alpha = 0.4f),
+                color = textColor.copy(alpha = 0.85f),
                 textAlign = TextAlign.Center
             )
         } else {

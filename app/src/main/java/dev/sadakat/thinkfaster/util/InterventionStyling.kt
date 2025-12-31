@@ -5,18 +5,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import dev.sadakat.thinkfaster.domain.model.InterventionContent
+import dev.sadakat.thinkfaster.ui.theme.GradientColorSystem
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionTypography
 
 /**
  * Visual styling properties for intervention content
+ * Includes gradient-aware colors for optimal contrast on all backgrounds
  */
 data class InterventionStyle(
     val backgroundColor: Color,
     val textColor: Color,
     val accentColor: Color,
     val primaryTextStyle: TextStyle,
-    val secondaryTextStyle: TextStyle
+    val secondaryTextStyle: TextStyle,
+    // Gradient-aware colors (computed based on gradient type)
+    val secondaryTextColor: Color = textColor,  // For secondary text, hints
+    val borderColor: Color = textColor.copy(alpha = 0.5f),  // For outlined elements
+    val containerColor: Color = textColor.copy(alpha = 0.2f),  // For cards/panels
+    val iconColor: Color = textColor  // For icons/tints
 )
 
 /**
@@ -30,17 +37,32 @@ object InterventionStyling {
 
     /**
      * Gets the appropriate styling for a given intervention content type
+     * Now includes gradient-aware colors for optimal contrast on all gradient backgrounds
      *
      * @param content The intervention content to style
      * @param isDarkTheme Whether dark theme is active
-     * @return Complete styling properties
+     * @return Complete styling properties with gradient-aware colors
      */
     @Composable
     fun getStyleForContent(
         content: InterventionContent,
         isDarkTheme: Boolean = isSystemInDarkTheme()
     ): InterventionStyle {
-        return when (content) {
+        // Get the actual content type string for GradientColorSystem lookup
+        // Note: content.javaClass.simpleName returns "InterventionContent" (sealed class name)
+        // so we need to map each type to its string name explicitly
+        val contentType = when (content) {
+            is InterventionContent.ReflectionQuestion -> "ReflectionQuestion"
+            is InterventionContent.TimeAlternative -> "TimeAlternative"
+            is InterventionContent.BreathingExercise -> "BreathingExercise"
+            is InterventionContent.UsageStats -> "UsageStats"
+            is InterventionContent.EmotionalAppeal -> "EmotionalAppeal"
+            is InterventionContent.Quote -> "Quote"
+            is InterventionContent.Gamification -> "Gamification"
+            is InterventionContent.ActivitySuggestion -> "ActivitySuggestion"
+        }
+
+        val baseStyle = when (content) {
             is InterventionContent.ReflectionQuestion -> reflectionStyle(isDarkTheme)
             is InterventionContent.TimeAlternative -> timeAlternativeStyle(isDarkTheme)
             is InterventionContent.BreathingExercise -> breathingStyle(isDarkTheme)
@@ -50,6 +72,17 @@ object InterventionStyling {
             is InterventionContent.Gamification -> gamificationStyle(isDarkTheme)
             is InterventionContent.ActivitySuggestion -> activitySuggestionStyle(isDarkTheme)
         }
+
+        // Apply gradient-aware colors from GradientColorSystem
+        // Note: Intervention overlays ALWAYS use dark gradients, so we use gradient-aware
+        // colors instead of theme-based colors for proper contrast
+        return baseStyle.copy(
+            textColor = GradientColorSystem.getPrimaryText(contentType, isDarkTheme),
+            secondaryTextColor = GradientColorSystem.getSecondaryText(contentType, isDarkTheme),
+            borderColor = GradientColorSystem.getBorder(contentType, isDarkTheme),
+            containerColor = GradientColorSystem.getContainer(contentType, isDarkTheme),
+            iconColor = GradientColorSystem.getIcon(contentType, isDarkTheme)
+        )
     }
 
     /**

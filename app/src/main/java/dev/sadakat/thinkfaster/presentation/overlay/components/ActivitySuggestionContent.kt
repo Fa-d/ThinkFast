@@ -202,7 +202,7 @@ fun EnhancedActivitySuggestionContent(
                 Text(
                     text = "Tap emoji for time estimate",
                     fontSize = 12.sp,
-                    color = secondaryTextColor.copy(alpha = 0.5f),
+                    color = secondaryTextColor.copy(alpha = 0.85f),
                     textAlign = TextAlign.Center
                 )
             }

@@ -1,6 +1,7 @@
 package dev.sadakat.thinkfaster.analytics
 
 import android.content.Context
+import android.util.Log
 import androidx.work.*
 import dev.sadakat.thinkfaster.domain.model.InterventionResult
 import dev.sadakat.thinkfaster.domain.model.InterventionType
@@ -15,18 +16,29 @@ import java.util.concurrent.TimeUnit
  *
  * Coordinates local data aggregation and Firebase reporting
  * All processing happens locally - only summaries are sent
+ *
+ * DEBUGGING: Added comprehensive logging to help identify why events may not appear in Firebase
  */
 class AnalyticsManager(
     private val context: Context,
     private val repository: InterventionResultRepository,
     private val userPropertiesManager: UserPropertiesManager
 ) {
+    companion object {
+        private const val TAG = "AnalyticsManager"
+    }
+
     private val privacySafeAnalytics = PrivacySafeAnalytics(context)
     private val firebaseReporter = FirebaseAnalyticsReporter()
 
     init {
         // Sync Firebase collection with user preference
-        firebaseReporter.setAnalyticsEnabled(privacySafeAnalytics.isAnalyticsEnabled())
+        val isEnabled = privacySafeAnalytics.isAnalyticsEnabled()
+        Log.i(TAG, "AnalyticsManager init - Privacy setting analytics_enabled=$isEnabled")
+        firebaseReporter.setAnalyticsEnabled(isEnabled)
+
+        // Log current state for debugging
+        logAnalyticsState()
     }
 
     /**
@@ -38,6 +50,7 @@ class AnalyticsManager(
      * Enable or disable analytics (called from settings)
      */
     fun setAnalyticsEnabled(enabled: Boolean) {
+        Log.i(TAG, "setAnalyticsEnabled: $enabled")
         privacySafeAnalytics.setAnalyticsEnabled(enabled)
         firebaseReporter.setAnalyticsEnabled(enabled)
 
@@ -48,17 +61,37 @@ class AnalyticsManager(
     }
 
     /**
+     * Log current analytics state for debugging
+     * Call this to verify analytics is properly configured
+     */
+    fun logAnalyticsState() {
+        val isEnabled = privacySafeAnalytics.isAnalyticsEnabled()
+        Log.i(TAG, "========== ANALYTICS STATE ==========")
+        Log.i(TAG, "Privacy enabled: $isEnabled")
+        Log.i(TAG, "Firebase enabled: ${firebaseReporter.isAnalyticsEnabled()}")
+        Log.i(TAG, "====================================")
+    }
+
+    /**
      * Track an intervention result
      * This is called after each intervention is completed
      */
     fun trackIntervention(result: InterventionResult) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackIntervention: Analytics DISABLED - skipping event")
+            return
+        }
 
-        // Aggregate locally (raw data stays on device)
-        val aggregatedEvent = privacySafeAnalytics.aggregateIntervention(result)
+        try {
+            // Aggregate locally (raw data stays on device)
+            val aggregatedEvent = privacySafeAnalytics.aggregateIntervention(result)
+            Log.d(TAG, "trackIntervention: Logging aggregated event - type=${result.interventionType}, choice=${result.userChoice}")
 
-        // Send only aggregated data to Firebase
-        firebaseReporter.reportIntervention(aggregatedEvent)
+            // Send only aggregated data to Firebase
+            firebaseReporter.reportIntervention(aggregatedEvent)
+        } catch (e: Exception) {
+            Log.e(TAG, "trackIntervention: Failed to track intervention", e)
+        }
     }
 
     /**
@@ -66,24 +99,44 @@ class AnalyticsManager(
      * Call this once per day (e.g., via WorkManager)
      */
     suspend fun sendDailySummary() {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "sendDailySummary: Analytics DISABLED - skipping")
+            return
+        }
 
-        // Get recent results (last 1000 = roughly all for a new app)
-        val recentResults = repository.getRecentResults(limit = 1000)
+        try {
+            // Get recent results (last 1000 = roughly all for a new app)
+            val recentResults = repository.getRecentResults(limit = 1000)
 
-        if (recentResults.isEmpty()) return
+            if (recentResults.isEmpty()) {
+                Log.d(TAG, "sendDailySummary: No results to summarize")
+                return
+            }
 
-        // Filter to last 24 hours
-        val oneDayAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1)
-        val yesterdayResults = recentResults.filter { it.timestamp >= oneDayAgo }
+            // Filter to last 24 hours
+            val oneDayAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1)
+            val yesterdayResults = recentResults.filter { it.timestamp >= oneDayAgo }
 
-        if (yesterdayResults.isEmpty()) return
+            if (yesterdayResults.isEmpty()) {
+                Log.d(TAG, "sendDailySummary: No results from last 24 hours")
+                return
+            }
 
-        // Generate summary locally
-        val summary = generateDailySummary(yesterdayResults) ?: return
+            // Generate summary locally
+            val summary = generateDailySummary(yesterdayResults)
 
-        // Send only summary to Firebase
-        firebaseReporter.reportDailySummary(summary)
+            if (summary == null) {
+                Log.w(TAG, "sendDailySummary: Failed to generate summary")
+                return
+            }
+
+            Log.d(TAG, "sendDailySummary: Sending daily summary with ${summary.totalInterventions} interventions")
+
+            // Send only summary to Firebase
+            firebaseReporter.reportDailySummary(summary)
+        } catch (e: Exception) {
+            Log.e(TAG, "sendDailySummary: Failed to send daily summary", e)
+        }
     }
 
     /**
@@ -91,30 +144,42 @@ class AnalyticsManager(
      * Helps understand which content categories work best
      */
     suspend fun sendContentPerformanceReport() {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "sendContentPerformanceReport: Analytics DISABLED - skipping")
+            return
+        }
 
-        val allResults = repository.getRecentResults(limit = 1000)
-        if (allResults.isEmpty()) return
+        try {
+            val allResults = repository.getRecentResults(limit = 1000)
+            if (allResults.isEmpty()) {
+                Log.d(TAG, "sendContentPerformanceReport: No results to analyze")
+                return
+            }
 
-        // Group by content category
-        val byCategory =
-            allResults.groupBy { categorizeContent(it.contentType) }.map { (category, results) ->
-                    ContentPerformanceReport(
-                        contentCategory = category,
-                        totalInterventions = results.size,
-                        successRate = calculateSuccessRate(results),
-                        avgDecisionTimeSeconds = results.map { it.timeToShowDecisionMs }.average()
-                            .let { if (it.isNaN()) 0.0 else it / 1000.0 }.toInt())
-                }
+            // Group by content category
+            val byCategory = allResults.groupBy { categorizeContent(it.contentType) }.map { (category, results) ->
+                ContentPerformanceReport(
+                    contentCategory = category,
+                    totalInterventions = results.size,
+                    successRate = calculateSuccessRate(results),
+                    avgDecisionTimeSeconds = results.map { it.timeToShowDecisionMs }.average()
+                        .let { if (it.isNaN()) 0.0 else it / 1000.0 }.toInt()
+                )
+            }
 
-        // Send each category's performance
-        byCategory.forEach { report ->
-            firebaseReporter.reportContentPerformance(
-                contentCategory = report.contentCategory,
-                successRate = report.successRate,
-                avgDecisionTime = report.avgDecisionTimeSeconds,
-                sampleSize = report.totalInterventions
-            )
+            Log.d(TAG, "sendContentPerformanceReport: Sending ${byCategory.size} category reports")
+
+            // Send each category's performance
+            byCategory.forEach { report ->
+                firebaseReporter.reportContentPerformance(
+                    contentCategory = report.contentCategory,
+                    successRate = report.successRate,
+                    avgDecisionTime = report.avgDecisionTimeSeconds,
+                    sampleSize = report.totalInterventions
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "sendContentPerformanceReport: Failed", e)
         }
     }
 
@@ -124,223 +189,424 @@ class AnalyticsManager(
     fun reportAppQualityIssue(
         crashType: String? = null, anrOccurred: Boolean = false, slowRender: Boolean = false
     ) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "reportAppQualityIssue: Analytics DISABLED - skipping")
+            return
+        }
 
-        firebaseReporter.reportAppQuality(crashType, anrOccurred, slowRender)
+        try {
+            Log.d(TAG, "reportAppQualityIssue: crash=$crashType, anr=$anrOccurred, slow=$slowRender")
+            firebaseReporter.reportAppQuality(crashType, anrOccurred, slowRender)
+        } catch (e: Exception) {
+            Log.e(TAG, "reportAppQualityIssue: Failed", e)
+        }
     }
 
     // ========== Onboarding Analytics ==========
 
     fun trackOnboardingStarted() {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
-        firebaseReporter.logEvent(AnalyticsEvents.ONBOARDING_STARTED)
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackOnboardingStarted: Analytics DISABLED - skipping")
+            return
+        }
+        Log.d(TAG, "trackOnboardingStarted: Logging event")
+        try {
+            firebaseReporter.logEvent(AnalyticsEvents.ONBOARDING_STARTED)
+        } catch (e: Exception) {
+            Log.e(TAG, "trackOnboardingStarted: Failed", e)
+        }
     }
 
     fun trackOnboardingStepCompleted(step: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
-        firebaseReporter.logEvent(
-            AnalyticsEvents.ONBOARDING_STEP_COMPLETED,
-            mapOf(AnalyticsEvents.Params.ONBOARDING_STEP to step)
-        )
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackOnboardingStepCompleted: Analytics DISABLED - skipping")
+            return
+        }
+        Log.d(TAG, "trackOnboardingStepCompleted: Logging step $step")
+        try {
+            firebaseReporter.logEvent(
+                AnalyticsEvents.ONBOARDING_STEP_COMPLETED,
+                mapOf(AnalyticsEvents.Params.ONBOARDING_STEP to step)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackOnboardingStepCompleted: Failed", e)
+        }
     }
 
     fun trackOnboardingCompleted(daysSinceInstall: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
-        firebaseReporter.logEvent(
-            AnalyticsEvents.ONBOARDING_COMPLETED,
-            mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
-        )
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackOnboardingCompleted: Analytics DISABLED - skipping")
+            return
+        }
+        Log.d(TAG, "trackOnboardingCompleted: Logging event (day $daysSinceInstall)")
+        try {
+            firebaseReporter.logEvent(
+                AnalyticsEvents.ONBOARDING_COMPLETED,
+                mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackOnboardingCompleted: Failed", e)
+        }
     }
 
     fun trackOnboardingSkipped(daysSinceInstall: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
-        firebaseReporter.logEvent(
-            AnalyticsEvents.ONBOARDING_SKIPPED,
-            mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
-        )
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackOnboardingSkipped: Analytics DISABLED - skipping")
+            return
+        }
+        Log.d(TAG, "trackOnboardingSkipped: Logging event (day $daysSinceInstall)")
+        try {
+            firebaseReporter.logEvent(
+                AnalyticsEvents.ONBOARDING_SKIPPED,
+                mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackOnboardingSkipped: Failed", e)
+        }
     }
 
     fun trackQuestStepCompleted(stepName: String, daysSinceInstall: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
-        firebaseReporter.logEvent(
-            AnalyticsEvents.QUEST_STEP_COMPLETED,
-            mapOf(
-                AnalyticsEvents.Params.STEP_NAME to stepName,
-                AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackQuestStepCompleted: Analytics DISABLED - skipping")
+            return
+        }
+        Log.d(TAG, "trackQuestStepCompleted: Logging $stepName")
+        try {
+            firebaseReporter.logEvent(
+                AnalyticsEvents.QUEST_STEP_COMPLETED,
+                mapOf(
+                    AnalyticsEvents.Params.STEP_NAME to stepName,
+                    AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackQuestStepCompleted: Failed", e)
+        }
     }
 
     fun trackQuestCompleted(daysSinceInstall: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
-        firebaseReporter.logEvent(
-            AnalyticsEvents.QUEST_COMPLETED,
-            mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
-        )
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackQuestCompleted: Analytics DISABLED - skipping")
+            return
+        }
+        Log.d(TAG, "trackQuestCompleted: Logging event")
+        try {
+            firebaseReporter.logEvent(
+                AnalyticsEvents.QUEST_COMPLETED,
+                mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackQuestCompleted: Failed", e)
+        }
     }
 
     // ========== Goal Analytics ==========
 
     fun trackGoalCreated(targetApp: String, goalMinutes: Int, daysSinceInstall: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackGoalCreated: Analytics DISABLED - skipping")
+            return
+        }
 
-        // Privacy: Use app category instead of package name
-        val appCategory = categorizeApp(targetApp)
+        try {
+            // Privacy: Use app category instead of package name
+            val appCategory = categorizeApp(targetApp)
+            Log.d(TAG, "trackGoalCreated: Logging goal $goalMinutes min for $appCategory")
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.GOAL_CREATED,
-            mapOf(
-                AnalyticsEvents.Params.APP_CATEGORY to appCategory,
-                AnalyticsEvents.Params.GOAL_MINUTES to goalMinutes,
-                AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+            firebaseReporter.logEvent(
+                AnalyticsEvents.GOAL_CREATED,
+                mapOf(
+                    AnalyticsEvents.Params.APP_CATEGORY to appCategory,
+                    AnalyticsEvents.Params.GOAL_MINUTES to goalMinutes,
+                    AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackGoalCreated: Failed", e)
+        }
     }
 
     fun trackGoalAchieved(targetApp: String, streakDays: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackGoalAchieved: Analytics DISABLED - skipping")
+            return
+        }
 
-        val appCategory = categorizeApp(targetApp)
+        try {
+            val appCategory = categorizeApp(targetApp)
+            Log.d(TAG, "trackGoalAchieved: Logging goal achieved - $streakDays day streak")
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.GOAL_ACHIEVED,
-            mapOf(
-                AnalyticsEvents.Params.APP_CATEGORY to appCategory,
-                AnalyticsEvents.Params.STREAK_DAYS to streakDays
+            firebaseReporter.logEvent(
+                AnalyticsEvents.GOAL_ACHIEVED,
+                mapOf(
+                    AnalyticsEvents.Params.APP_CATEGORY to appCategory,
+                    AnalyticsEvents.Params.STREAK_DAYS to streakDays
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackGoalAchieved: Failed", e)
+        }
     }
 
     fun trackGoalUpdated(targetApp: String, newGoalMinutes: Int, daysSinceInstall: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackGoalUpdated: Analytics DISABLED - skipping")
+            return
+        }
 
-        val appCategory = categorizeApp(targetApp)
+        try {
+            val appCategory = categorizeApp(targetApp)
+            Log.d(TAG, "trackGoalUpdated: Logging goal update to $newGoalMinutes min")
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.GOAL_UPDATED,
-            mapOf(
-                AnalyticsEvents.Params.APP_CATEGORY to appCategory,
-                AnalyticsEvents.Params.GOAL_MINUTES to newGoalMinutes,
-                AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+            firebaseReporter.logEvent(
+                AnalyticsEvents.GOAL_UPDATED,
+                mapOf(
+                    AnalyticsEvents.Params.APP_CATEGORY to appCategory,
+                    AnalyticsEvents.Params.GOAL_MINUTES to newGoalMinutes,
+                    AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackGoalUpdated: Failed", e)
+        }
     }
 
     fun trackGoalExceeded(targetApp: String, usageMinutes: Int, goalMinutes: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackGoalExceeded: Analytics DISABLED - skipping")
+            return
+        }
 
-        val appCategory = categorizeApp(targetApp)
-        val excessMinutes = usageMinutes - goalMinutes
+        try {
+            val appCategory = categorizeApp(targetApp)
+            val excessMinutes = usageMinutes - goalMinutes
+            Log.d(TAG, "trackGoalExceeded: Logging goal exceeded by $excessMinutes min")
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.GOAL_EXCEEDED,
-            mapOf(
-                AnalyticsEvents.Params.APP_CATEGORY to appCategory,
-                "excess_minutes" to excessMinutes
+            firebaseReporter.logEvent(
+                AnalyticsEvents.GOAL_EXCEEDED,
+                mapOf(
+                    AnalyticsEvents.Params.APP_CATEGORY to appCategory,
+                    "excess_minutes" to excessMinutes
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackGoalExceeded: Failed", e)
+        }
     }
 
     // ========== Streak Analytics ==========
 
     fun trackStreakMilestone(streakDays: Int, milestoneType: String) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackStreakMilestone: Analytics DISABLED - skipping")
+            return
+        }
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.STREAK_MILESTONE,
-            mapOf(
-                AnalyticsEvents.Params.STREAK_DAYS to streakDays,
-                AnalyticsEvents.Params.MILESTONE_TYPE to milestoneType
+        try {
+            Log.d(TAG, "trackStreakMilestone: Logging $streakDays day milestone ($milestoneType)")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.STREAK_MILESTONE,
+                mapOf(
+                    AnalyticsEvents.Params.STREAK_DAYS to streakDays,
+                    AnalyticsEvents.Params.MILESTONE_TYPE to milestoneType
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackStreakMilestone: Failed", e)
+        }
     }
 
     fun trackStreakBroken(previousStreak: Int, recoveryStarted: Boolean) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackStreakBroken: Analytics DISABLED - skipping")
+            return
+        }
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.STREAK_BROKEN,
-            mapOf(
-                AnalyticsEvents.Params.PREVIOUS_STREAK to previousStreak,
-                AnalyticsEvents.Params.RECOVERY_STARTED to recoveryStarted
+        try {
+            Log.d(TAG, "trackStreakBroken: Logging streak broken - was $previousStreak days")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.STREAK_BROKEN,
+                mapOf(
+                    AnalyticsEvents.Params.PREVIOUS_STREAK to previousStreak,
+                    AnalyticsEvents.Params.RECOVERY_STARTED to recoveryStarted
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackStreakBroken: Failed", e)
+        }
     }
 
     fun trackStreakFreezeActivated(currentStreak: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackStreakFreezeActivated: Analytics DISABLED - skipping")
+            return
+        }
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.STREAK_FREEZE_ACTIVATED,
-            mapOf(AnalyticsEvents.Params.STREAK_DAYS to currentStreak)
-        )
+        try {
+            Log.d(TAG, "trackStreakFreezeActivated: Logging freeze activated at $currentStreak days")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.STREAK_FREEZE_ACTIVATED,
+                mapOf(AnalyticsEvents.Params.STREAK_DAYS to currentStreak)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackStreakFreezeActivated: Failed", e)
+        }
     }
 
     fun trackStreakRecoveryStarted(previousStreak: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackStreakRecoveryStarted: Analytics DISABLED - skipping")
+            return
+        }
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.STREAK_RECOVERY_STARTED,
-            mapOf(AnalyticsEvents.Params.PREVIOUS_STREAK to previousStreak)
-        )
+        try {
+            Log.d(TAG, "trackStreakRecoveryStarted: Logging recovery started from $previousStreak days")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.STREAK_RECOVERY_STARTED,
+                mapOf(AnalyticsEvents.Params.PREVIOUS_STREAK to previousStreak)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackStreakRecoveryStarted: Failed", e)
+        }
     }
 
     fun trackStreakRecoveryCompleted(previousStreak: Int, daysToRecover: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackStreakRecoveryCompleted: Analytics DISABLED - skipping")
+            return
+        }
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.STREAK_RECOVERY_COMPLETED,
-            mapOf(
-                AnalyticsEvents.Params.PREVIOUS_STREAK to previousStreak,
-                "recovery_days" to daysToRecover
+        try {
+            Log.d(TAG, "trackStreakRecoveryCompleted: Logging recovery completed in $daysToRecover days")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.STREAK_RECOVERY_COMPLETED,
+                mapOf(
+                    AnalyticsEvents.Params.PREVIOUS_STREAK to previousStreak,
+                    "recovery_days" to daysToRecover
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackStreakRecoveryCompleted: Failed", e)
+        }
+    }
+
+    // ========== Intervention Dismissal/Snooze Analytics ==========
+
+    /**
+     * Track when user snoozes an intervention
+     * This is called from overlay ViewModels when user clicks snooze
+     */
+    fun trackInterventionSnoozed(snoozeDurationMinutes: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackInterventionSnoozed: Analytics DISABLED - skipping")
+            return
+        }
+
+        try {
+            Log.d(TAG, "trackInterventionSnoozed: Logging snooze for $snoozeDurationMinutes min")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.INTERVENTION_SNOOZED,
+                mapOf("snooze_duration_minutes" to snoozeDurationMinutes)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackInterventionSnoozed: Failed", e)
+        }
+    }
+
+    /**
+     * Track when user dismisses an intervention (without making a choice)
+     */
+    fun trackInterventionDismissed() {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackInterventionDismissed: Analytics DISABLED - skipping")
+            return
+        }
+
+        try {
+            Log.d(TAG, "trackInterventionDismissed: Logging intervention dismissed")
+            firebaseReporter.logEvent(AnalyticsEvents.INTERVENTION_DISMISSED)
+        } catch (e: Exception) {
+            Log.e(TAG, "trackInterventionDismissed: Failed", e)
+        }
     }
 
     // ========== Settings Analytics ==========
 
     fun trackSettingChanged(settingName: String, newValue: String) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackSettingChanged: Analytics DISABLED - skipping")
+            return
+        }
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.SETTINGS_CHANGED,
-            mapOf(
-                AnalyticsEvents.Params.SETTING_NAME to settingName,
-                AnalyticsEvents.Params.SETTING_VALUE to newValue
+        try {
+            Log.d(TAG, "trackSettingChanged: Logging $settingName = $newValue")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.SETTINGS_CHANGED,
+                mapOf(
+                    AnalyticsEvents.Params.SETTING_NAME to settingName,
+                    AnalyticsEvents.Params.SETTING_VALUE to newValue
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackSettingChanged: Failed", e)
+        }
     }
 
     // ========== App Lifecycle Analytics ==========
 
     fun trackAppLaunched(daysSinceInstall: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackAppLaunched: Analytics DISABLED - skipping")
+            return
+        }
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.APP_LAUNCHED,
-            mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
-        )
+        try {
+            Log.d(TAG, "trackAppLaunched: Logging app launch (day $daysSinceInstall)")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.APP_LAUNCHED,
+                mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackAppLaunched: Failed", e)
+        }
     }
 
     fun trackSessionEnd(durationMs: Long) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackSessionEnd: Analytics DISABLED - skipping")
+            return
+        }
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.SESSION_END,
-            mapOf(AnalyticsEvents.Params.SESSION_DURATION_MS to durationMs)
-        )
+        try {
+            val durationSeconds = durationMs / 1000
+            Log.d(TAG, "trackSessionEnd: Logging session end (${durationSeconds}s)")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.SESSION_END,
+                mapOf(AnalyticsEvents.Params.SESSION_DURATION_MS to durationMs)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackSessionEnd: Failed", e)
+        }
     }
 
     fun trackBaselineCalculated(avgDailyMinutes: Int, daysSinceInstall: Int) {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackBaselineCalculated: Analytics DISABLED - skipping")
+            return
+        }
 
-        firebaseReporter.logEvent(
-            AnalyticsEvents.BASELINE_CALCULATED,
-            mapOf(
-                "avg_daily_minutes" to avgDailyMinutes,
-                AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+        try {
+            Log.d(TAG, "trackBaselineCalculated: Logging baseline ($avgDailyMinutes min/day)")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.BASELINE_CALCULATED,
+                mapOf(
+                    "avg_daily_minutes" to avgDailyMinutes,
+                    AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackBaselineCalculated: Failed", e)
+        }
     }
 
     // ========== User Properties ==========
@@ -350,9 +616,18 @@ class AnalyticsManager(
      * Call this daily or after significant user actions
      */
     suspend fun updateUserProperties() {
-        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "updateUserProperties: Analytics DISABLED - skipping")
+            return
+        }
 
-        userPropertiesManager.updateUserProperties()
+        try {
+            Log.d(TAG, "updateUserProperties: Updating user properties")
+            userPropertiesManager.updateUserProperties()
+            Log.d(TAG, "updateUserProperties: User properties updated")
+        } catch (e: Exception) {
+            Log.e(TAG, "updateUserProperties: Failed", e)
+        }
     }
 
     // ========== Private Helper Methods ==========

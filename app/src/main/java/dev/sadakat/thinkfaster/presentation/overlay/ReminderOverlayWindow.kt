@@ -96,6 +96,7 @@ import dev.sadakat.thinkfaster.presentation.overlay.components.OverlayEntranceAn
 import dev.sadakat.thinkfaster.presentation.overlay.components.getActivityTimeEstimate
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionGradients
+import dev.sadakat.thinkfaster.ui.theme.InterventionTypography
 import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
 import dev.sadakat.thinkfaster.ui.theme.ResponsivePadding
 import dev.sadakat.thinkfaster.ui.theme.ResponsiveFontSize
@@ -104,6 +105,7 @@ import dev.sadakat.thinkfaster.ui.theme.AccessibleColors
 import dev.sadakat.thinkfaster.ui.theme.adaptiveAnimationSpec
 import dev.sadakat.thinkfaster.ui.theme.isLandscape
 import dev.sadakat.thinkfaster.ui.theme.adaptiveColumnCount
+import dev.sadakat.thinkfaster.util.InterventionStyling
 import dev.sadakat.thinkfaster.util.ErrorLogger
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -553,16 +555,36 @@ private fun ReminderOverlayContent(
     // Phase 4: High-contrast text colors (accessibility aware)
     // IMPORTANT: All gradients use dark backgrounds, so we ALWAYS use light text
     // regardless of system theme to ensure readability
-    val baseTextColor = InterventionColors.InterventionTextPrimaryDark  // Always use light text
-    val baseSecondaryTextColor = InterventionColors.InterventionTextSecondaryDark  // Always use light text
-    val textColor = AccessibleColors.text(
-        normalColor = baseTextColor,
-        highContrastColor = Color.White  // High contrast mode: pure white
-    )
-    val secondaryTextColor = AccessibleColors.text(
-        normalColor = baseSecondaryTextColor,
-        highContrastColor = Color.White  // High contrast mode: pure white
-    )
+    // Use gradient-aware colors from InterventionStyling
+    val style = interventionContent?.let {
+        InterventionStyling.getStyleForContent(it, isDarkTheme)
+    } ?: run {
+        // Fallback style when no content
+        dev.sadakat.thinkfaster.util.InterventionStyle(
+            backgroundColor = Color.Transparent,
+            textColor = AccessibleColors.text(
+                normalColor = InterventionColors.InterventionTextPrimaryDark,
+                highContrastColor = Color.White
+            ),
+            accentColor = InterventionColors.Success,
+            primaryTextStyle = InterventionTypography.InterventionMessage,
+            secondaryTextStyle = InterventionTypography.InterventionSubtext,
+            secondaryTextColor = AccessibleColors.text(
+                normalColor = InterventionColors.InterventionTextSecondaryDark,
+                highContrastColor = Color.White
+            ),
+            borderColor = Color.White.copy(alpha = 0.5f),
+            containerColor = Color.White.copy(alpha = 0.55f),
+            iconColor = AccessibleColors.text(
+                normalColor = InterventionColors.InterventionTextPrimaryDark,
+                highContrastColor = Color.White
+            )
+        )
+    }
+
+    // Local aliases for compatibility with existing code
+    val textColor = style.textColor
+    val secondaryTextColor = style.secondaryTextColor
 
     LaunchedEffect(interventionContent) {
         visible = true
@@ -617,12 +639,7 @@ private fun ReminderOverlayContent(
                         text = appName,
                         fontSize = ResponsiveFontSize.appName(),
                         fontWeight = FontWeight.Medium,
-                        color = textColor.copy(
-                            alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
-                                isPrimary = false,
-                                isOnGradient = true
-                            )
-                        ),
+                        color = style.secondaryTextColor,
                         textAlign = TextAlign.Center
                     )
 
@@ -654,7 +671,7 @@ private fun ReminderOverlayContent(
                         FeedbackPrompt(
                             onFeedback = onFeedbackReceived,
                             onDismiss = onSkipFeedback,
-                            isDarkTheme = isDarkTheme
+                            style = style
                         )
                     }
 
@@ -785,7 +802,7 @@ private fun ReminderOverlayContent(
                     FeedbackPrompt(
                         onFeedback = onFeedbackReceived,
                         onDismiss = onSkipFeedback,
-                        isDarkTheme = isDarkTheme
+                        style = style
                     )
                 }
 
@@ -1220,7 +1237,7 @@ private fun InterventionActionButtons(
                         "This brief pause helps you make a conscious choice"
                 },
                 fontSize = 14.sp,
-                color = secondaryTextColor.copy(alpha = 0.6f),
+                color = secondaryTextColor.copy(alpha = 0.95f),
                 textAlign = TextAlign.Center
             )
         }
@@ -1328,7 +1345,7 @@ private fun InterventionActionButtons(
 private fun FeedbackPrompt(
     onFeedback: (InterventionFeedback) -> Unit,
     onDismiss: () -> Unit,
-    isDarkTheme: Boolean
+    style: dev.sadakat.thinkfaster.util.InterventionStyle
 ) {
     // Phase 1: Interaction sources for button press feedback
     val helpfulInteractionSource = remember { MutableInteractionSource() }
@@ -1356,21 +1373,12 @@ private fun FeedbackPrompt(
         label = "disruptive_scale"
     )
 
-    // Text colors - always use light text on dark backgrounds
-    val textColor = InterventionColors.InterventionTextPrimaryDark
-    val secondaryTextColor = InterventionColors.InterventionTextSecondaryDark
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(
-                alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalContainerAlpha(
-                    isOnGradient = true,
-                    baseAlpha = 0.18f
-                )
-            )  // Enhanced visibility for gradients
+            containerColor = style.containerColor
         ),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
     ) {
@@ -1383,7 +1391,7 @@ private fun FeedbackPrompt(
                 text = "Was this intervention well-timed?",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
-                color = textColor,
+                color = style.textColor,
                 textAlign = TextAlign.Center,
                 lineHeight = 24.sp
             )
@@ -1393,12 +1401,7 @@ private fun FeedbackPrompt(
             Text(
                 text = "Your feedback helps us show interventions at better times",
                 fontSize = 14.sp,
-                color = secondaryTextColor.copy(
-                        alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
-                            isPrimary = false,
-                            isOnGradient = true
-                        )
-                    ),
+                color = style.secondaryTextColor,
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp
             )
@@ -1422,15 +1425,16 @@ private fun FeedbackPrompt(
                             .size(80.dp)
                             .scale(helpfulScale),
                         colors = IconButtonDefaults.outlinedIconButtonColors(
-                            containerColor = Color(0xFF4CAF50).copy(alpha = 0.15f),  // Light green tint
-                            contentColor = Color(0xFF81C784)  // Lighter green for icon
+                            containerColor = style.containerColor,
+                            contentColor = style.iconColor
                         ),
+                        border = BorderStroke(1.dp, style.borderColor),
                         interactionSource = helpfulInteractionSource
                     ) {
                         Icon(
                             imageVector = Icons.Default.ThumbUp,
                             contentDescription = "Helpful - intervention was well-timed",
-                            tint = Color(0xFF81C784),  // Light green
+                            tint = style.iconColor,
                             modifier = Modifier.size(40.dp)
                         )
                     }
@@ -1441,7 +1445,7 @@ private fun FeedbackPrompt(
                         text = "Helpful",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = textColor.copy(alpha = 0.8f)
+                        color = style.iconColor
                     )
                 }
 
@@ -1457,15 +1461,16 @@ private fun FeedbackPrompt(
                             .size(80.dp)
                             .scale(disruptiveScale),
                         colors = IconButtonDefaults.outlinedIconButtonColors(
-                            containerColor = Color(0xFFF44336).copy(alpha = 0.15f),  // Light red tint
-                            contentColor = Color(0xFFE57373)  // Lighter red for icon
+                            containerColor = style.containerColor,
+                            contentColor = style.iconColor
                         ),
+                        border = BorderStroke(1.dp, style.borderColor),
                         interactionSource = disruptiveInteractionSource
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.ThumbDown,
                             contentDescription = "Disruptive - intervention was poorly-timed",
-                            tint = Color(0xFFE57373),  // Light red
+                            tint = style.iconColor,
                             modifier = Modifier.size(40.dp)
                         )
                     }
@@ -1476,7 +1481,7 @@ private fun FeedbackPrompt(
                         text = "Disruptive",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = textColor.copy(alpha = 0.8f)
+                        color = style.iconColor
                     )
                 }
             }
@@ -1493,7 +1498,7 @@ private fun FeedbackPrompt(
                 Text(
                     text = "Skip",
                     fontSize = 14.sp,
-                    color = secondaryTextColor.copy(alpha = 0.6f),
+                    color = style.secondaryTextColor,
                     fontWeight = FontWeight.Normal
                 )
             }

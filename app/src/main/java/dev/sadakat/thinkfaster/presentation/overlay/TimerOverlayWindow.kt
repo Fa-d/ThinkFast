@@ -494,7 +494,7 @@ private fun DynamicInterventionContent(
             Text(
                 text = alertText,
                 style = InterventionTypography.InterventionSubtext,
-                color = style.textColor.copy(alpha = 0.7f),
+                color = style.secondaryTextColor,
                 textAlign = TextAlign.Center
             )
         }
@@ -507,7 +507,7 @@ private fun DynamicInterventionContent(
             when (content) {
                 is dev.sadakat.thinkfaster.domain.model.InterventionContent.ReflectionQuestion -> ReflectionQuestionContent(content, style)
                 is dev.sadakat.thinkfaster.domain.model.InterventionContent.TimeAlternative -> TimeAlternativeContent(content, style, sessionDuration)
-                is dev.sadakat.thinkfaster.domain.model.InterventionContent.BreathingExercise -> BreathingExerciseContent(content, isDarkTheme)
+                is dev.sadakat.thinkfaster.domain.model.InterventionContent.BreathingExercise -> BreathingExerciseContent(content, style)
                 is dev.sadakat.thinkfaster.domain.model.InterventionContent.UsageStats -> UsageStatsContent(content, style, todaysTotalUsage)
                 is dev.sadakat.thinkfaster.domain.model.InterventionContent.EmotionalAppeal -> EmotionalAppealContent(content, style)
                 is dev.sadakat.thinkfaster.domain.model.InterventionContent.Quote -> QuoteContent(content, style)
@@ -530,7 +530,7 @@ private fun DynamicInterventionContent(
             FeedbackPrompt(
                 onFeedback = onFeedbackReceived,
                 onDismiss = onSkipFeedback,
-                isDarkTheme = isDarkTheme
+                style = style
             )
         }
 
@@ -550,34 +550,17 @@ private fun DynamicInterventionContent(
                         .fillMaxWidth(0.85f)
                         .height(48.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.White.copy(
-                            alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalContainerAlpha(
-                                isOnGradient = true,
-                                baseAlpha = 0.15f
-                            )
-                        ),
-                        contentColor = style.textColor.copy(
-                            alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalTextAlpha(
-                                isPrimary = false,
-                                isOnGradient = true
-                            )
-                        )
+                        containerColor = style.containerColor,
+                        contentColor = style.secondaryTextColor
                     ),
-                    border = BorderStroke(
-                        1.5.dp,
-                        style.textColor.copy(
-                            alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalBorderAlpha(
-                                isOnGradient = true
-                            )
-                        )
-                    ),
+                    border = BorderStroke(1.5.dp, style.borderColor),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Pause,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
-                        tint = style.textColor.copy(alpha = 0.8f)
+                        tint = style.iconColor
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
@@ -620,7 +603,7 @@ private fun ReflectionQuestionContent(
 
         Text(
             text = content.subtext,
-            color = style.textColor.copy(alpha = 0.7f),
+            color = style.secondaryTextColor,
             textAlign = TextAlign.Center
         )
     }
@@ -652,7 +635,7 @@ private fun TimeAlternativeContent(
         Text(
             text = content.prefix,
             style = InterventionTypography.TimeAlternativePrefix,
-            color = style.textColor.copy(alpha = 0.9f),
+            color = style.secondaryTextColor,
             textAlign = TextAlign.Center,
             fontSize = 22.sp,
             fontWeight = FontWeight.SemiBold
@@ -706,14 +689,16 @@ private fun TimeAlternativeContent(
 @Composable
 private fun BreathingExerciseContent(
     content: dev.sadakat.thinkfaster.domain.model.InterventionContent.BreathingExercise,
-    isDarkTheme: Boolean
+    style: dev.sadakat.thinkfaster.util.InterventionStyle
 ) {
     // Use full breathing exercise component
     BreathingExercise(
         variant = content.variant,
         instruction = content.instruction,
         onComplete = null,  // Don't auto-dismiss
-        isDarkTheme = isDarkTheme,
+        isDarkTheme = false,  // Always use gradient colors, not solid background colors
+        textColor = style.textColor,
+        secondaryTextColor = style.secondaryTextColor,
         modifier = Modifier.fillMaxSize()
     )
 }
@@ -742,7 +727,7 @@ private fun UsageStatsContent(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = style.textColor.copy(alpha = 0.1f)
+                containerColor = style.containerColor
             )
         ) {
             Column(
@@ -752,7 +737,7 @@ private fun UsageStatsContent(
                 Text(
                     text = "Today's Total",
                     style = InterventionTypography.StatsLabel,
-                    color = style.textColor.copy(alpha = 0.6f)
+                    color = style.secondaryTextColor
                 )
 
                 Text(
@@ -787,7 +772,7 @@ private fun EmotionalAppealContent(
 
         Text(
             text = content.subtext,
-            color = style.textColor.copy(alpha = 0.8f),
+            color = style.secondaryTextColor,
             textAlign = TextAlign.Center
         )
     }
@@ -820,7 +805,7 @@ private fun QuoteContent(
 
         Text(
             text = "— ${content.author}",
-            color = style.textColor.copy(alpha = 0.7f),
+            color = style.secondaryTextColor,
             textAlign = TextAlign.Center
         )
     }
@@ -890,7 +875,7 @@ private fun ActivitySuggestionContent(
         // Header text
         Text(
             text = "Instead, try this:",
-            color = style.textColor.copy(alpha = 0.8f),
+            color = style.secondaryTextColor,
             textAlign = TextAlign.Center
         )
 
@@ -954,7 +939,7 @@ private fun InterventionButtons(
                 Text(
                     text = "Take a moment to consider...",
                     style = InterventionTypography.ButtonTextSmall,
-                    color = if (isDarkTheme) InterventionColors.InterventionTextPrimaryDark.copy(alpha = 0.7f) else InterventionColors.InterventionTextPrimary.copy(alpha = 0.7f),
+                    color = if (isDarkTheme) InterventionColors.InterventionTextPrimaryDark.copy(alpha = 0.95f) else InterventionColors.InterventionTextPrimary.copy(alpha = 0.95f),
                     textAlign = TextAlign.Center
                 )
 
@@ -1048,12 +1033,13 @@ private fun LinearProgressIndicator(
  * Phase 1: Feedback prompt with excellent UX
  * Shows after user makes their choice (Go Back or Proceed)
  * Smooth slide-up animation with haptic feedback
+ * Now uses gradient-aware colors for optimal contrast
  */
 @Composable
 private fun FeedbackPrompt(
     onFeedback: (InterventionFeedback) -> Unit,
     onDismiss: () -> Unit,
-    isDarkTheme: Boolean
+    style: dev.sadakat.thinkfaster.util.InterventionStyle
 ) {
     // Phase 1: Interaction sources for button press feedback
     val helpfulInteractionSource = remember { MutableInteractionSource() }
@@ -1081,21 +1067,12 @@ private fun FeedbackPrompt(
         label = "disruptive_scale"
     )
 
-    // Text colors - always use light text on dark backgrounds
-    val textColor = InterventionColors.InterventionTextPrimaryDark
-    val secondaryTextColor = InterventionColors.InterventionTextSecondaryDark
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(
-                alpha = dev.sadakat.thinkfaster.ui.theme.GradientContrastUtils.getOptimalContainerAlpha(
-                    isOnGradient = true,
-                    baseAlpha = 0.18f
-                )
-            )  // Enhanced visibility for gradients
+            containerColor = style.containerColor
         ),
         shape = RoundedCornerShape(20.dp)
     ) {
@@ -1108,7 +1085,7 @@ private fun FeedbackPrompt(
                 text = "Was this intervention well-timed?",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
-                color = textColor,
+                color = style.textColor,
                 textAlign = TextAlign.Center,
                 lineHeight = 24.sp
             )
@@ -1118,7 +1095,7 @@ private fun FeedbackPrompt(
             Text(
                 text = "Your feedback helps us show interventions at better times",
                 fontSize = 14.sp,
-                color = secondaryTextColor.copy(alpha = 0.7f),
+                color = style.secondaryTextColor,
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp
             )
@@ -1142,15 +1119,16 @@ private fun FeedbackPrompt(
                             .size(80.dp)
                             .scale(helpfulScale),
                         colors = IconButtonDefaults.outlinedIconButtonColors(
-                            containerColor = Color(0xFF4CAF50).copy(alpha = 0.15f),  // Light green tint
-                            contentColor = Color(0xFF81C784)  // Lighter green for icon
+                            containerColor = style.containerColor,
+                            contentColor = style.iconColor
                         ),
+                        border = BorderStroke(1.dp, style.borderColor),
                         interactionSource = helpfulInteractionSource
                     ) {
                         Icon(
                             imageVector = Icons.Default.ThumbUp,
                             contentDescription = "Helpful - intervention was well-timed",
-                            tint = Color(0xFF81C784),  // Light green
+                            tint = style.iconColor,
                             modifier = Modifier.size(40.dp)
                         )
                     }
@@ -1161,7 +1139,7 @@ private fun FeedbackPrompt(
                         text = "Helpful",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = textColor.copy(alpha = 0.8f)
+                        color = style.iconColor
                     )
                 }
 
@@ -1177,15 +1155,16 @@ private fun FeedbackPrompt(
                             .size(80.dp)
                             .scale(disruptiveScale),
                         colors = IconButtonDefaults.outlinedIconButtonColors(
-                            containerColor = Color(0xFFF44336).copy(alpha = 0.15f),  // Light red tint
-                            contentColor = Color(0xFFE57373)  // Lighter red for icon
+                            containerColor = style.containerColor,
+                            contentColor = style.iconColor
                         ),
+                        border = BorderStroke(1.dp, style.borderColor),
                         interactionSource = disruptiveInteractionSource
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Close,
                             contentDescription = "Disruptive - intervention was poorly-timed",
-                            tint = Color(0xFFE57373),  // Light red
+                            tint = style.iconColor,
                             modifier = Modifier.size(40.dp)
                         )
                     }
@@ -1196,7 +1175,7 @@ private fun FeedbackPrompt(
                         text = "Disruptive",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = textColor.copy(alpha = 0.8f)
+                        color = style.iconColor
                     )
                 }
             }
@@ -1213,7 +1192,7 @@ private fun FeedbackPrompt(
                 Text(
                     text = "Skip",
                     fontSize = 14.sp,
-                    color = secondaryTextColor.copy(alpha = 0.6f),
+                    color = style.secondaryTextColor,
                     fontWeight = FontWeight.Normal
                 )
             }

@@ -84,7 +84,7 @@ fun EnhancedUsageStatsContent(
             Text(
                 text = "minutes today",
                 fontSize = 18.sp,
-                color = secondaryTextColor.copy(alpha = 0.7f)
+                color = secondaryTextColor.copy(alpha = 0.95f)
             )
         }
 
@@ -158,7 +158,7 @@ private fun GoalProgressCircle(
                 text = "/ $goal min",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = textColor.copy(alpha = 0.6f)
+                color = textColor.copy(alpha = 0.95f)
             )
         }
     }

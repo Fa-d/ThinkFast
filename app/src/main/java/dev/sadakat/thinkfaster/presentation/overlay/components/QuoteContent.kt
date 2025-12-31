@@ -93,7 +93,7 @@ fun EnhancedQuoteContent(
                     Text(
                         text = "— ",
                         fontSize = 16.sp,
-                        color = secondaryTextColor.copy(alpha = 0.7f),
+                        color = secondaryTextColor.copy(alpha = 0.95f),
                         fontFamily = FontFamily.Serif
                     )
                     Text(

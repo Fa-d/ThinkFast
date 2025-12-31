@@ -139,7 +139,7 @@ fun EnhancedGamificationContent(
                         text = "/ $target days",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
-                        color = textColor.copy(alpha = 0.6f)
+                        color = textColor.copy(alpha = 0.95f)
                     )
                 }
             }

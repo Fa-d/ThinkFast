@@ -270,8 +270,8 @@ object GradientContrastUtils {
     ): Float {
         return if (isOnGradient) {
             // Increase alpha on gradients for better visibility
-            // 10% -> 25%, 15% -> 35-37%, 18% -> 40-45%
-            minOf(baseAlpha * 2.5f, 0.45f)
+            // 10% -> 35%, 15% -> 52.5%, 18% -> 55%
+            minOf(baseAlpha * 3.5f, 0.55f)  // Increased from 2.5f/0.45f for better contrast
         } else {
             baseAlpha
         }
@@ -290,8 +290,8 @@ object GradientContrastUtils {
     ): Float {
         return if (isOnGradient) {
             // Increase border visibility on gradients
-            // 30% -> 60%
-            minOf(baseAlpha * 2.0f, 0.7f)
+            // 30% -> 75%, capped at 85%
+            minOf(baseAlpha * 2.5f, 0.85f)  // Increased from 2.0f/0.7f for better contrast
         } else {
             baseAlpha
         }
@@ -310,10 +310,10 @@ object GradientContrastUtils {
         isOnGradient: Boolean
     ): Float {
         return when {
-            isPrimary && isOnGradient -> 0.95f  // Primary text on gradient: 95%
+            isPrimary && isOnGradient -> 1.0f    // Primary text on gradient: 100%
             isPrimary -> 1.0f                    // Primary on solid: 100%
-            isOnGradient -> 0.85f                // Secondary on gradient: 85%
-            else -> 0.7f                         // Secondary on solid: 70%
+            isOnGradient -> 0.95f                // Secondary on gradient: 95% (was 0.85f - improved WCAG AA compliance)
+            else -> 0.85f                        // Secondary on solid: 85% (was 0.7f - improved readability)
         }
     }
 
@@ -373,5 +373,119 @@ object GradientContrastUtils {
         val g = if (green <= 0.03928f) green / 12.92f else Math.pow(((green + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
         val b = if (blue <= 0.03928f) blue / 12.92f else Math.pow(((blue + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
         return 0.2126f * r + 0.7152f * g + 0.0722f * b
+    }
+}
+
+/**
+ * Gradient-specific color system for optimal contrast across different backgrounds.
+ * Each gradient type has unique color characteristics requiring tailored text/border colors.
+ *
+ * Gradient Categories:
+ * - DARK: Indigo, Green, Purple, Teal, Blue Gray (luminance ~0.05-0.12)
+ * - WARM: Orange, Amber, Red-Orange (luminance ~0.12-0.25)
+ */
+object GradientColorSystem {
+
+    /**
+     * Color palette configuration for a specific gradient type
+     */
+    data class GradientPalette(
+        val primaryText: Color,
+        val secondaryText: Color,
+        val border: Color,
+        val container: Color,
+        val icon: Color
+    )
+
+    /**
+     * Get optimized colors for the given content type (gradient background)
+     *
+     * @param contentType The intervention content type (determines gradient)
+     * @param isDarkTheme Whether system dark theme is active
+     * @return Optimized color palette for the specific gradient
+     */
+    fun getPaletteForContent(contentType: String?, isDarkTheme: Boolean): GradientPalette {
+        return when (contentType) {
+            // Dark gradients - standard light colors work well
+            "ReflectionQuestion",
+            "BreathingExercise",
+            "EmotionalAppeal",
+            "Gamification",
+            "UsageStats" -> getDarkGradientPalette()
+
+            // Warm/bright gradients - need higher contrast
+            "TimeAlternative",
+            "Quote",
+            "ActivitySuggestion" -> getWarmGradientPalette()
+
+            // Fallback to dark gradient palette
+            else -> getDarkGradientPalette()
+        }
+    }
+
+    /**
+     * Colors for DARK gradients (Indigo, Green, Purple, Teal, Blue Gray)
+     * These gradients have low luminance (~0.05-0.12), so pure light colors work best.
+     */
+    private fun getDarkGradientPalette(): GradientPalette {
+        return GradientPalette(
+            primaryText = Color(0xFFFFFFFF),  // Pure white
+            secondaryText = Color(0xFFF5F5F5),  // Off-white with 96% opacity equivalent
+            border = Color(0xFFFFFFFF).copy(alpha = 0.5f),  // Semi-transparent white border
+            container = Color.White.copy(alpha = 0.55f),  // White container with good opacity
+            icon = Color(0xFFFFFFFF).copy(alpha = 0.9f)  // Near-white icon
+        )
+    }
+
+    /**
+     * Colors for WARM gradients (Orange, Amber, Red-Orange)
+     * These gradients have medium-high luminance (~0.12-0.25), requiring adjustments:
+     * - Slightly darker text for better contrast
+     * - Higher opacity borders for visibility
+     * - Darker containers for separation
+     */
+    private fun getWarmGradientPalette(): GradientPalette {
+        return GradientPalette(
+            primaryText = Color(0xFFF5F5F5),  // Off-white (not pure white for better contrast on orange)
+            secondaryText = Color(0xFFE0E0E0),  // Light gray with ~88% opacity equivalent
+            border = Color(0xFF1A1A1A).copy(alpha = 0.35f),  // Dark border for visibility on warm backgrounds
+            container = Color(0xFF1A1A1A).copy(alpha = 0.35f),  // Dark container for contrast
+            icon = Color(0xFFF5F5F5).copy(alpha = 0.85f)  // Off-white icon
+        )
+    }
+
+    /**
+     * Get primary text color for a gradient
+     */
+    fun getPrimaryText(contentType: String?, isDarkTheme: Boolean): Color {
+        return getPaletteForContent(contentType, isDarkTheme).primaryText
+    }
+
+    /**
+     * Get secondary text color for a gradient
+     */
+    fun getSecondaryText(contentType: String?, isDarkTheme: Boolean): Color {
+        return getPaletteForContent(contentType, isDarkTheme).secondaryText
+    }
+
+    /**
+     * Get border color for outlined elements on a gradient
+     */
+    fun getBorder(contentType: String?, isDarkTheme: Boolean): Color {
+        return getPaletteForContent(contentType, isDarkTheme).border
+    }
+
+    /**
+     * Get container background color for cards/panels on a gradient
+     */
+    fun getContainer(contentType: String?, isDarkTheme: Boolean): Color {
+        return getPaletteForContent(contentType, isDarkTheme).container
+    }
+
+    /**
+     * Get icon/tint color for a gradient
+     */
+    fun getIcon(contentType: String?, isDarkTheme: Boolean): Color {
+        return getPaletteForContent(contentType, isDarkTheme).icon
     }
 }
