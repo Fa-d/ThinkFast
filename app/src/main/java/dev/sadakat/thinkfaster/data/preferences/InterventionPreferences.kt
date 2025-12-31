@@ -108,6 +108,21 @@ class InterventionPreferences(context: Context) {
         return daysDiff.toInt()
     }
 
+    /**
+     * Get or generate persistent anonymous user ID
+     * This UUID persists across app launches and reinstalls (until app data cleared)
+     * Used for Firebase Analytics and Crashlytics to track user behavior over time
+     */
+    fun getAnonymousUserId(): String {
+        val existing = prefs.getString(KEY_ANONYMOUS_USER_ID, null)
+        if (existing != null) return existing
+
+        // Generate new UUID on first launch
+        val newId = java.util.UUID.randomUUID().toString()
+        prefs.edit().putString(KEY_ANONYMOUS_USER_ID, newId).apply()
+        return newId
+    }
+
     // ========== Phase 2: Snooze Functionality ==========
 
     /**
@@ -116,6 +131,34 @@ class InterventionPreferences(context: Context) {
      */
     fun setSnoozeUntil(until: Long) {
         prefs.edit().putLong(KEY_SNOOZE_UNTIL, until).apply()
+    }
+
+    /**
+     * Set snooze for a specific duration in minutes
+     * @param durationMinutes Duration in minutes to snooze
+     */
+    fun setSnoozeDuration(durationMinutes: Int) {
+        val durationMs = durationMinutes * 60 * 1000L
+        val snoozeUntil = System.currentTimeMillis() + durationMs
+        setSnoozeUntil(snoozeUntil)
+        // Store the selected duration for overlay display
+        setSelectedSnoozeDuration(durationMinutes)
+    }
+
+    /**
+     * Get the user's selected snooze duration in minutes (for overlay display)
+     * @return Duration in minutes, defaults to 10
+     */
+    fun getSelectedSnoozeDuration(): Int {
+        return prefs.getInt(KEY_SELECTED_SNOOZE_DURATION, 10)
+    }
+
+    /**
+     * Set the selected snooze duration in minutes (for overlay display)
+     * @param durationMinutes Duration in minutes
+     */
+    private fun setSelectedSnoozeDuration(durationMinutes: Int) {
+        prefs.edit().putInt(KEY_SELECTED_SNOOZE_DURATION, durationMinutes).apply()
     }
 
     /**
@@ -237,9 +280,11 @@ class InterventionPreferences(context: Context) {
         private const val KEY_FRICTION_OVERRIDE = "friction_level_override"
         private const val KEY_LOCKED_MODE = "locked_mode_enabled"
         private const val KEY_INSTALL_DATE = "install_date"
+        private const val KEY_ANONYMOUS_USER_ID = "anonymous_user_id"
 
         // Phase 2: Snooze functionality keys
         private const val KEY_SNOOZE_UNTIL = "snooze_until"
+        private const val KEY_SELECTED_SNOOZE_DURATION = "selected_snooze_duration"
         private const val KEY_WORKING_MODE = "working_mode_enabled"
         private const val KEY_DISMISSAL_COUNT = "dismissal_count_today"
         private const val KEY_LAST_DISMISSAL_DATE = "last_dismissal_date"

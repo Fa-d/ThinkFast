@@ -1,5 +1,7 @@
 package dev.sadakat.thinkfaster.domain.usecase.baseline
 
+import dev.sadakat.thinkfaster.analytics.AnalyticsManager
+import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 import dev.sadakat.thinkfaster.domain.model.UserBaseline
 import dev.sadakat.thinkfaster.domain.repository.GoalRepository
 import dev.sadakat.thinkfaster.domain.repository.UsageRepository
@@ -19,7 +21,9 @@ import java.util.Locale
 class CalculateUserBaselineUseCase(
     private val usageRepository: UsageRepository,
     private val goalRepository: GoalRepository,
-    private val baselineRepository: UserBaselineRepository
+    private val baselineRepository: UserBaselineRepository,
+    private val analyticsManager: AnalyticsManager,
+    private val interventionPreferences: InterventionPreferences
 ) {
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
@@ -66,6 +70,11 @@ class CalculateUserBaselineUseCase(
         )
 
         baselineRepository.saveBaseline(baseline)
+
+        // Track analytics
+        val daysSinceInstall = interventionPreferences.getDaysSinceInstall()
+        analyticsManager.trackBaselineCalculated(averageDailyMinutes, daysSinceInstall)
+
         return baseline
     }
 }

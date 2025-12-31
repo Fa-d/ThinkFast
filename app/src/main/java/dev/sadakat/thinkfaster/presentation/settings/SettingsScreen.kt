@@ -478,6 +478,15 @@ fun SettingsScreen(
                 )
             }
 
+            // Snooze Settings
+            item {
+                SnoozeSettingsCard(
+                    snoozeActive = uiState.snoozeActive,
+                    remainingMinutes = uiState.snoozeRemainingMinutes,
+                    viewModel = viewModel
+                )
+            }
+
             // Theme and Appearance card
             item {
                 Card(

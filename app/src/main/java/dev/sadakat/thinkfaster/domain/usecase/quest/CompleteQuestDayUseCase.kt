@@ -1,6 +1,8 @@
 package dev.sadakat.thinkfaster.domain.usecase.quest
 
 import android.content.Context
+import dev.sadakat.thinkfaster.analytics.AnalyticsManager
+import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 import dev.sadakat.thinkfaster.data.preferences.OnboardingQuestPreferences
 import dev.sadakat.thinkfaster.util.NotificationHelper
 import java.text.SimpleDateFormat
@@ -17,7 +19,9 @@ import java.util.Locale
 class CompleteQuestDayUseCase(
     private val questPreferences: OnboardingQuestPreferences,
     private val notificationHelper: NotificationHelper,
-    private val context: Context
+    private val context: Context,
+    private val analyticsManager: AnalyticsManager,
+    private val interventionPreferences: InterventionPreferences
 ) {
     operator fun invoke(day: Int, goalMet: Boolean) {
         if (!questPreferences.isQuestActive()) return
@@ -27,6 +31,16 @@ class CompleteQuestDayUseCase(
         // Mark milestone shown
         questPreferences.markDayCompleted(day)
 
+        // Track analytics
+        val daysSinceInstall = interventionPreferences.getDaysSinceInstall()
+        val stepName = when (day) {
+            1 -> "day_1_first_goal"
+            2 -> "day_2_building_momentum"
+            7 -> "day_7_quest_complete"
+            else -> "day_$day"
+        }
+        analyticsManager.trackQuestStepCompleted(stepName, daysSinceInstall)
+
         // Send notification based on day
         when (day) {
             1 -> notificationHelper.showQuestDayNotification(context, 1, "🌱", "Great start!")
@@ -35,6 +49,8 @@ class CompleteQuestDayUseCase(
                 questPreferences.markQuestComplete(
                     SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 )
+                // Track quest completion analytics
+                analyticsManager.trackQuestCompleted(daysSinceInstall)
                 notificationHelper.showQuestCompleteNotification(context)
             }
             // Day 3-6 handled by existing streak milestone celebrations

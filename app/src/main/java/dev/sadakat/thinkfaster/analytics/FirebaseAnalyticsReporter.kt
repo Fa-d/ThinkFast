@@ -95,10 +95,67 @@ class FirebaseAnalyticsReporter {
     }
 
     /**
+     * Set user ID for analytics (call once on app init)
+     */
+    fun setUserId(userId: String) {
+        firebaseAnalytics.setUserId(userId)
+    }
+
+    /**
      * Set user property for app usage pattern
      */
     fun setUserProperty(usageLevel: String) {
         firebaseAnalytics.setUserProperty("usage_level", usageLevel)
+    }
+
+    /**
+     * Set a single user property
+     */
+    fun setUserProperty(key: String, value: String) {
+        firebaseAnalytics.setUserProperty(key, value)
+    }
+
+    /**
+     * Set multiple user properties at once
+     */
+    fun setUserProperties(properties: Map<String, String>) {
+        properties.forEach { (key, value) ->
+            firebaseAnalytics.setUserProperty(key, value)
+        }
+    }
+
+    /**
+     * Log a simple event with no parameters
+     */
+    fun logEvent(eventName: String) {
+        firebaseAnalytics.logEvent(eventName) {}
+    }
+
+    /**
+     * Log event with parameters
+     */
+    fun logEvent(eventName: String, params: Map<String, Any>) {
+        firebaseAnalytics.logEvent(eventName) {
+            params.forEach { (key, value) ->
+                when (value) {
+                    is String -> param(key, value)
+                    is Long -> param(key, value)
+                    is Int -> param(key, value.toLong())
+                    is Double -> param(key, value)
+                    is Boolean -> param(key, if (value) 1L else 0L)
+                }
+            }
+        }
+    }
+
+    /**
+     * Log screen view event
+     */
+    fun logScreenView(screenName: String, screenClass: String) {
+        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW) {
+            param(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
+            param(FirebaseAnalytics.Param.SCREEN_CLASS, screenClass)
+        }
     }
 
     /**

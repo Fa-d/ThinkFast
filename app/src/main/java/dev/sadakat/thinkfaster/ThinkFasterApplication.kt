@@ -1,12 +1,16 @@
 package dev.sadakat.thinkfaster
 
 import android.app.Application
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
+import dev.sadakat.thinkfaster.analytics.AppLifecycleObserver
+import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 import dev.sadakat.thinkfaster.data.preferences.NotificationPreferences
 import dev.sadakat.thinkfaster.di.analyticsModule
 import dev.sadakat.thinkfaster.di.databaseModule
@@ -47,10 +51,24 @@ class ThinkFasterApplication : Application(), KoinComponent {
             )
         }
 
+        // Set install date if first launch
+        val interventionPrefs = InterventionPreferences(this)
+        if (interventionPrefs.getInstallDate() == 0L) {
+            interventionPrefs.setInstallDate(System.currentTimeMillis())
+        }
+
         // Initialize Firebase Crashlytics
         // Note: This will only work if google-services.json is present
         // Otherwise it will safely do nothing
         initializeCrashlytics()
+
+        // Track app launch AFTER analytics is initialized
+        val daysSinceInstall = interventionPrefs.getDaysSinceInstall()
+        analyticsManager.trackAppLaunched(daysSinceInstall)
+
+        // Register lifecycle observer for session tracking
+        val lifecycleObserver = AppLifecycleObserver(analyticsManager)
+        ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver)
 
         // Initialize notification channels (must be done before scheduling workers)
         NotificationHelper.createNotificationChannels(this)
@@ -73,14 +91,20 @@ class ThinkFasterApplication : Application(), KoinComponent {
             // Enable crash collection (can be controlled by user preference later)
             crashlytics.setCrashlyticsCollectionEnabled(true)
 
-            // Set user identifier (anonymous - no personal info)
-            // We use a random identifier that doesn't persist across installs
-            // This helps track unique crash sessions without PII
-            crashlytics.setUserId(java.util.UUID.randomUUID().toString())
+            // FIX: Use persistent anonymous user ID
+            val interventionPrefs = InterventionPreferences(this)
+            val anonymousUserId = interventionPrefs.getAnonymousUserId()
+
+            // Set user ID for Crashlytics
+            crashlytics.setUserId(anonymousUserId)
+
+            // Also set for Firebase Analytics
+            Firebase.analytics.setUserId(anonymousUserId)
 
             // Set custom keys for additional context
             crashlytics.setCustomKey("app_version", getAppVersion())
             crashlytics.setCustomKey("build_type", getBuildType())
+            crashlytics.setCustomKey("days_since_install", interventionPrefs.getDaysSinceInstall())
 
         } catch (e: Exception) {
             // Crashlytics not available (google-services.json missing)

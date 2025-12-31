@@ -51,7 +51,6 @@ class UsageMonitorService : Service() {
     private lateinit var appLaunchDetector: AppLaunchDetector
     private lateinit var sessionDetector: SessionDetector
     private lateinit var contextDetector: ContextDetector
-    private lateinit var timingModel: dev.sadakat.thinkfaster.ml.TimingModel
 
     // WindowManager-based overlays
     private lateinit var reminderOverlay: ReminderOverlayWindow
@@ -142,7 +141,6 @@ class UsageMonitorService : Service() {
         contextDetector = ContextDetector(
             context = this
         )
-        timingModel = dev.sadakat.thinkfaster.ml.TimingModel(this)
 
         // Initialize WindowManager-based overlays
         // These will be created even without permission, but won't show until granted
@@ -179,9 +177,6 @@ class UsageMonitorService : Service() {
         serviceScope.launch {
             sessionDetector.initialize()
         }
-
-        // Initialize ML timing model
-        timingModel.initialize()
 
         // Observe tracked apps changes and invalidate cache when apps are added/removed
         serviceScope.launch {
@@ -244,13 +239,6 @@ class UsageMonitorService : Service() {
             unregisterReceiver(powerSaveReceiver)
         } catch (e: Exception) {
             // Receivers might not be registered
-        }
-
-        // Clean up ML model
-        try {
-            timingModel.cleanup()
-        } catch (e: Exception) {
-            // Model might not be initialized
         }
 
         // End any active session
@@ -543,11 +531,11 @@ class UsageMonitorService : Service() {
             return
         }
 
-        // Phase 4: Check ML-based timing predictions
-        val mlPrediction = checkMLPrediction()
-        if (!mlPrediction.shouldShowIntervention) {
+        // Phase 4: Check heuristic-based timing predictions
+        val prediction = checkHeuristicPrediction()
+        if (!prediction.shouldShowIntervention) {
             ErrorLogger.info(
-                "Skipping reminder overlay - ML prediction: effectiveness=${mlPrediction.effectivenessScore}, confidence=${mlPrediction.confidence}",
+                "Skipping reminder overlay - heuristic prediction: effectiveness=${prediction.effectivenessScore}, confidence=${prediction.confidence}",
                 context = "UsageMonitorService.showReminderOverlay"
             )
             return
@@ -654,11 +642,11 @@ class UsageMonitorService : Service() {
             return
         }
 
-        // Phase 4: Check ML-based timing predictions
-        val mlPrediction = checkMLPrediction()
-        if (!mlPrediction.shouldShowIntervention) {
+        // Phase 4: Check heuristic-based timing predictions
+        val prediction = checkHeuristicPrediction()
+        if (!prediction.shouldShowIntervention) {
             ErrorLogger.info(
-                "Skipping timer overlay - ML prediction: effectiveness=${mlPrediction.effectivenessScore}, confidence=${mlPrediction.confidence}",
+                "Skipping timer overlay - heuristic prediction: effectiveness=${prediction.effectivenessScore}, confidence=${prediction.confidence}",
                 context = "UsageMonitorService.showTimerOverlay"
             )
             return
@@ -720,28 +708,42 @@ class UsageMonitorService : Service() {
     }
 
     /**
-     * Check ML prediction for intervention timing
+     * Check heuristic-based prediction for intervention timing
+     * Uses simple rules instead of ML model to determine when to show interventions
      */
-    private fun checkMLPrediction(): dev.sadakat.thinkfaster.ml.TimingModel.PredictionResult {
-        // Get recent usage statistics for ML features
-        val recentAverageDuration = 15f // TODO: Get from usage repository
-        val recentSessionCount = 5 // TODO: Get from usage repository
-        val timeSinceLastIntervention = 2f // TODO: Track last intervention time
-        val lastInterventionEffectiveness = 0.7f // TODO: Calculate from intervention results
-        val sessionFrequency = 2f // TODO: Calculate from usage repository
+    private fun checkHeuristicPrediction(): PredictionResult {
+        val calendar = java.util.Calendar.getInstance()
+        val hourOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+        val dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK)
 
-        // Extract current time features
-        val features = timingModel.extractCurrentTimeFeatures(
-            recentAverageDuration = recentAverageDuration,
-            recentSessionCount = recentSessionCount,
-            timeSinceLastIntervention = timeSinceLastIntervention,
-            lastInterventionEffectiveness = lastInterventionEffectiveness,
-            sessionFrequency = sessionFrequency
+        // Simple heuristic: avoid showing interventions during late night hours
+        // and during typical work hours (9 AM - 5 PM) on weekdays
+        val isLateNight = hourOfDay >= 22 || hourOfDay < 6
+        val isWorkHours = hourOfDay in 9..16 && dayOfWeek in java.util.Calendar.MONDAY..java.util.Calendar.FRIDAY
+
+        // Higher effectiveness score during reasonable hours
+        val effectivenessScore = when {
+            isLateNight -> 0.2f
+            isWorkHours -> 0.5f
+            else -> 0.8f
+        }
+
+        // Always show interventions but with varying effectiveness
+        return PredictionResult(
+            shouldShowIntervention = true,
+            effectivenessScore = effectivenessScore,
+            confidence = 0.7f
         )
-
-        // Get prediction
-        return timingModel.predict(features)
     }
+
+    /**
+     * Simple prediction result data class
+     */
+    private data class PredictionResult(
+        val shouldShowIntervention: Boolean,
+        val effectivenessScore: Float,
+        val confidence: Float
+    )
 
     /**
      * Create the foreground notification

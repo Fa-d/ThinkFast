@@ -2,15 +2,10 @@ package dev.sadakat.thinkfaster.service
 
 import android.content.Context
 import dev.sadakat.thinkfaster.util.ErrorLogger
-import java.util.Calendar
 
 /**
  * Detects contextual information to determine if interventions should be shown
- * Factors include:
- * - Time of day (work hours, sleep hours)
- * - Day of week (weekends vs weekdays)
- *
- * The app now uses time-based and usage-pattern-based context for intervention timing.
+ * No time-based restrictions - interventions can be shown whenever needed
  */
 class ContextDetector(
     private val context: Context
@@ -34,29 +29,10 @@ class ContextDetector(
 
     /**
      * Check time-based context (work hours, sleep hours, etc.)
+     * Always returns true - no time restrictions
      */
     private fun checkTimeContext(): ContextResult {
-        val calendar = Calendar.getInstance()
-        val hourOfDay = calendar.get(Calendar.HOUR_OF_DAY)
-        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-
-        // Skip interventions during typical sleep hours (11 PM - 7 AM)
-        if (hourOfDay !in 7..<23) {
-            return ContextResult(
-                shouldShowIntervention = false,
-                reason = "Sleep hours (11 PM - 7 AM)"
-            )
-        }
-
-        // Skip interventions during early morning hours on weekends (7 AM - 9 AM)
-        val isWeekend = dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY
-        if (isWeekend && (hourOfDay in 7..<9)) {
-            return ContextResult(
-                shouldShowIntervention = false,
-                reason = "Weekend morning (7 AM - 9 AM)"
-            )
-        }
-
+        // No time-based restrictions - show interventions whenever needed
         return ContextResult(shouldShowIntervention = true)
     }
 

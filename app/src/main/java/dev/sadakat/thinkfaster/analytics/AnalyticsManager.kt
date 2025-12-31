@@ -17,7 +17,9 @@ import java.util.concurrent.TimeUnit
  * All processing happens locally - only summaries are sent
  */
 class AnalyticsManager(
-    private val context: Context, private val repository: InterventionResultRepository
+    private val context: Context,
+    private val repository: InterventionResultRepository,
+    private val userPropertiesManager: UserPropertiesManager
 ) {
     private val privacySafeAnalytics = PrivacySafeAnalytics(context)
     private val firebaseReporter = FirebaseAnalyticsReporter()
@@ -127,7 +129,244 @@ class AnalyticsManager(
         firebaseReporter.reportAppQuality(crashType, anrOccurred, slowRender)
     }
 
+    // ========== Onboarding Analytics ==========
+
+    fun trackOnboardingStarted() {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        firebaseReporter.logEvent(AnalyticsEvents.ONBOARDING_STARTED)
+    }
+
+    fun trackOnboardingStepCompleted(step: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        firebaseReporter.logEvent(
+            AnalyticsEvents.ONBOARDING_STEP_COMPLETED,
+            mapOf(AnalyticsEvents.Params.ONBOARDING_STEP to step)
+        )
+    }
+
+    fun trackOnboardingCompleted(daysSinceInstall: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        firebaseReporter.logEvent(
+            AnalyticsEvents.ONBOARDING_COMPLETED,
+            mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
+        )
+    }
+
+    fun trackOnboardingSkipped(daysSinceInstall: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        firebaseReporter.logEvent(
+            AnalyticsEvents.ONBOARDING_SKIPPED,
+            mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
+        )
+    }
+
+    fun trackQuestStepCompleted(stepName: String, daysSinceInstall: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        firebaseReporter.logEvent(
+            AnalyticsEvents.QUEST_STEP_COMPLETED,
+            mapOf(
+                AnalyticsEvents.Params.STEP_NAME to stepName,
+                AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+            )
+        )
+    }
+
+    fun trackQuestCompleted(daysSinceInstall: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+        firebaseReporter.logEvent(
+            AnalyticsEvents.QUEST_COMPLETED,
+            mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
+        )
+    }
+
+    // ========== Goal Analytics ==========
+
+    fun trackGoalCreated(targetApp: String, goalMinutes: Int, daysSinceInstall: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        // Privacy: Use app category instead of package name
+        val appCategory = categorizeApp(targetApp)
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.GOAL_CREATED,
+            mapOf(
+                AnalyticsEvents.Params.APP_CATEGORY to appCategory,
+                AnalyticsEvents.Params.GOAL_MINUTES to goalMinutes,
+                AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+            )
+        )
+    }
+
+    fun trackGoalAchieved(targetApp: String, streakDays: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        val appCategory = categorizeApp(targetApp)
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.GOAL_ACHIEVED,
+            mapOf(
+                AnalyticsEvents.Params.APP_CATEGORY to appCategory,
+                AnalyticsEvents.Params.STREAK_DAYS to streakDays
+            )
+        )
+    }
+
+    fun trackGoalUpdated(targetApp: String, newGoalMinutes: Int, daysSinceInstall: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        val appCategory = categorizeApp(targetApp)
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.GOAL_UPDATED,
+            mapOf(
+                AnalyticsEvents.Params.APP_CATEGORY to appCategory,
+                AnalyticsEvents.Params.GOAL_MINUTES to newGoalMinutes,
+                AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+            )
+        )
+    }
+
+    fun trackGoalExceeded(targetApp: String, usageMinutes: Int, goalMinutes: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        val appCategory = categorizeApp(targetApp)
+        val excessMinutes = usageMinutes - goalMinutes
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.GOAL_EXCEEDED,
+            mapOf(
+                AnalyticsEvents.Params.APP_CATEGORY to appCategory,
+                "excess_minutes" to excessMinutes
+            )
+        )
+    }
+
+    // ========== Streak Analytics ==========
+
+    fun trackStreakMilestone(streakDays: Int, milestoneType: String) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.STREAK_MILESTONE,
+            mapOf(
+                AnalyticsEvents.Params.STREAK_DAYS to streakDays,
+                AnalyticsEvents.Params.MILESTONE_TYPE to milestoneType
+            )
+        )
+    }
+
+    fun trackStreakBroken(previousStreak: Int, recoveryStarted: Boolean) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.STREAK_BROKEN,
+            mapOf(
+                AnalyticsEvents.Params.PREVIOUS_STREAK to previousStreak,
+                AnalyticsEvents.Params.RECOVERY_STARTED to recoveryStarted
+            )
+        )
+    }
+
+    fun trackStreakFreezeActivated(currentStreak: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.STREAK_FREEZE_ACTIVATED,
+            mapOf(AnalyticsEvents.Params.STREAK_DAYS to currentStreak)
+        )
+    }
+
+    fun trackStreakRecoveryStarted(previousStreak: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.STREAK_RECOVERY_STARTED,
+            mapOf(AnalyticsEvents.Params.PREVIOUS_STREAK to previousStreak)
+        )
+    }
+
+    fun trackStreakRecoveryCompleted(previousStreak: Int, daysToRecover: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.STREAK_RECOVERY_COMPLETED,
+            mapOf(
+                AnalyticsEvents.Params.PREVIOUS_STREAK to previousStreak,
+                "recovery_days" to daysToRecover
+            )
+        )
+    }
+
+    // ========== Settings Analytics ==========
+
+    fun trackSettingChanged(settingName: String, newValue: String) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.SETTINGS_CHANGED,
+            mapOf(
+                AnalyticsEvents.Params.SETTING_NAME to settingName,
+                AnalyticsEvents.Params.SETTING_VALUE to newValue
+            )
+        )
+    }
+
+    // ========== App Lifecycle Analytics ==========
+
+    fun trackAppLaunched(daysSinceInstall: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.APP_LAUNCHED,
+            mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
+        )
+    }
+
+    fun trackSessionEnd(durationMs: Long) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.SESSION_END,
+            mapOf(AnalyticsEvents.Params.SESSION_DURATION_MS to durationMs)
+        )
+    }
+
+    fun trackBaselineCalculated(avgDailyMinutes: Int, daysSinceInstall: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        firebaseReporter.logEvent(
+            AnalyticsEvents.BASELINE_CALCULATED,
+            mapOf(
+                "avg_daily_minutes" to avgDailyMinutes,
+                AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall
+            )
+        )
+    }
+
+    // ========== User Properties ==========
+
+    /**
+     * Update user properties for segmentation
+     * Call this daily or after significant user actions
+     */
+    suspend fun updateUserProperties() {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) return
+
+        userPropertiesManager.updateUserProperties()
+    }
+
     // ========== Private Helper Methods ==========
+
+    private fun categorizeApp(packageName: String): String {
+        return when {
+            packageName.contains("facebook") -> "social_facebook"
+            packageName.contains("instagram") -> "social_instagram"
+            packageName.contains("twitter") || packageName.contains("x.com") -> "social_twitter"
+            packageName.contains("tiktok") -> "social_tiktok"
+            packageName.contains("snapchat") -> "social_snapchat"
+            else -> "social_other"
+        }
+    }
 
     private fun categorizeContent(contentType: String): String {
         return when {
@@ -215,6 +454,9 @@ class DailyAnalyticsUploadWorker(
 
             // Send content performance report
             analyticsManager.sendContentPerformanceReport()
+
+            // Update user properties for segmentation
+            analyticsManager.updateUserProperties()
 
             Result.success()
         } catch (e: Exception) {

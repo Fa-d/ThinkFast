@@ -73,6 +73,7 @@ class TimerOverlayWindow(
 ) : KoinComponent, LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences by inject()
     private val viewModel: TimerOverlayViewModel by inject()
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -130,6 +131,7 @@ class TimerOverlayWindow(
                 ThinkFasterTheme {
                     TimerOverlayScreen(
                         viewModel = viewModel,
+                        snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),
                         onDismiss = { dismiss() },
                         onGoBackToHome = { goToHomeScreen() }
                     )
@@ -290,6 +292,7 @@ class TimerOverlayWindow(
 @Composable
 fun TimerOverlayScreen(
     viewModel: TimerOverlayViewModel,
+    snoozeDurationMinutes: Int,
     onDismiss: () -> Unit,
     onGoBackToHome: () -> Unit
 ) {
@@ -365,6 +368,7 @@ fun TimerOverlayScreen(
                             timerAlertMinutes = uiState.timerAlertMinutes,
                             frictionLevel = uiState.frictionLevel,
                             showFeedbackPrompt = uiState.showFeedbackPrompt,
+                            snoozeDurationMinutes = snoozeDurationMinutes,
                             onProceed = {
                                 // Phase 1.2: Haptic feedback on button press
                                 view.performHapticFeedback(
@@ -423,6 +427,7 @@ private fun DynamicInterventionContent(
     timerAlertMinutes: Int,
     frictionLevel: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel,
     showFeedbackPrompt: Boolean,
+    snoozeDurationMinutes: Int = 10,  // User-selected snooze duration
     onProceed: () -> Unit,
     onGoBack: () -> Unit,
     onSnoozeClick: () -> Unit,  // Phase 2: Snooze functionality
@@ -567,9 +572,10 @@ private fun DynamicInterventionContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Snooze for 10 minutes",
+                        text = "Snooze for $snoozeDurationMinutes minutes",
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = style.textColor
                     )
                 }
 

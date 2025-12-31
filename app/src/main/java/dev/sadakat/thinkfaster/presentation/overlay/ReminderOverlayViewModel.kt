@@ -295,7 +295,7 @@ class ReminderOverlayViewModel(
 
     /**
      * Called when user clicks snooze button
-     * Sets 10-minute snooze and dismisses overlay
+     * Sets snooze with user-selected duration and dismisses overlay
      */
     fun onSnoozeClicked() {
         val currentState = _uiState.value
@@ -303,9 +303,10 @@ class ReminderOverlayViewModel(
 
         viewModelScope.launch {
             try {
-                // Set 10-minute snooze
-                val tenMinutesInMs = 10 * 60 * 1000L
-                val snoozeUntil = System.currentTimeMillis() + tenMinutesInMs
+                // Get user's selected snooze duration
+                val snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration()
+                val snoozeDurationMs = snoozeDurationMinutes * 60 * 1000L
+                val snoozeUntil = System.currentTimeMillis() + snoozeDurationMs
 
                 interventionPreferences.setSnoozeUntil(snoozeUntil)
 
@@ -321,12 +322,12 @@ class ReminderOverlayViewModel(
                         sessionId = currentState.sessionId,
                         eventType = "EVENT_INTERVENTION_SNOOZED",
                         timestamp = System.currentTimeMillis(),
-                        metadata = "Snoozed for 10 minutes | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
+                        metadata = "Snoozed for $snoozeDurationMinutes minutes | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
                     )
                 )
 
                 dev.sadakat.thinkfaster.util.ErrorLogger.info(
-                    "Intervention snoozed for 10 minutes",
+                    "Intervention snoozed for $snoozeDurationMinutes minutes",
                     context = "ReminderOverlayViewModel.onSnoozeClicked"
                 )
             } catch (e: Exception) {

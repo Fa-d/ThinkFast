@@ -123,6 +123,7 @@ class ReminderOverlayWindow(
 ) : KoinComponent, LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences by inject()
     private val viewModel: ReminderOverlayViewModel by inject()
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -202,6 +203,7 @@ class ReminderOverlayWindow(
                                 frictionLevel = uiState.interventionContext?.userFrictionLevel
                                     ?: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
                                 showFeedbackPrompt = uiState.showFeedbackPrompt,
+                                snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),
                                 onGoBackClick = {
                                     handleGoBackClick(sessionId)
                                 },
@@ -447,6 +449,7 @@ private fun ReminderOverlayContent(
     interventionContent: InterventionContent?,
     frictionLevel: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel,
     showFeedbackPrompt: Boolean,
+    snoozeDurationMinutes: Int = 10,  // User-selected snooze duration
     onGoBackClick: () -> Unit,
     onProceedClick: () -> Unit,
     onSnoozeClick: () -> Unit,  // Phase 2: Snooze functionality
@@ -657,9 +660,10 @@ private fun ReminderOverlayContent(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Snooze for 10 minutes",
+                                    text = "Snooze for $snoozeDurationMinutes minutes",
                                     fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
+                                    color = textColor
                                 )
                             }
 
@@ -788,9 +792,10 @@ private fun ReminderOverlayContent(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Snooze for 10 minutes",
+                                text = "Snooze for $snoozeDurationMinutes minutes",
                                 fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                color = textColor
                             )
                         }
 

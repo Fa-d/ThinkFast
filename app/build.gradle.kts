@@ -160,6 +160,7 @@ dependencies {
     // Core Android dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.activity.compose)
 
     // Compose
@@ -204,20 +205,6 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics.ktx)
     implementation(libs.firebase.crashlytics.ktx)
-
-    // TensorFlow Lite
-    implementation(libs.tensorflow.lite) {
-        exclude(group = "com.google.ai.edge.litert", module = "litert")
-        exclude(group = "com.google.ai.edge.litert", module = "litert-api")
-        exclude(group = "com.google.ai.edge.litert", module = "litert-support")
-        exclude(group = "com.google.ai.edge.litert", module = "litert-support-api")
-    }
-    implementation(libs.tensorflow.lite.support) {
-        exclude(group = "com.google.ai.edge.litert", module = "litert")
-        exclude(group = "com.google.ai.edge.litert", module = "litert-api")
-        exclude(group = "com.google.ai.edge.litert", module = "litert-support")
-        exclude(group = "com.google.ai.edge.litert", module = "litert-support-api")
-    }
 
     // Testing
     testImplementation(libs.junit)

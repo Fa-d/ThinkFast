@@ -78,7 +78,8 @@ val useCaseModule = module {
             streakRecoveryRepository = get(),
             freezePreferences = get(),
             notificationHelper = NotificationHelper,
-            context = androidContext()
+            context = androidContext(),
+            analyticsManager = get()
         )
     }
 
@@ -87,7 +88,9 @@ val useCaseModule = module {
         CalculateUserBaselineUseCase(
             usageRepository = get(),
             goalRepository = get(),
-            baselineRepository = get()
+            baselineRepository = get(),
+            analyticsManager = get(),
+            interventionPreferences = get()
         )
     }
     factory {
@@ -107,7 +110,9 @@ val useCaseModule = module {
         CompleteQuestDayUseCase(
             questPreferences = get(),
             notificationHelper = NotificationHelper,
-            context = androidContext()
+            context = androidContext(),
+            analyticsManager = get(),
+            interventionPreferences = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences(androidContext())
         )
     }
 

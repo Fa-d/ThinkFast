@@ -2,6 +2,7 @@ package dev.sadakat.thinkfaster.domain.usecase.streaks
 
 import android.content.Context
 import android.util.Log
+import dev.sadakat.thinkfaster.analytics.AnalyticsManager
 import dev.sadakat.thinkfaster.data.preferences.StreakFreezePreferences
 import dev.sadakat.thinkfaster.domain.repository.GoalRepository
 import dev.sadakat.thinkfaster.domain.repository.StreakRecoveryRepository
@@ -28,7 +29,8 @@ class UpdateStreakWithRecoveryUseCase(
     private val streakRecoveryRepository: StreakRecoveryRepository,
     private val freezePreferences: StreakFreezePreferences,
     private val notificationHelper: NotificationHelper,
-    private val context: Context
+    private val context: Context,
+    private val analyticsManager: AnalyticsManager
 ) {
     private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
@@ -106,6 +108,9 @@ class UpdateStreakWithRecoveryUseCase(
             goalRepository.updateBestStreakIfNeeded(targetApp, newStreak)
             Log.d(TAG, "$targetApp streak incremented: ${goal.currentStreak} → $newStreak")
 
+            // Track analytics - goal achieved
+            analyticsManager.trackGoalAchieved(targetApp, newStreak)
+
             // Update recovery progress if in recovery
             val recovery = streakRecoveryRepository.getRecoveryByApp(targetApp)
             if (recovery != null && !recovery.isRecoveryComplete) {
@@ -119,6 +124,9 @@ class UpdateStreakWithRecoveryUseCase(
                 if (newRecoveryDays >= recoveryTarget) {
                     streakRecoveryRepository.completeRecovery(targetApp, getTodayDate())
                     Log.d(TAG, "$targetApp recovery complete! Reached $newRecoveryDays/$recoveryTarget days")
+
+                    // Track analytics - recovery completed
+                    analyticsManager.trackStreakRecoveryCompleted(recovery.previousStreak, newRecoveryDays)
 
                     // Show "back on track" notification
                     notificationHelper.showRecoveryCompleteNotification(
@@ -142,6 +150,9 @@ class UpdateStreakWithRecoveryUseCase(
             // Goal NOT met - streak breaks
             val previousStreak = goal.currentStreak
 
+            // Track analytics - goal exceeded
+            analyticsManager.trackGoalExceeded(targetApp, usageMinutes, goal.dailyLimitMinutes)
+
             if (previousStreak > 0) {
                 // Only create recovery if there was a streak to lose
                 streakRecoveryRepository.startRecovery(
@@ -150,6 +161,10 @@ class UpdateStreakWithRecoveryUseCase(
                     startDate = getTodayDate()
                 )
                 Log.d(TAG, "$targetApp streak broken! Starting recovery from $previousStreak days")
+
+                // Track analytics - streak broken and recovery started
+                analyticsManager.trackStreakBroken(previousStreak, recoveryStarted = true)
+                analyticsManager.trackStreakRecoveryStarted(previousStreak)
 
                 // Send streak broken notification
                 notificationHelper.showStreakBrokenNotification(

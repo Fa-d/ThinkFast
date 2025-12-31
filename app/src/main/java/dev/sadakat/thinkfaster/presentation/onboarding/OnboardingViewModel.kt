@@ -3,6 +3,8 @@ package dev.sadakat.thinkfaster.presentation.onboarding
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.sadakat.thinkfaster.analytics.AnalyticsManager
+import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 import dev.sadakat.thinkfaster.domain.model.Goal
 import dev.sadakat.thinkfaster.domain.repository.GoalRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +21,8 @@ import androidx.core.content.edit
  * Manages 3-screen onboarding state and completion tracking
  */
 class OnboardingViewModel(
-    private val goalRepository: GoalRepository
+    private val goalRepository: GoalRepository,
+    private val analyticsManager: AnalyticsManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingState())
@@ -40,11 +43,21 @@ class OnboardingViewModel(
     }
 
     /**
+     * Initialize onboarding and track analytics
+     */
+    fun init(context: Context) {
+        if (!isOnboardingCompleted(context)) {
+            analyticsManager.trackOnboardingStarted()
+        }
+    }
+
+    /**
      * Move to next page in onboarding
      */
     fun nextPage() {
         val currentPage = _uiState.value.currentPage
         if (currentPage < 2) { // 0, 1, 2 = 3 pages
+            analyticsManager.trackOnboardingStepCompleted(currentPage + 1)
             _uiState.value = _uiState.value.copy(currentPage = currentPage + 1)
         }
     }
@@ -63,6 +76,11 @@ class OnboardingViewModel(
      * Skip onboarding (mark as completed without setting goals)
      */
     fun skipOnboarding(context: Context) {
+        // Track analytics
+        val interventionPrefs = InterventionPreferences(context)
+        val daysSinceInstall = interventionPrefs.getDaysSinceInstall()
+        analyticsManager.trackOnboardingSkipped(daysSinceInstall)
+
         markOnboardingCompleted(context)
     }
 
@@ -96,6 +114,11 @@ class OnboardingViewModel(
 
             goalRepository.upsertGoal(facebookGoal)
             goalRepository.upsertGoal(instagramGoal)
+
+            // Track analytics
+            val interventionPrefs = InterventionPreferences(context)
+            val daysSinceInstall = interventionPrefs.getDaysSinceInstall()
+            analyticsManager.trackOnboardingCompleted(daysSinceInstall)
 
             // Mark onboarding as completed
             markOnboardingCompleted(context)

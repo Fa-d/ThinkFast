@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.sadakat.thinkfaster.analytics.AnalyticsManager
 import dev.sadakat.thinkfaster.data.preferences.OnboardingQuestPreferences
 import dev.sadakat.thinkfaster.domain.model.OnboardingQuest
 import dev.sadakat.thinkfaster.domain.model.QuickWinType
@@ -45,7 +46,8 @@ class HomeViewModel(
     private val checkQuickWinMilestonesUseCase: CheckQuickWinMilestonesUseCase,
     private val getOnboardingQuestStatusUseCase: GetOnboardingQuestStatusUseCase,
     private val baselineRepository: UserBaselineRepository,
-    private val questPreferences: OnboardingQuestPreferences
+    private val questPreferences: OnboardingQuestPreferences,
+    private val analyticsManager: AnalyticsManager
 ) : ViewModel() {
 
     private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -183,6 +185,16 @@ class HomeViewModel(
         val isMilestone = streak in listOf(3, 7, 14, 30) || (streak > 30 && streak % 30 == 0)
 
         if (isMilestone) {
+            // Track analytics
+            val milestoneType = when (streak) {
+                3 -> "three_day"
+                7 -> "week"
+                14 -> "two_week"
+                30 -> "month"
+                else -> "extended"
+            }
+            analyticsManager.trackStreakMilestone(streak, milestoneType)
+
             _uiState.value = _uiState.value.copy(showStreakCelebration = true)
         }
     }
@@ -273,6 +285,9 @@ class HomeViewModel(
 
                 when (result) {
                     is ActivateStreakFreezeUseCase.Result.Success -> {
+                        // Track analytics
+                        analyticsManager.trackStreakFreezeActivated(_uiState.value.currentStreak)
+
                         // Reload freeze status to update UI
                         loadFreezeStatus()
                     }

@@ -31,10 +31,11 @@ val viewModelModule = module {
             checkQuickWinMilestonesUseCase = get(),
             getOnboardingQuestStatusUseCase = get(),
             baselineRepository = get(),
-            questPreferences = get()
+            questPreferences = get(),
+            analyticsManager = get()
         )
     }
-    viewModel { OnboardingViewModel(goalRepository = get()) }
+    viewModel { OnboardingViewModel(goalRepository = get(), analyticsManager = get()) }
     viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), interventionPreferences = get()) }
     viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), settingsRepository = get(), interventionPreferences = get()) }
     viewModel { AnalyticsViewModel(resultRepository = get()) }
@@ -61,7 +62,9 @@ val viewModelModule = module {
             usageRepository = get(),
             trackedAppsRepository = get(),
             getTrackedAppsWithDetailsUseCase = get(),
-            interventionPreferences = get()
+            goalRepository = get(),
+            interventionPreferences = get(),
+            analyticsManager = get()
         )
     }
     viewModel {

@@ -2,6 +2,7 @@ package dev.sadakat.thinkfaster.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.sadakat.thinkfaster.analytics.AnalyticsManager
 import dev.sadakat.thinkfaster.domain.intervention.FrictionLevel
 import dev.sadakat.thinkfaster.domain.model.AppSettings
 import dev.sadakat.thinkfaster.domain.model.AppTarget
@@ -27,7 +28,9 @@ class GoalViewModel(
     private val usageRepository: UsageRepository,
     private val trackedAppsRepository: TrackedAppsRepository,
     private val getTrackedAppsWithDetailsUseCase: GetTrackedAppsWithDetailsUseCase,
-    private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
+    private val goalRepository: dev.sadakat.thinkfaster.domain.repository.GoalRepository,
+    private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences,
+    private val analyticsManager: AnalyticsManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GoalUiState())
@@ -38,6 +41,7 @@ class GoalViewModel(
         loadSettings()
         loadFrictionLevel()
         loadWorkingMode()  // Phase 2: Load working mode state
+        loadSnoozeState()  // Load snooze state
         observeTrackedApps()
     }
 
@@ -110,7 +114,18 @@ class GoalViewModel(
             _uiState.value = _uiState.value.copy(isSaving = true, error = null)
 
             try {
+                // Check if goal already exists (for update vs create tracking)
+                val existingGoal = goalRepository.getGoalByApp(targetApp)
+
                 setGoalUseCase(targetApp, dailyLimitMinutes)
+
+                // Track analytics
+                val daysSinceInstall = interventionPreferences.getDaysSinceInstall()
+                if (existingGoal != null) {
+                    analyticsManager.trackGoalUpdated(targetApp, dailyLimitMinutes, daysSinceInstall)
+                } else {
+                    analyticsManager.trackGoalCreated(targetApp, dailyLimitMinutes, daysSinceInstall)
+                }
 
                 // Reload progress after setting goal
                 loadGoalProgress()
@@ -307,6 +322,10 @@ class GoalViewModel(
             try {
                 usageRepository.setFrictionLevelOverride(level)
 
+                // Track analytics
+                val levelName = level?.name ?: "AUTO"
+                analyticsManager.trackSettingChanged("friction_level", levelName)
+
                 // Reload to get updated effective level
                 loadFrictionLevel()
 
@@ -371,6 +390,9 @@ class GoalViewModel(
             try {
                 interventionPreferences.setWorkingMode(enabled)
 
+                // Track analytics
+                analyticsManager.trackSettingChanged("working_mode", enabled.toString())
+
                 // Update UI state
                 val remainingMinutes = if (enabled) {
                     interventionPreferences.getSnoozeRemainingMinutes()
@@ -397,6 +419,96 @@ class GoalViewModel(
             }
         }
     }
+
+    // ========== Snooze Settings ==========
+
+    /**
+     * Load snooze state
+     */
+    private fun loadSnoozeState() {
+        viewModelScope.launch {
+            try {
+                val isActive = interventionPreferences.isSnoozed()
+                val remainingMinutes = interventionPreferences.getSnoozeRemainingMinutes()
+
+                _uiState.value = _uiState.value.copy(
+                    snoozeActive = isActive,
+                    snoozeRemainingMinutes = remainingMinutes
+                )
+            } catch (e: Exception) {
+                // Silently fail - not critical
+            }
+        }
+    }
+
+    /**
+     * Toggle snooze on/off
+     */
+    fun toggleSnooze(enabled: Boolean, durationMinutes: Int = 10) {
+        viewModelScope.launch {
+            try {
+                if (enabled) {
+                    interventionPreferences.setSnoozeDuration(durationMinutes)
+
+                    // Track analytics
+                    analyticsManager.trackSettingChanged("snooze_enabled", "$durationMinutes min")
+
+                    _uiState.value = _uiState.value.copy(
+                        snoozeActive = true,
+                        snoozeRemainingMinutes = durationMinutes,
+                        successMessage = "Snooze enabled for $durationMinutes minutes"
+                    )
+                } else {
+                    interventionPreferences.clearSnooze()
+
+                    // Track analytics
+                    analyticsManager.trackSettingChanged("snooze_enabled", "false")
+
+                    _uiState.value = _uiState.value.copy(
+                        snoozeActive = false,
+                        snoozeRemainingMinutes = 0,
+                        successMessage = "Snooze disabled - overlays will show"
+                    )
+                }
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(3000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to update snooze"
+                )
+            }
+        }
+    }
+
+    /**
+     * Set snooze duration
+     */
+    fun setSnoozeDuration(durationMinutes: Int) {
+        viewModelScope.launch {
+            try {
+                interventionPreferences.setSnoozeDuration(durationMinutes)
+
+                // Track analytics
+                analyticsManager.trackSettingChanged("snooze_duration", "$durationMinutes min")
+
+                _uiState.value = _uiState.value.copy(
+                    snoozeActive = true,
+                    snoozeRemainingMinutes = durationMinutes,
+                    successMessage = "Snooze set for $durationMinutes minutes"
+                )
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(3000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to set snooze duration"
+                )
+            }
+        }
+    }
 }
 
 /**
@@ -415,6 +527,8 @@ data class GoalUiState(
     val currentFrictionLevel: FrictionLevel = FrictionLevel.GENTLE,
     val workingModeEnabled: Boolean = false,  // Phase 2: Working mode toggle
     val workingModeRemainingMinutes: Int = 0,  // Phase 2: Remaining minutes
+    val snoozeActive: Boolean = false,  // Snooze toggle state
+    val snoozeRemainingMinutes: Int = 0,  // Remaining snooze minutes
     val error: String? = null,
     val successMessage: String? = null
 )
