@@ -9,6 +9,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -17,6 +18,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +48,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -113,6 +116,15 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 /**
+ * Screen state enum for reminder overlay content
+ */
+private enum class OverlayScreenState {
+    LOADING,
+    CONTENT,
+    CELEBRATION
+}
+
+/**
  * WindowManager-based overlay that appears on top of all apps
  * Uses Compose UI embedded in a system window
  * Now renders context-aware dynamic content based on time, usage patterns, and user behavior
@@ -177,6 +189,7 @@ class ReminderOverlayWindow(
                 ThinkFasterTheme {
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     var showCelebration by remember { mutableStateOf(false) }
+                    val isDarkTheme = isSystemInDarkTheme()
 
                     // Handle dismiss with celebration flow
                     LaunchedEffect(uiState.shouldDismiss) {
@@ -192,51 +205,78 @@ class ReminderOverlayWindow(
                         }
                     }
 
+                    // Get gradient background based on content type
+                    val backgroundGradient = remember(uiState.interventionContent, isDarkTheme) {
+                        dev.sadakat.thinkfaster.ui.theme.InterventionGradients.getGradientForContent(
+                            uiState.interventionContent?.javaClass?.simpleName,
+                            isDarkTheme
+                        )
+                    }
+
                     // Phase 1.3: Enhanced entrance animation wrapper
                     OverlayEntranceAnimation {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            // Main intervention content
-                            ReminderOverlayContent(
-                                targetApp = targetApp,
-                                context = context,
-                                interventionContent = uiState.interventionContent,
-                                frictionLevel = uiState.interventionContext?.userFrictionLevel
-                                    ?: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
-                                showFeedbackPrompt = uiState.showFeedbackPrompt,
-                                snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),
-                                onGoBackClick = {
-                                    handleGoBackClick(sessionId)
+                        // Background gradient always visible
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(backgroundGradient)
+                        ) {
+                            // Crossfade between different states for smooth transitions
+                            Crossfade(
+                                targetState = when {
+                                    showCelebration -> OverlayScreenState.CELEBRATION
+                                    uiState.isLoading -> OverlayScreenState.LOADING
+                                    else -> OverlayScreenState.CONTENT
                                 },
-                                onProceedClick = {
-                                    handleProceedClick(sessionId)
-                                },
-                                onSnoozeClick = {  // Phase 2: Snooze callback
-                                    overlayView?.performHapticFeedback(
-                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
-                                    )
-                                    viewModel.onSnoozeClicked()
-                                },
-                                onFeedbackReceived = { feedback ->
-                                    // Phase 1.2: Haptic feedback on thumbs up/down
-                                    overlayView?.performHapticFeedback(
-                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
-                                    )
-                                    viewModel.onFeedbackReceived(feedback)
-                                },
-                                onSkipFeedback = {
-                                    viewModel.onSkipFeedback()
-                                }
-                            )
-
-                            // Celebration overlay (shown on top when user chooses "Go Back")
-                            if (showCelebration) {
-                                CelebrationScreen(
-                                    onComplete = {
-                                        goToHomeScreen()
-                                        dismiss()
-                                        viewModel.onDismissHandled()
+                                label = "reminder_overlay_state_transition"
+                            ) { state ->
+                                when (state) {
+                                    OverlayScreenState.CELEBRATION -> {
+                                        CelebrationScreen(
+                                            onComplete = {
+                                                goToHomeScreen()
+                                                dismiss()
+                                                viewModel.onDismissHandled()
+                                            }
+                                        )
                                     }
-                                )
+                                    OverlayScreenState.LOADING -> {
+                                        LoadingScreen()
+                                    }
+                                    OverlayScreenState.CONTENT -> {
+                                        ReminderOverlayContent(
+                                            targetApp = targetApp,
+                                            context = context,
+                                            interventionContent = uiState.interventionContent,
+                                            frictionLevel = uiState.interventionContext?.userFrictionLevel
+                                                ?: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
+                                            showFeedbackPrompt = uiState.showFeedbackPrompt,
+                                            snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),
+                                            onGoBackClick = {
+                                                handleGoBackClick(sessionId)
+                                            },
+                                            onProceedClick = {
+                                                handleProceedClick(sessionId)
+                                            },
+                                            onSnoozeClick = {  // Phase 2: Snooze callback
+                                                overlayView?.performHapticFeedback(
+                                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                                )
+                                                viewModel.onSnoozeClicked()
+                                            },
+                                            onFeedbackReceived = { feedback ->
+                                                // Phase 1.2: Haptic feedback on thumbs up/down
+                                                overlayView?.performHapticFeedback(
+                                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                                )
+                                                viewModel.onFeedbackReceived(feedback)
+                                            },
+                                            onSkipFeedback = {
+                                                viewModel.onSkipFeedback()
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -443,6 +483,18 @@ private fun getSecondaryTextColor(isDarkTheme: Boolean): Color {
 }
 
 @Composable
+private fun LoadingScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            color = Color.White
+        )
+    }
+}
+
+@Composable
 private fun ReminderOverlayContent(
     targetApp: String,
     context: Context,
@@ -498,13 +550,6 @@ private fun ReminderOverlayContent(
         label = "scale"
     )
 
-    val backgroundGradient = remember(interventionContent, isDarkTheme) {
-        InterventionGradients.getGradientForContent(
-            interventionContent?.javaClass?.simpleName,
-            isDarkTheme
-        )
-    }
-
     // Phase 4: High-contrast text colors (accessibility aware)
     // IMPORTANT: All gradients use dark backgrounds, so we ALWAYS use light text
     // regardless of system theme to ensure readability
@@ -548,7 +593,6 @@ private fun ReminderOverlayContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundGradient) // Use gradient instead of solid color
             .windowInsetsPadding(WindowInsets.safeDrawing) // Avoid system bars, notches, camera holes
             .alpha(alpha)
             .scale(scale)

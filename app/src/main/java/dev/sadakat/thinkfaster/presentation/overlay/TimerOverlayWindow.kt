@@ -333,79 +333,88 @@ fun TimerOverlayScreen(
         val secondaryTextStyle = dev.sadakat.thinkfaster.ui.theme.InterventionTypography.InterventionTitle
     }
 
+    // Background gradient always visible
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundGradient)
     ) {
-        when {
-            // Show celebration when requested (takes priority over loading)
-            uiState.showCelebration -> {
-                CelebrationScreen(
-                    onComplete = {
-                        // Celebration will show for 1.5s, then dismiss and go home
-                        viewModel.onCelebrationComplete()
-                    }
-                )
-            }
-            // Show loading spinner during initial load
-            uiState.isLoading -> {
-                LoadingScreen()
-            }
-            // Show main content when ready
-            else -> {
-                AnimatedVisibility(
-                    visible = true,
-                    enter = InterventionAnimations.overlayEnterTransition(),
-                    exit = InterventionAnimations.overlayExitTransition()
-                ) {
+        // Crossfade between different states to ensure smooth transitions
+        Crossfade(
+            targetState = when {
+                uiState.showCelebration -> OverlayState.CELEBRATION
+                uiState.isLoading -> OverlayState.LOADING
+                else -> OverlayState.CONTENT
+            },
+            label = "overlay_state_transition"
+        ) { state ->
+            when (state) {
+                OverlayState.CELEBRATION -> {
+                    CelebrationScreen(
+                        onComplete = {
+                            // Celebration will show for 1.5s, then dismiss and go home
+                            viewModel.onCelebrationComplete()
+                        }
+                    )
+                }
+                OverlayState.LOADING -> {
+                    LoadingScreen()
+                }
+                OverlayState.CONTENT -> {
                     uiState.interventionContent?.let { content ->
                         DynamicInterventionContent(
-                            content = content,
-                            targetApp = uiState.targetApp,
-                            sessionDuration = uiState.currentSessionDuration,
-                            todaysTotalUsage = uiState.todaysTotalUsage,
-                            timerAlertMinutes = uiState.timerAlertMinutes,
-                            frictionLevel = uiState.frictionLevel,
-                            showFeedbackPrompt = uiState.showFeedbackPrompt,
-                            snoozeDurationMinutes = snoozeDurationMinutes,
-                            onProceed = {
-                                // Phase 1.2: Haptic feedback on button press
-                                view.performHapticFeedback(
-                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
-                                )
-                                viewModel.onProceedClicked()
-                            },
-                            onGoBack = {
-                                // Phase 1.2: Success haptic feedback on "Go Back"
-                                view.performHapticFeedback(
-                                    android.view.HapticFeedbackConstants.CONFIRM
-                                )
-                                viewModel.onGoBackClicked()
-                            },
-                            onSnoozeClick = {  // Phase 2: Snooze callback
-                                view.performHapticFeedback(
-                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
-                                )
-                                viewModel.onSnoozeClicked()
-                            },
-                            onFeedbackReceived = { feedback ->
-                                // Phase 1.2: Haptic feedback on thumbs up/down
-                                view.performHapticFeedback(
-                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
-                                )
-                                viewModel.onFeedbackReceived(feedback)
-                            },
-                            onSkipFeedback = {
-                                viewModel.onSkipFeedback()
-                            },
-                            isDarkTheme = isDarkTheme
+                    content = content,
+                    targetApp = uiState.targetApp,
+                    sessionDuration = uiState.currentSessionDuration,
+                    todaysTotalUsage = uiState.todaysTotalUsage,
+                    timerAlertMinutes = uiState.timerAlertMinutes,
+                    frictionLevel = uiState.frictionLevel,
+                    showFeedbackPrompt = uiState.showFeedbackPrompt,
+                    snoozeDurationMinutes = snoozeDurationMinutes,
+                    onProceed = {
+                        // Phase 1.2: Haptic feedback on button press
+                        view.performHapticFeedback(
+                            android.view.HapticFeedbackConstants.VIRTUAL_KEY
                         )
+                        viewModel.onProceedClicked()
+                    },
+                    onGoBack = {
+                        // Phase 1.2: Success haptic feedback on "Go Back"
+                        view.performHapticFeedback(
+                            android.view.HapticFeedbackConstants.CONFIRM
+                        )
+                        viewModel.onGoBackClicked()
+                    },
+                    onSnoozeClick = {  // Phase 2: Snooze callback
+                        view.performHapticFeedback(
+                            android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                        )
+                        viewModel.onSnoozeClicked()
+                    },
+                    onFeedbackReceived = { feedback ->
+                        // Phase 1.2: Haptic feedback on thumbs up/down
+                        view.performHapticFeedback(
+                            android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                        )
+                        viewModel.onFeedbackReceived(feedback)
+                    },
+                    onSkipFeedback = {
+                        viewModel.onSkipFeedback()
+                    },
+                    isDarkTheme = isDarkTheme
+                )
                     }
                 }
             }
         }
     }
+}
+
+// State enum for overlay content
+private enum class OverlayState {
+    LOADING,
+    CONTENT,
+    CELEBRATION
 }
 
 @Composable
