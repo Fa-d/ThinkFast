@@ -171,7 +171,7 @@ fun OnboardingPermissionOverlayScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -234,7 +234,7 @@ fun OnboardingPermissionOverlayScreen(
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }

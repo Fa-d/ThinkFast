@@ -102,7 +102,7 @@ fun OnboardingWelcomeScreen(
             }
 
             // Skip button
-            TextButton(
+        /*    TextButton(
                 onClick = {
                     // Mark onboarding as skipped (not completed)
                     viewModel.skipOnboarding(context)
@@ -116,7 +116,7 @@ fun OnboardingWelcomeScreen(
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text("Skip for now")
-            }
+            }*/
         }
     }
 }

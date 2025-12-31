@@ -220,7 +220,7 @@ fun OnboardingPermissionNotificationScreen(
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
 
