@@ -159,10 +159,10 @@ private fun SuccessView(
             OverallStatsCard(analytics = state.analytics)
         }
 
-        // Anonymous Analytics toggle
-        item {
-            AnonymousAnalyticsCard()
-        }
+        // Anonymous Analytics toggle (hidden)
+        // item {
+        //     AnonymousAnalyticsCard()
+        // }
 
         // Success Metrics
         item {
@@ -176,33 +176,37 @@ private fun SuccessView(
             }
         }
 
-        // Content Effectiveness
-        item {
-            Text(
-                text = "Content Effectiveness",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        // Content Effectiveness (only show if data available)
+        if (state.contentEffectiveness.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Content Effectiveness",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            items(state.contentEffectiveness) { content ->
+                ContentEffectivenessCard(content)
+            }
         }
 
-        items(state.contentEffectiveness) { content ->
-            ContentEffectivenessCard(content)
-        }
+        // Stats by App (only show if data available)
+        if (state.appStats.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Stats by App",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            }
 
-        // App Stats
-        item {
-            Text(
-                text = "Stats by App",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-        }
-
-        items(state.appStats.entries.toList()) { (app, stats) ->
-            AppStatsCard(appName = app, stats = stats)
+            items(state.appStats.entries.toList()) { (app, stats) ->
+                AppStatsCard(appName = app, stats = stats)
+            }
         }
     }
 }

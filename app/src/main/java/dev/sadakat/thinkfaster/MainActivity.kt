@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -52,11 +53,13 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import dev.sadakat.thinkfaster.analytics.AnalyticsManager
 import dev.sadakat.thinkfaster.presentation.navigation.NavGraph
 import dev.sadakat.thinkfaster.presentation.navigation.Screen
 import dev.sadakat.thinkfaster.ui.theme.ThinkFasterThemeWithMode
 import dev.sadakat.thinkfaster.util.PermissionHelper
 import dev.sadakat.thinkfaster.util.ThemePreferences
+import org.koin.compose.koinInject
 
 /**
  * Data class for bottom navigation items
@@ -102,20 +105,59 @@ private fun isOnboardingCompleted(context: android.content.Context): Boolean {
     return prefs.getBoolean("onboarding_completed", false)
 }
 
+/**
+ * Calculate days since app was first installed
+ * Used for analytics events to track user journey
+ */
+private fun getDaysSinceInstall(context: android.content.Context): Int {
+    val prefs = context.getSharedPreferences("think_fast_onboarding", android.content.Context.MODE_PRIVATE)
+    val firstInstallTime = prefs.getLong("first_install_time", 0L)
+
+    // If not set, use the app's install time from package manager
+    val installTime = if (firstInstallTime > 0) {
+        firstInstallTime
+    } else {
+        try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            val installTimeFromPm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageInfo.firstInstallTime
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo.firstInstallTime
+            }
+            // Store it for future use
+            prefs.edit().putLong("first_install_time", installTimeFromPm).apply()
+            installTimeFromPm
+        } catch (e: Exception) {
+            // Fallback to current time if we can't get install time
+            System.currentTimeMillis()
+        }
+    }
+
+    val daysSinceInstall = (System.currentTimeMillis() - installTime) / (1000 * 60 * 60 * 24)
+    return daysSinceInstall.toInt().coerceAtLeast(0)
+}
+
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
     val navController = rememberNavController()
+    val analyticsManager: AnalyticsManager = koinInject()
 
     // Determine start destination based on onboarding completion and permissions
     val startDestination = if (!isOnboardingCompleted(context)) {
-        // First time user - show onboarding
-        Screen.Onboarding.route
+        // First time user - show new 6-step onboarding flow
+        Screen.OnboardingWelcome.route
     } else if (!PermissionHelper.hasAllRequiredPermissions(context)) {
-        // Onboarding done, but need permissions
+        // Onboarding done, but need permissions - show permission screen
         Screen.PermissionRequest.route
     } else {
         // All setup complete - go to home
+        // Track user_ready event when user enters with all permissions (only tracked once)
+        LaunchedEffect(Unit) {
+            val daysSinceInstall = getDaysSinceInstall(context)
+            analyticsManager.trackUserReady(daysSinceInstall)
+        }
         Screen.Home.route
     }
 
@@ -124,6 +166,12 @@ fun MainScreen() {
 
     // Hide bottom navigation on onboarding, permission request, analytics, and theme appearance screens
     val showBottomBar = currentRoute != Screen.Onboarding.route &&
+                        currentRoute != Screen.OnboardingWelcome.route &&
+                        currentRoute != Screen.OnboardingGoals.route &&
+                        currentRoute != Screen.OnboardingPermissionUsage.route &&
+                        currentRoute != Screen.OnboardingPermissionOverlay.route &&
+                        currentRoute != Screen.OnboardingPermissionNotification.route &&
+                        currentRoute != Screen.OnboardingComplete.route &&
                         currentRoute != Screen.PermissionRequest.route &&
                         currentRoute != Screen.Analytics.route &&
                         currentRoute != Screen.ThemeAppearance.route

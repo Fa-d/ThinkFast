@@ -469,15 +469,6 @@ fun SettingsScreen(
                 )
             }
 
-            // Phase 2: Working Mode toggle
-            item {
-                WorkingModeCard(
-                    isEnabled = uiState.workingModeEnabled,
-                    remainingMinutes = uiState.workingModeRemainingMinutes,
-                    onToggle = { viewModel.setWorkingMode(it) }
-                )
-            }
-
             // Snooze Settings
             item {
                 SnoozeSettingsCard(
@@ -1039,101 +1030,6 @@ private fun FrictionLevelCard(
                     onLevelSelected(it)
                     showBottomSheet = false
                 }
-            )
-        }
-    }
-}
-
-/**
- * Phase 2: Working Mode card - Toggle for 2-hour "I'm working" mode
- */
-@Composable
-private fun WorkingModeCard(
-    isEnabled: Boolean,
-    remainingMinutes: Int,
-    onToggle: (Boolean) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isEnabled)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(text = "💼", fontSize = 24.sp)
-                    Text(
-                        text = "I'm Working Mode",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isEnabled)
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        else
-                            MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Snooze all interventions for 2 hours. Perfect for focus sessions.",
-                    fontSize = 13.sp,
-                    color = if (isEnabled)
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 18.sp
-                )
-
-                // Show remaining time if active
-                if (isEnabled && remainingMinutes > 0) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Pause,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "$remainingMinutes minutes remaining",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Switch(
-                checked = isEnabled,
-                onCheckedChange = onToggle,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.primary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
             )
         }
     }

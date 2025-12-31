@@ -9,6 +9,12 @@ import dev.sadakat.thinkfaster.presentation.analytics.AnalyticsScreen
 import dev.sadakat.thinkfaster.presentation.home.HomeScreen
 import dev.sadakat.thinkfaster.presentation.manageapps.ManageAppsScreen
 import dev.sadakat.thinkfaster.presentation.onboarding.OnboardingScreen
+import dev.sadakat.thinkfaster.presentation.onboarding.OnboardingWelcomeScreen
+import dev.sadakat.thinkfaster.presentation.onboarding.OnboardingGoalsScreen
+import dev.sadakat.thinkfaster.presentation.onboarding.OnboardingPermissionUsageScreen
+import dev.sadakat.thinkfaster.presentation.onboarding.OnboardingPermissionOverlayScreen
+import dev.sadakat.thinkfaster.presentation.onboarding.OnboardingPermissionNotificationScreen
+import dev.sadakat.thinkfaster.presentation.onboarding.OnboardingCompleteScreen
 import dev.sadakat.thinkfaster.presentation.permission.PermissionRequestScreen
 import dev.sadakat.thinkfaster.presentation.settings.SettingsScreen
 import dev.sadakat.thinkfaster.presentation.stats.StatsScreen
@@ -28,7 +34,7 @@ fun NavGraph(
         navController = navController,
         startDestination = startDestination
     ) {
-        // Onboarding screen - first-time user experience
+        // Onboarding screen - first-time user experience (DEPRECATED - use new 6-step flow)
         composable(route = Screen.Onboarding.route) {
             OnboardingScreen(
                 navController = navController,
@@ -36,7 +42,50 @@ fun NavGraph(
             )
         }
 
-        // Permission request screen - onboarding
+        // New 6-step onboarding flow
+        composable(route = Screen.OnboardingWelcome.route) {
+            OnboardingWelcomeScreen(
+                navController = navController,
+                contentPadding = contentPadding
+            )
+        }
+
+        composable(route = Screen.OnboardingGoals.route) {
+            OnboardingGoalsScreen(
+                navController = navController,
+                contentPadding = contentPadding
+            )
+        }
+
+        composable(route = Screen.OnboardingPermissionUsage.route) {
+            OnboardingPermissionUsageScreen(
+                navController = navController,
+                contentPadding = contentPadding
+            )
+        }
+
+        composable(route = Screen.OnboardingPermissionOverlay.route) {
+            OnboardingPermissionOverlayScreen(
+                navController = navController,
+                contentPadding = contentPadding
+            )
+        }
+
+        composable(route = Screen.OnboardingPermissionNotification.route) {
+            OnboardingPermissionNotificationScreen(
+                navController = navController,
+                contentPadding = contentPadding
+            )
+        }
+
+        composable(route = Screen.OnboardingComplete.route) {
+            OnboardingCompleteScreen(
+                navController = navController,
+                contentPadding = contentPadding
+            )
+        }
+
+        // Permission request screen - for re-granting permissions
         composable(route = Screen.PermissionRequest.route) {
             PermissionRequestScreen(
                 navController = navController,

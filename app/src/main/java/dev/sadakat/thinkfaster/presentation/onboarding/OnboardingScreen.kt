@@ -223,42 +223,43 @@ fun WelcomePage() {
         // Icon
         Box(
             modifier = Modifier
-                .size(120.dp)
+                .size(80.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "⚡",
-                fontSize = 64.sp
+                fontSize = 44.sp
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Title
         Text(
             text = "Take Control of\nYour Screen Time",
-            style = MaterialTheme.typography.headlineLarge.copy(
+            style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                lineHeight = 32.sp
             ),
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Subtitle
         Text(
-            text = "ThinkFast helps you build a healthier relationship with social media through mindful interventions.",
-            style = MaterialTheme.typography.bodyLarge.copy(
+            text = "Build a healthier relationship with social media through mindful interventions.",
+            style = MaterialTheme.typography.bodyMedium.copy(
                 textAlign = TextAlign.Center,
-                lineHeight = 24.sp
+                lineHeight = 20.sp
             ),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         // Feature cards
         FeatureCard(
@@ -267,7 +268,7 @@ fun WelcomePage() {
             description = "Smart alerts that help you pause and reflect"
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         FeatureCard(
             icon = Icons.Default.Info,
@@ -275,7 +276,7 @@ fun WelcomePage() {
             description = "Visualize your usage and celebrate improvements"
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         FeatureCard(
             icon = Icons.Default.Lock,
@@ -302,29 +303,29 @@ fun FeatureCard(
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(28.dp)
             )
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
+                    style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
@@ -347,41 +348,43 @@ fun PermissionPage() {
         // Icon
         Box(
             modifier = Modifier
-                .size(100.dp)
+                .size(80.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "🔒",
-                fontSize = 54.sp
+                fontSize = 44.sp
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Title
         Text(
             text = "Why We Need Permissions",
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                lineHeight = 32.sp
             ),
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Explanation
         Text(
             text = "To help you mindfully use social media, ThinkFast needs a few permissions:",
-            style = MaterialTheme.typography.bodyLarge.copy(
-                textAlign = TextAlign.Center
+            style = MaterialTheme.typography.bodyMedium.copy(
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp
             ),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Permission cards
         PermissionCard(
@@ -391,7 +394,7 @@ fun PermissionPage() {
             importance = "Essential"
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         PermissionCard(
             emoji = "🔔",
@@ -400,7 +403,7 @@ fun PermissionPage() {
             importance = "Essential"
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         PermissionCard(
             emoji = "📱",
@@ -409,7 +412,7 @@ fun PermissionPage() {
             importance = "Optional"
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Privacy note
         Card(
@@ -420,21 +423,21 @@ fun PermissionPage() {
             shape = RoundedCornerShape(12.dp)
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
                 Text(
                     text = "Your data never leaves your device. Everything is stored locally and privately.",
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                    style = MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Medium
                     ),
                     color = MaterialTheme.colorScheme.onTertiaryContainer
@@ -462,13 +465,13 @@ fun PermissionCard(
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.Top
         ) {
             Text(
                 text = emoji,
-                fontSize = 32.sp,
-                modifier = Modifier.padding(end = 12.dp)
+                fontSize = 28.sp,
+                modifier = Modifier.padding(end = 10.dp)
             )
 
             Column(modifier = Modifier.weight(1f)) {
@@ -477,13 +480,13 @@ fun PermissionCard(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium.copy(
+                        style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.SemiBold
                         ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     Text(
                         text = importance,
@@ -506,11 +509,11 @@ fun PermissionCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
@@ -536,41 +539,43 @@ fun GoalSetupPage(
         // Icon
         Box(
             modifier = Modifier
-                .size(100.dp)
+                .size(80.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "🎯",
-                fontSize = 54.sp
+                fontSize = 44.sp
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Title
         Text(
             text = "Set Your Daily Goal",
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                lineHeight = 32.sp
             ),
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Subtitle
         Text(
             text = "How much time do you want to spend on social media each day?",
-            style = MaterialTheme.typography.bodyLarge.copy(
-                textAlign = TextAlign.Center
+            style = MaterialTheme.typography.bodyMedium.copy(
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp
             ),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         // Goal display card
         Card(
@@ -583,25 +588,25 @@ fun GoalSetupPage(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "$selectedGoalMinutes",
-                    style = MaterialTheme.typography.displayLarge.copy(
+                    style = MaterialTheme.typography.displayMedium.copy(
                         fontWeight = FontWeight.Bold
                     ),
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
                     text = "minutes per day",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Slider
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -636,7 +641,7 @@ fun GoalSetupPage(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Research-based recommendations
         Card(
@@ -646,7 +651,7 @@ fun GoalSetupPage(
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = "💡 Recommended: 60 minutes",
                     style = MaterialTheme.typography.titleSmall.copy(
@@ -654,7 +659,7 @@ fun GoalSetupPage(
                     ),
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = "Research shows that limiting social media to ~1 hour per day significantly improves wellbeing and reduces anxiety.",
                     style = MaterialTheme.typography.bodySmall,
@@ -663,7 +668,7 @@ fun GoalSetupPage(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Note about changing later
         Text(

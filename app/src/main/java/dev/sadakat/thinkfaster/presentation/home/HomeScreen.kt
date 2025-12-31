@@ -3,6 +3,7 @@ package dev.sadakat.thinkfaster.presentation.home
 import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -192,6 +193,11 @@ fun HomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Complete Setup Banner (for users who skipped onboarding)
+            item {
+                CompleteSetupBanner(navController = navController, context = context)
+            }
+
             // Today at a Glance Card
             item {
                 TodayAtAGlanceCard(
@@ -807,5 +813,79 @@ private fun stopMonitoringService(context: Context) {
         context.stopService(intent)
     } catch (e: Exception) {
         e.printStackTrace()
+    }
+}
+
+/**
+ * Complete Setup Banner - shown when user skips onboarding
+ * Prompts user to complete setup to activate ThinkFast
+ */
+@Composable
+private fun CompleteSetupBanner(
+    navController: NavHostController,
+    context: Context
+) {
+    // Check if onboarding was skipped (not completed)
+    val prefs = context.getSharedPreferences("think_fast_onboarding", Context.MODE_PRIVATE)
+    val onboardingCompleted = prefs.getBoolean("onboarding_completed", false)
+    val hasAllPermissions = PermissionHelper.hasAllRequiredPermissions(context)
+
+    // Show banner if onboarding was skipped OR if permissions are missing
+    if (!onboardingCompleted || !hasAllPermissions) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = "Warning",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(32.dp)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Complete Setup Required",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "ThinkFast isn't active yet. Complete the setup to start protecting your time.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(
+                    onClick = {
+                        // Navigate to onboarding welcome screen (Step 1) for complete flow
+                        navController.navigate(Screen.OnboardingWelcome.route)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Get Started")
+                }
+            }
+        }
     }
 }

@@ -95,6 +95,49 @@ class AnalyticsManager(
     }
 
     /**
+     * Track when user completes onboarding AND grants all 3 required permissions
+     * This is a critical conversion event - user is now ready to use the app
+     * This should only be tracked ONCE per user installation
+     */
+    fun trackUserReady(daysSinceInstall: Int) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackUserReady: Analytics DISABLED - skipping")
+            return
+        }
+
+        try {
+            // Check if we've already tracked this event
+            val prefs = context.getSharedPreferences("analytics_events", Context.MODE_PRIVATE)
+            val key = "user_ready_tracked"
+            if (prefs.getBoolean(key, false)) {
+                Log.d(TAG, "trackUserReady: Already tracked, skipping")
+                return
+            }
+
+            Log.d(TAG, "trackUserReady: Logging user_ready event (day $daysSinceInstall)")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.USER_READY,
+                mapOf(AnalyticsEvents.Params.DAYS_SINCE_INSTALL to daysSinceInstall)
+            )
+
+            // Mark as tracked so we don't track it again
+            prefs.edit().putBoolean(key, true).apply()
+            Log.d(TAG, "trackUserReady: Event logged and marked as tracked")
+        } catch (e: Exception) {
+            Log.e(TAG, "trackUserReady: Failed", e)
+        }
+    }
+
+    /**
+     * Reset the user_ready tracking flag (for testing purposes)
+     */
+    fun resetUserReadyTracking() {
+        val prefs = context.getSharedPreferences("analytics_events", Context.MODE_PRIVATE)
+        prefs.edit().remove("user_ready_tracked").apply()
+        Log.d(TAG, "resetUserReadyTracking: Tracking flag reset")
+    }
+
+    /**
      * Generate and send daily summary
      * Call this once per day (e.g., via WorkManager)
      */

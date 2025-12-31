@@ -6,8 +6,40 @@ package dev.sadakat.thinkfaster.presentation.navigation
 sealed class Screen(val route: String) {
     /**
      * Onboarding screen - first-time user onboarding with value prop and goal setup
+     * @deprecated Use specific onboarding step screens instead
      */
+    @Deprecated("Use OnboardingWelcome, OnboardingGoals, etc.")
     data object Onboarding : Screen("onboarding")
+
+    /**
+     * Onboarding Step 1 - Welcome and value proposition
+     */
+    data object OnboardingWelcome : Screen("onboarding/welcome")
+
+    /**
+     * Onboarding Step 2 - Goal setup (daily usage limit)
+     */
+    data object OnboardingGoals : Screen("onboarding/goals")
+
+    /**
+     * Onboarding Step 3 - Usage Stats permission primer
+     */
+    data object OnboardingPermissionUsage : Screen("onboarding/permission/usage")
+
+    /**
+     * Onboarding Step 4 - Display Over Apps permission primer
+     */
+    data object OnboardingPermissionOverlay : Screen("onboarding/permission/overlay")
+
+    /**
+     * Onboarding Step 5 - Notifications permission primer
+     */
+    data object OnboardingPermissionNotification : Screen("onboarding/permission/notification")
+
+    /**
+     * Onboarding Step 6 - Success celebration and activation
+     */
+    data object OnboardingComplete : Screen("onboarding/complete")
 
     /**
      * Permission request screen - onboarding for granting permissions

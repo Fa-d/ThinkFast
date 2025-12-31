@@ -135,6 +135,17 @@ class OnboardingViewModel(
     }
 
     /**
+     * Save goal selection (Step 2 of new onboarding flow)
+     * Stores selected goal minutes without creating Goal entities yet
+     * Goal entities are created during completeOnboarding()
+     */
+    fun saveGoalSelection(minutes: Int) {
+        _uiState.value = _uiState.value.copy(selectedGoalMinutes = minutes)
+        // Track analytics for goal selection step
+        analyticsManager.trackOnboardingStepCompleted(2)
+    }
+
+    /**
      * Mark onboarding as completed in SharedPreferences
      */
     private fun markOnboardingCompleted(context: Context) {
@@ -161,11 +172,12 @@ class OnboardingViewModel(
 
 /**
  * UI state for onboarding screens
+ * Used by both old 3-page flow and new 6-step flow
  */
 data class OnboardingState(
-    val currentPage: Int = 0, // 0 = Welcome, 1 = Permissions, 2 = Goals
-    val selectedGoalMinutes: Int = 60, // Default: 60 minutes/day
-    val isCompleted: Boolean = false
+    val currentPage: Int = 0, // For old flow: 0 = Welcome, 1 = Permissions, 2 = Goals
+    val selectedGoalMinutes: Int = 60, // Default: 60 minutes/day (user-selectable: 15-180)
+    val isCompleted: Boolean = false // Set to true when onboarding is fully complete
 )
 
 /**
