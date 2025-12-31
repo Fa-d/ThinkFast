@@ -45,6 +45,10 @@ fun StackedBarUsageChart(
         else -> 300.dp  // Medium screens: default
     }
 
+    // Get theme-aware colors
+    val textColor = MaterialTheme.colorScheme.onSurface.hashCode()
+    val gridColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f).hashCode()
+
     val chartData = remember(sessions, period) {
         prepareStackedBarData(sessions, period)
     }
@@ -85,11 +89,11 @@ fun StackedBarUsageChart(
                 .height(chartHeight),
             factory = { context ->
                 BarChart(context).apply {
-                    setupBarChart(this, period)
+                    setupBarChart(this, period, textColor, gridColor)
                 }
             },
             update = { chart ->
-                updateBarChartData(chart, chartData, period)
+                updateBarChartData(chart, chartData, period, textColor)
             }
         )
     }
@@ -112,7 +116,7 @@ private fun prepareStackedBarData(
 /**
  * Setup the bar chart appearance and behavior
  */
-private fun setupBarChart(chart: BarChart, period: ChartPeriod) {
+private fun setupBarChart(chart: BarChart, period: ChartPeriod, textColor: Int, gridColor: Int) {
     chart.apply {
         // Basic settings
         description.isEnabled = false
@@ -130,7 +134,7 @@ private fun setupBarChart(chart: BarChart, period: ChartPeriod) {
 
         // X Axis setup
         xAxis.apply {
-            applyCommonStyling()
+            applyCommonStyling(textColor)
             valueFormatter = when (period) {
                 ChartPeriod.DAILY -> HourValueFormatter()
                 ChartPeriod.WEEKLY -> DayOfWeekValueFormatter()
@@ -148,7 +152,7 @@ private fun setupBarChart(chart: BarChart, period: ChartPeriod) {
 
         // Left Y Axis
         axisLeft.apply {
-            applyCommonStyling()
+            applyCommonStyling(textColor, gridColor)
             valueFormatter = MinutesValueFormatter()
         }
 
@@ -162,6 +166,7 @@ private fun setupBarChart(chart: BarChart, period: ChartPeriod) {
             form = Legend.LegendForm.SQUARE
             formSize = 10f
             textSize = 12f
+            this.textColor = textColor
             xEntrySpace = 15f
         }
     }
@@ -173,7 +178,8 @@ private fun setupBarChart(chart: BarChart, period: ChartPeriod) {
 private fun updateBarChartData(
     chart: BarChart,
     data: List<TimeSlotUsage>,
-    period: ChartPeriod
+    period: ChartPeriod,
+    textColor: Int
 ) {
     if (data.isEmpty() || data.all { it.totalMinutes == 0f }) {
         chart.clear()
@@ -215,6 +221,7 @@ private fun updateBarChartData(
         // Visual settings
         setDrawValues(true)
         valueTextSize = 9f
+        valueTextColor = textColor
         valueFormatter = MinutesValueFormatter()
 
         // Highlight settings

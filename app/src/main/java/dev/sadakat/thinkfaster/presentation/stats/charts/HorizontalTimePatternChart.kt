@@ -45,6 +45,10 @@ fun HorizontalTimePatternChart(
         else -> 250.dp  // Medium screens: default
     }
 
+    // Get theme-aware colors
+    val textColor = MaterialTheme.colorScheme.onSurface.hashCode()
+    val gridColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f).hashCode()
+
     val chartData = remember(sessions) {
         prepareTimePatternData(sessions)
     }
@@ -85,11 +89,11 @@ fun HorizontalTimePatternChart(
                 .height(chartHeight),
             factory = { context ->
                 HorizontalBarChart(context).apply {
-                    setupHorizontalBarChart(this)
+                    setupHorizontalBarChart(this, textColor, gridColor)
                 }
             },
             update = { chart ->
-                updateHorizontalBarChartData(chart, chartData)
+                updateHorizontalBarChartData(chart, chartData, textColor)
             }
         )
     }
@@ -136,7 +140,7 @@ private class TimePeriodValueFormatter(
 /**
  * Setup the horizontal bar chart appearance and behavior
  */
-private fun setupHorizontalBarChart(chart: HorizontalBarChart) {
+private fun setupHorizontalBarChart(chart: HorizontalBarChart, textColor: Int, gridColor: Int) {
     chart.apply {
         // Basic settings
         description.isEnabled = false
@@ -159,7 +163,8 @@ private fun setupHorizontalBarChart(chart: HorizontalBarChart) {
             setDrawAxisLine(true)
             axisMinimum = 0f
             textSize = 10f
-            gridColor = ChartColors.GRID_LIGHT_GRAY
+            this.textColor = textColor
+            this.gridColor = gridColor
             valueFormatter = MinutesValueFormatter()
         }
 
@@ -169,6 +174,7 @@ private fun setupHorizontalBarChart(chart: HorizontalBarChart) {
             setDrawAxisLine(true)
             textSize = 10f
             granularity = 1f
+            this.textColor = textColor
         }
 
         // Right Y Axis - disable
@@ -184,6 +190,7 @@ private fun setupHorizontalBarChart(chart: HorizontalBarChart) {
             form = Legend.LegendForm.SQUARE
             formSize = 10f
             textSize = 12f
+            this.textColor = textColor
             xEntrySpace = 15f
         }
     }
@@ -194,7 +201,8 @@ private fun setupHorizontalBarChart(chart: HorizontalBarChart) {
  */
 private fun updateHorizontalBarChartData(
     chart: HorizontalBarChart,
-    data: List<TimePeriodData>
+    data: List<TimePeriodData>,
+    textColor: Int
 ) {
     if (data.isEmpty() || data.all { it.totalMinutes == 0f }) {
         chart.clear()
@@ -237,6 +245,7 @@ private fun updateHorizontalBarChartData(
         // Visual settings
         setDrawValues(true)
         valueTextSize = 10f
+        valueTextColor = textColor
         valueFormatter = MinutesValueFormatter()
 
         // Highlight settings

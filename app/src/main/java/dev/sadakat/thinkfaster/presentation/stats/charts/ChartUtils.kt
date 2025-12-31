@@ -146,23 +146,25 @@ class MinutesValueFormatter : ValueFormatter() {
 /**
  * Configure common X-axis styling
  */
-fun XAxis.applyCommonStyling() {
+fun XAxis.applyCommonStyling(textColor: Int = 0xFF000000.toInt()) {
     position = XAxis.XAxisPosition.BOTTOM
     setDrawGridLines(false)
     setDrawAxisLine(true)
     textSize = 10f
     granularity = 1f
+    this.textColor = textColor
 }
 
 /**
  * Configure common Y-axis styling
  */
-fun YAxis.applyCommonStyling() {
+fun YAxis.applyCommonStyling(textColor: Int = 0xFF000000.toInt(), gridColor: Int = ChartColors.GRID_LIGHT_GRAY) {
     setDrawGridLines(true)
     setDrawAxisLine(true)
     axisMinimum = 0f
     textSize = 10f
-    gridColor = ChartColors.GRID_LIGHT_GRAY
+    this.textColor = textColor
+    this.gridColor = gridColor
 }
 
 /**
