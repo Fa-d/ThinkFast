@@ -52,6 +52,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         _settingsFlow.value = loadSettings()
     }
 
+    override suspend fun setOverlayStyle(style: dev.sadakat.thinkfaster.domain.model.OverlayStyle) {
+        prefs.edit().putString(KEY_OVERLAY_STYLE, style.name).apply()
+        _settingsFlow.value = loadSettings()
+    }
+
     override suspend fun setMotivationalNotificationsEnabled(enabled: Boolean) {
         // Update notification preferences
         notificationPreferences.setMotivationalNotificationsEnabled(enabled)
@@ -96,6 +101,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             putInt(KEY_TIMER_ALERT_MINUTES, settings.timerAlertMinutes)
             putBoolean(KEY_ALWAYS_SHOW_REMINDER, settings.alwaysShowReminder)
             putBoolean(KEY_LOCKED_MODE, settings.lockedMode)
+            putString(KEY_OVERLAY_STYLE, settings.overlayStyle.name)
         }.apply()
 
         // Also sync locked mode to InterventionPreferences
@@ -122,10 +128,19 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             appSettingsLockedMode
         }
 
+        // Load overlay style preference
+        val overlayStyleStr = prefs.getString(KEY_OVERLAY_STYLE, DEFAULT_OVERLAY_STYLE) ?: DEFAULT_OVERLAY_STYLE
+        val overlayStyle = try {
+            dev.sadakat.thinkfaster.domain.model.OverlayStyle.valueOf(overlayStyleStr)
+        } catch (e: IllegalArgumentException) {
+            dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN
+        }
+
         return AppSettings(
             timerAlertMinutes = prefs.getInt(KEY_TIMER_ALERT_MINUTES, DEFAULT_TIMER_MINUTES),
             alwaysShowReminder = prefs.getBoolean(KEY_ALWAYS_SHOW_REMINDER, DEFAULT_ALWAYS_SHOW_REMINDER),
             lockedMode = actualLockedMode,
+            overlayStyle = overlayStyle,
             // Push Notification Strategy: Load notification settings
             motivationalNotificationsEnabled = notificationPreferences.isMotivationalNotificationsEnabled(),
             morningNotificationHour = notificationPreferences.getMorningHour(),
@@ -140,10 +155,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         private const val KEY_TIMER_ALERT_MINUTES = "timer_alert_minutes"
         private const val KEY_ALWAYS_SHOW_REMINDER = "always_show_reminder"
         private const val KEY_LOCKED_MODE = "locked_mode"
+        private const val KEY_OVERLAY_STYLE = "overlay_style"
 
         // Default values
         private const val DEFAULT_TIMER_MINUTES = 10
         private const val DEFAULT_ALWAYS_SHOW_REMINDER = true
         private const val DEFAULT_LOCKED_MODE = false
+        private const val DEFAULT_OVERLAY_STYLE = "FULLSCREEN"
     }
 }

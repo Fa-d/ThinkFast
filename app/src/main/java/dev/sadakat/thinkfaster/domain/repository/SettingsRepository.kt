@@ -34,6 +34,11 @@ interface SettingsRepository {
     suspend fun setLockedMode(enabled: Boolean)
 
     /**
+     * Update overlay display style (full-screen vs compact)
+     */
+    suspend fun setOverlayStyle(style: dev.sadakat.thinkfaster.domain.model.OverlayStyle)
+
+    /**
      * Push Notification Strategy: Enable/disable daily reminder notifications
      * When enabled, schedules morning, evening, and streak monitoring workers
      * When disabled, cancels all notification workers

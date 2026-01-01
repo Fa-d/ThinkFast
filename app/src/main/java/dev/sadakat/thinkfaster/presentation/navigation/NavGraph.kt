@@ -2,9 +2,15 @@ package dev.sadakat.thinkfaster.presentation.navigation
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import dev.sadakat.thinkfaster.analytics.FirebaseAnalyticsReporter
 import dev.sadakat.thinkfaster.presentation.analytics.AnalyticsScreen
 import dev.sadakat.thinkfaster.presentation.home.HomeScreen
 import dev.sadakat.thinkfaster.presentation.manageapps.ManageAppsScreen
@@ -19,6 +25,7 @@ import dev.sadakat.thinkfaster.presentation.permission.PermissionRequestScreen
 import dev.sadakat.thinkfaster.presentation.settings.SettingsScreen
 import dev.sadakat.thinkfaster.presentation.stats.StatsScreen
 import dev.sadakat.thinkfaster.presentation.themeappearance.ThemeAppearanceScreen
+import org.koin.compose.koinInject
 
 /**
  * Main navigation graph for the app
@@ -28,8 +35,36 @@ import dev.sadakat.thinkfaster.presentation.themeappearance.ThemeAppearanceScree
 fun NavGraph(
     navController: NavHostController,
     startDestination: String = Screen.PermissionRequest.route,
-    contentPadding: PaddingValues = PaddingValues()
+    contentPadding: PaddingValues = PaddingValues(),
+    analyticsReporter: FirebaseAnalyticsReporter = koinInject()
 ) {
+    // Track previous destination to avoid duplicate screen_view events
+    val previousDestination = rememberSaveable { mutableStateOf<String?>(null) }
+
+    // Skip analytics tracking in preview mode
+    val isPreviewMode = LocalInspectionMode.current
+
+    // Log screen view events on destination change
+    if (!isPreviewMode) {
+        DisposableEffect(navController) {
+            val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
+                val route = destination.route
+                val screenName = getScreenName(route)
+                val screenClass = getScreenClass(route)
+
+                if (route != previousDestination.value) {
+                    analyticsReporter.logScreenView(screenName, screenClass)
+                    previousDestination.value = route
+                }
+            }
+            navController.addOnDestinationChangedListener(listener)
+
+            onDispose {
+                navController.removeOnDestinationChangedListener(listener)
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -137,5 +172,51 @@ fun NavGraph(
                 onBack = { navController.popBackStack() }
             )
         }
+    }
+}
+
+/**
+ * Maps a route to a human-readable screen name for analytics
+ */
+private fun getScreenName(route: String?): String {
+    return when (route) {
+        Screen.Onboarding.route -> "Onboarding"
+        Screen.OnboardingWelcome.route -> "OnboardingWelcome"
+        Screen.OnboardingGoals.route -> "OnboardingGoals"
+        Screen.OnboardingPermissionUsage.route -> "OnboardingPermissionUsage"
+        Screen.OnboardingPermissionOverlay.route -> "OnboardingPermissionOverlay"
+        Screen.OnboardingPermissionNotification.route -> "OnboardingPermissionNotification"
+        Screen.OnboardingComplete.route -> "OnboardingComplete"
+        Screen.PermissionRequest.route -> "PermissionRequest"
+        Screen.Home.route -> "Home"
+        Screen.Statistics.route -> "Statistics"
+        Screen.Settings.route -> "Settings"
+        Screen.Analytics.route -> "Analytics"
+        Screen.ThemeAppearance.route -> "ThemeAppearance"
+        Screen.ManageApps.route -> "ManageApps"
+        else -> route?.substringBeforeLast("/")?.substringAfterLast("/") ?: "Unknown"
+    }
+}
+
+/**
+ * Maps a route to its screen class name for analytics
+ */
+private fun getScreenClass(route: String?): String {
+    return when (route) {
+        Screen.Onboarding.route -> "OnboardingScreen"
+        Screen.OnboardingWelcome.route -> "OnboardingWelcomeScreen"
+        Screen.OnboardingGoals.route -> "OnboardingGoalsScreen"
+        Screen.OnboardingPermissionUsage.route -> "OnboardingPermissionUsageScreen"
+        Screen.OnboardingPermissionOverlay.route -> "OnboardingPermissionOverlayScreen"
+        Screen.OnboardingPermissionNotification.route -> "OnboardingPermissionNotificationScreen"
+        Screen.OnboardingComplete.route -> "OnboardingCompleteScreen"
+        Screen.PermissionRequest.route -> "PermissionRequestScreen"
+        Screen.Home.route -> "HomeScreen"
+        Screen.Statistics.route -> "StatsScreen"
+        Screen.Settings.route -> "SettingsScreen"
+        Screen.Analytics.route -> "AnalyticsScreen"
+        Screen.ThemeAppearance.route -> "ThemeAppearanceScreen"
+        Screen.ManageApps.route -> "ManageAppsScreen"
+        else -> route?.substringBeforeLast("/")?.substringAfterLast("/") ?: "UnknownScreen"
     }
 }

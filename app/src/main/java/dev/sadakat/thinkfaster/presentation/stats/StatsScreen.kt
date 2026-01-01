@@ -457,12 +457,6 @@ private fun DailyStatsContent(stats: DailyStatistics, trend: UsageTrend?) {
             )
         }
 
-        // App breakdown
-        AppBreakdownCard(
-            facebookUsage = stats.facebookUsageMillis,
-            instagramUsage = stats.instagramUsageMillis
-        )
-
         // Interaction stats
         InteractionStatsCard(
             reminders = stats.reminderShownCount,
@@ -545,12 +539,6 @@ private fun WeeklyStatsContent(stats: WeeklyStatistics, trend: UsageTrend?) {
                 icon = "⏰"
             )
         }
-
-        // App breakdown
-        AppBreakdownCard(
-            facebookUsage = stats.facebookUsageMillis,
-            instagramUsage = stats.instagramUsageMillis
-        )
     }
 }
 
@@ -629,12 +617,6 @@ private fun MonthlyStatsContent(stats: MonthlyStatistics, trend: UsageTrend?) {
                 icon = "⏳"
             )
         }
-
-        // App breakdown
-        AppBreakdownCard(
-            facebookUsage = stats.facebookUsageMillis,
-            instagramUsage = stats.instagramUsageMillis
-        )
     }
 }
 
@@ -707,68 +689,6 @@ private fun StatCard(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun AppBreakdownCard(facebookUsage: Long, instagramUsage: Long) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "App Breakdown",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Facebook
-            AppUsageRow(
-                appName = "Facebook",
-                usageMillis = facebookUsage,
-                icon = "📘"
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Instagram
-            AppUsageRow(
-                appName = "Instagram",
-                usageMillis = instagramUsage,
-                icon = "📸"
-            )
-        }
-    }
-}
-
-@Composable
-private fun AppUsageRow(appName: String, usageMillis: Long, icon: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = icon, fontSize = 24.sp)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = appName,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        Text(
-            text = formatDuration(usageMillis),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
     }
 }
 

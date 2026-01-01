@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -66,30 +67,7 @@ fun SettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Header
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "🎯",
-                        fontSize = 48.sp
-                    )
-                    Text(
-                        text = "Set Your Daily Goals",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Stay mindful with daily usage limits",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
+
 
             // Success/Error messages
             item {
@@ -139,143 +117,6 @@ fun SettingsScreen(
             }
 
 
-            // Unified Manage Apps & Goals card
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { navController.navigate(Screen.ManageApps.route) },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Header row
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(text = "⚙️", fontSize = 24.sp)
-                                Text(
-                                    text = "Manage Apps & Goals",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Manage apps",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .rotate(270f)
-                            )
-                        }
-
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
-                            thickness = 1.dp
-                        )
-
-                        // Info sections
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            // Tracked apps count
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = "📱",
-                                    fontSize = 20.sp
-                                )
-                                Column {
-                                    Text(
-                                        text = "${uiState.trackedAppsCount}/10",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    Text(
-                                        text = "Apps tracked",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                    )
-                                }
-                            }
-
-                            // Goals info
-                            if (uiState.trackedAppsCount > 0) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        text = "🎯",
-                                        fontSize = 20.sp
-                                    )
-                                    Column {
-                                        Text(
-                                            text = "Set limits",
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                        Text(
-                                            text = "Daily goals",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                        )
-                                    }
-                                }
-                            } else {
-                                // Empty state hint
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        text = "➕",
-                                        fontSize = 20.sp
-                                    )
-                                    Column {
-                                        Text(
-                                            text = "Add apps",
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                        Text(
-                                            text = "Start tracking",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             // Empty state if no tracked apps (separate card for emphasis)
             if (uiState.trackedAppsCount == 0) {
                 item {
@@ -307,17 +148,6 @@ fun SettingsScreen(
                         }
                     }
                 }
-            }
-
-            // App Settings section header
-            item {
-                Text(
-                    text = "⚙️ App Settings",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                )
             }
 
             // Timer alert duration setting
@@ -370,6 +200,102 @@ fun SettingsScreen(
                             checked = uiState.appSettings.alwaysShowReminder,
                             onCheckedChange = { viewModel.setAlwaysShowReminder(it) }
                         )
+                    }
+                }
+            }
+
+            // Overlay Style toggle
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(text = "📐", fontSize = 24.sp)
+                                    Text(
+                                        text = "Overlay Style",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) {
+                                        "Compact popup in center"
+                                    } else {
+                                        "Full-screen coverage"
+                                    },
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Segmented control style toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Full-screen option
+                            OutlinedButton(
+                                onClick = { viewModel.setOverlayStyle(dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) },
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN)
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    else Color.Transparent,
+                                    contentColor = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN)
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN)
+                                        MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outline
+                                )
+                            ) {
+                                Text("Full-screen", fontWeight = FontWeight.Medium)
+                            }
+
+                            // Compact option
+                            OutlinedButton(
+                                onClick = { viewModel.setOverlayStyle(dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) },
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT)
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    else Color.Transparent,
+                                    contentColor = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT)
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT)
+                                        MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outline
+                                )
+                            ) {
+                                Text("Compact", fontWeight = FontWeight.Medium)
+                            }
+                        }
                     }
                 }
             }
@@ -481,10 +407,12 @@ fun SettingsScreen(
             // Theme and Appearance card
             item {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { navController.navigate("theme_appearance") },
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
@@ -504,35 +432,36 @@ fun SettingsScreen(
                                 Text(
                                     text = "Theme & Appearance",
                                     fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
                                 )
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Customize app theme, colors, and appearance",
                                 fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
                                 lineHeight = 20.sp
                             )
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        IconButton(
-                            onClick = { navController.navigate("theme_appearance") }
-                        ) {
-                            Text(
-                                text = "→",
-                                fontSize = 24.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Customize theme",
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .rotate(270f)
+                        )
                     }
                 }
             }
 
-            // Intervention Analytics (debug)
+            // Intervention Analytics card
             item {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { navController.navigate("analytics") },
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -567,16 +496,14 @@ fun SettingsScreen(
                                 lineHeight = 20.sp
                             )
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        IconButton(
-                            onClick = { navController.navigate("analytics") }
-                        ) {
-                            Text(
-                                text = "→",
-                                fontSize = 24.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "View analytics",
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .rotate(270f)
+                        )
                     }
                 }
             }
@@ -993,10 +920,12 @@ private fun FrictionLevelCard(
             }
 
             Icon(
-                imageVector = Icons.Default.KeyboardArrowUp,
+                imageVector = Icons.Default.KeyboardArrowDown,
                 contentDescription = "Show options",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier
+                    .size(32.dp)
+                    .rotate(270f)
             )
         }
     }

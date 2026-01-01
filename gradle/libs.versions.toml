@@ -17,6 +17,7 @@ ksp = "2.0.21-1.0.25"
 profileinstaller = "1.3.1"
 vico = "2.0.0-alpha.28"
 mpandroidchart = "3.1.0"
+glance = "1.1.1"
 # Firebase
 firebaseBom = "33.0.0"
 googleServices = "4.4.2"
@@ -77,6 +78,10 @@ vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = 
 
 # Charts (MPAndroidChart)
 mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpandroidchart" }
+
+# Glance (App Widgets)
+androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+androidx-glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 
 # Firebase
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }

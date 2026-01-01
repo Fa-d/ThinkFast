@@ -11,11 +11,13 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -23,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -215,6 +218,31 @@ fun HomeScreen(
                 )
             }
 
+            // Manage Apps & Goals Card
+            item {
+                ManageAppsAndGoalsCard(
+                    onClick = { navController.navigate(Screen.ManageApps.route) }
+                )
+            }
+
+            // Service Status Card (compact)
+            item {
+                CompactServiceStatusCard(
+                    isRunning = uiState.isServiceRunning,
+                    hasPermissions = hasAllPermissions,
+                    onStartClick = {
+                        HapticFeedback.success(context)
+                        startMonitoringService(context)
+                        viewModel.updateServiceState(true)
+                    },
+                    onStopClick = {
+                        HapticFeedback.medium(context)
+                        stopMonitoringService(context)
+                        viewModel.updateServiceState(false)
+                    }
+                )
+            }
+
             // Quest Progress Card (First-Week Retention: Days 1-7)
             if (uiState.showQuestCard) {
                 uiState.questStatus?.let { quest ->
@@ -290,24 +318,6 @@ fun HomeScreen(
                         }
                     )
                 }
-            }
-
-            // Service Status Card (compact)
-            item {
-                CompactServiceStatusCard(
-                    isRunning = uiState.isServiceRunning,
-                    hasPermissions = hasAllPermissions,
-                    onStartClick = {
-                        HapticFeedback.success(context)
-                        startMonitoringService(context)
-                        viewModel.updateServiceState(true)
-                    },
-                    onStopClick = {
-                        HapticFeedback.medium(context)
-                        stopMonitoringService(context)
-                        viewModel.updateServiceState(false)
-                    }
-                )
             }
         }
     }
@@ -884,6 +894,117 @@ private fun CompleteSetupBanner(
                     )
                 ) {
                     Text("Get Started")
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Manage Apps & Goals Card - Quick access to manage tracked apps and goals
+ */
+@Composable
+private fun ManageAppsAndGoalsCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(text = "⚙️", fontSize = 24.sp)
+                    Text(
+                        text = "Manage Apps & Goals",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Manage apps",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .rotate(270f)
+                )
+            }
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+
+            // Info sections
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "📱",
+                        fontSize = 20.sp
+                    )
+                    Column {
+                        Text(
+                            text = "Tracked apps",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "View & edit",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "🎯",
+                        fontSize = 20.sp
+                    )
+                    Column {
+                        Text(
+                            text = "Daily goals",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "Set limits",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
                 }
             }
         }

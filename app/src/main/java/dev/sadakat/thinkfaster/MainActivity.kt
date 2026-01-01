@@ -49,6 +49,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -56,6 +59,7 @@ import androidx.navigation.compose.rememberNavController
 import dev.sadakat.thinkfaster.analytics.AnalyticsManager
 import dev.sadakat.thinkfaster.presentation.navigation.NavGraph
 import dev.sadakat.thinkfaster.presentation.navigation.Screen
+import dev.sadakat.thinkfaster.presentation.widget.refreshWidgetData
 import dev.sadakat.thinkfaster.ui.theme.ThinkFasterThemeWithMode
 import dev.sadakat.thinkfaster.util.PermissionHelper
 import dev.sadakat.thinkfaster.util.ThemePreferences
@@ -94,6 +98,15 @@ class MainActivity : ComponentActivity() {
                 MainScreen()
             }
         }
+
+        // Refresh widget data when app opens
+        refreshWidgetData(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh widget when returning to the app
+        refreshWidgetData(this)
     }
 }
 
@@ -241,6 +254,7 @@ fun EnhancedNavigationBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.Center
     ) {

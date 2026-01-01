@@ -22,6 +22,7 @@ import dev.sadakat.thinkfaster.domain.repository.SettingsRepository
 import dev.sadakat.thinkfaster.domain.repository.UsageRepository
 import dev.sadakat.thinkfaster.presentation.overlay.ReminderOverlayWindow
 import dev.sadakat.thinkfaster.presentation.overlay.TimerOverlayWindow
+import dev.sadakat.thinkfaster.presentation.widget.updateWidgetData
 import dev.sadakat.thinkfaster.util.Constants
 import dev.sadakat.thinkfaster.util.ErrorLogger
 import dev.sadakat.thinkfaster.util.PermissionHelper
@@ -47,14 +48,17 @@ class UsageMonitorService : Service() {
     private val settingsRepository: SettingsRepository by inject()
     private val interventionResultRepository: InterventionResultRepository by inject()
     private val trackedAppsRepository: dev.sadakat.thinkfaster.domain.repository.TrackedAppsRepository by inject()
+    private val goalRepository: dev.sadakat.thinkfaster.domain.repository.GoalRepository by inject()
 
     private lateinit var appLaunchDetector: AppLaunchDetector
     private lateinit var sessionDetector: SessionDetector
     private lateinit var contextDetector: ContextDetector
 
-    // WindowManager-based overlays
+    // WindowManager-based overlays (full-screen and compact)
     private lateinit var reminderOverlay: ReminderOverlayWindow
     private lateinit var timerOverlay: TimerOverlayWindow
+    private lateinit var compactReminderOverlay: dev.sadakat.thinkfaster.presentation.overlay.CompactReminderOverlayWindow
+    private lateinit var compactTimerOverlay: dev.sadakat.thinkfaster.presentation.overlay.CompactTimerOverlayWindow
     private lateinit var overlayManager: OverlayManager
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
@@ -142,7 +146,7 @@ class UsageMonitorService : Service() {
             context = this
         )
 
-        // Initialize WindowManager-based overlays
+        // Initialize WindowManager-based overlays (full-screen and compact)
         // These will be created even without permission, but won't show until granted
         reminderOverlay = ReminderOverlayWindow(this) {
             // Callback when reminder overlay is dismissed
@@ -152,9 +156,25 @@ class UsageMonitorService : Service() {
             // Callback when timer overlay is dismissed
             onTimerOverlayDismissed()
         }
+        compactReminderOverlay = dev.sadakat.thinkfaster.presentation.overlay.CompactReminderOverlayWindow(this) {
+            // Callback when compact reminder overlay is dismissed
+            onReminderOverlayDismissed()
+        }
+        compactTimerOverlay = dev.sadakat.thinkfaster.presentation.overlay.CompactTimerOverlayWindow(this) {
+            // Callback when compact timer overlay is dismissed
+            onTimerOverlayDismissed()
+        }
 
         // Initialize overlay manager for coordination
-        overlayManager = OverlayManager(this, reminderOverlay, timerOverlay)
+        // Routes to full-screen or compact overlays based on user preference
+        overlayManager = OverlayManager(
+            context = this,
+            reminderOverlay = reminderOverlay,
+            timerOverlay = timerOverlay,
+            compactReminderOverlay = compactReminderOverlay,
+            compactTimerOverlay = compactTimerOverlay,
+            settingsRepository = settingsRepository
+        )
 
         // Set up session detector callbacks
         setupSessionCallbacks()
@@ -493,6 +513,34 @@ class UsageMonitorService : Service() {
                         "with final duration: ${finalDuration}ms",
                         context = "UsageMonitorService.onSessionEnd"
                     )
+
+                    // Update widget with latest data
+                    try {
+                        val goals = goalRepository.getAllGoals()
+                        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                            .format(java.util.Date())
+
+                        var totalUsedMinutes = 0
+                        var totalGoalMinutes = 0
+
+                        for (goal in goals) {
+                            totalGoalMinutes += goal.dailyLimitMinutes
+                            val sessions = usageRepository.getSessionsByAppInRange(
+                                targetApp = goal.targetApp,
+                                startDate = today,
+                                endDate = today
+                            )
+                            totalUsedMinutes += (sessions.sumOf { it.duration } / 1000 / 60).toInt()
+                        }
+
+                        updateWidgetData(this@UsageMonitorService, totalUsedMinutes, totalGoalMinutes)
+                    } catch (e: Exception) {
+                        ErrorLogger.error(
+                            e,
+                            message = "Failed to trigger widget update",
+                            context = "UsageMonitorService.onSessionEnd"
+                        )
+                    }
                 } catch (e: Exception) {
                     ErrorLogger.error(
                         e,

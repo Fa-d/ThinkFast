@@ -1,12 +1,21 @@
 package dev.sadakat.thinkfaster.domain.model
 
 /**
+ * Overlay display style options
+ */
+enum class OverlayStyle {
+    FULLSCREEN,  // Full-screen coverage (default)
+    COMPACT      // Center card popup (~70% screen)
+}
+
+/**
  * Domain model for app settings/preferences
  */
 data class AppSettings(
     val timerAlertMinutes: Int = 10,        // Duration before showing timer alert (default 10 minutes)
     val alwaysShowReminder: Boolean = true,  // Whether to show reminder every time app is opened (default true)
     val lockedMode: Boolean = false,         // Phase F: Maximum friction mode for users who want extra control
+    val overlayStyle: OverlayStyle = OverlayStyle.FULLSCREEN,  // Overlay display style (full-screen vs compact)
 
     // Push Notification Strategy: Motivational notification settings
     val motivationalNotificationsEnabled: Boolean = true,

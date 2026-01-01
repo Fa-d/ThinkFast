@@ -1,3 +1,34 @@
 <resources>
     <string name="app_name">Think Fast</string>
+    <string name="widget_description">Daily progress widget showing usage vs goal</string>
+
+    <!-- Widget strings -->
+    <string name="widget_title">DAILY USAGE</string>
+    <string name="widget_title_short">USAGE</string>
+    <string name="widget_progress_description">Daily usage progress indicator</string>
+    <string name="widget_progress_circle">Circular progress showing percentage of daily goal used</string>
+
+    <!-- Status messages -->
+    <string name="widget_no_usage">No usage yet</string>
+    <string name="widget_on_track">On track</string>
+    <string name="widget_doing_well">Doing well</string>
+    <string name="widget_almost_limit">Almost at limit</string>
+    <string name="widget_over_limit">Over limit!</string>
+    <string name="widget_no_goals">No goals set</string>
+    <string name="widget_great_start">Great start!</string>
+
+    <!-- Labels for clarity -->
+    <string name="widget_label_used">Used:</string>
+    <string name="widget_label_goal">Goal:</string>
+    <string name="widget_label_remaining">Remaining:</string>
+    <string name="widget_label_updated">Updated:</string>
+    <string name="widget_label_refresh">Refresh</string>
+
+    <!-- Time formatting -->
+    <string name="widget_updated_now">just now</string>
+    <string name="widget_updated_minutes_ago">%d min ago</string>
+    <string name="widget_updated_hours_ago">%d hr ago</string>
+    <string name="widget_refresh_description">Refresh widget data</string>
+    <string name="widget_remaining_time">%s</string>
+    <string name="widget_no_remaining_time">None</string>
 </resources>

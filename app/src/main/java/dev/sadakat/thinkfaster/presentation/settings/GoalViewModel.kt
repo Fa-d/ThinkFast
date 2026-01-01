@@ -228,6 +228,28 @@ class GoalViewModel(
     }
 
     /**
+     * Update overlay display style (full-screen vs compact)
+     */
+    fun setOverlayStyle(style: dev.sadakat.thinkfaster.domain.model.OverlayStyle) {
+        viewModelScope.launch {
+            try {
+                settingsRepository.setOverlayStyle(style)
+                _uiState.value = _uiState.value.copy(
+                    successMessage = "Overlay style updated"
+                )
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to update overlay style"
+                )
+            }
+        }
+    }
+
+    /**
      * Push Notification Strategy: Toggle daily reminder notifications
      */
     fun setMotivationalNotificationsEnabled(enabled: Boolean) {

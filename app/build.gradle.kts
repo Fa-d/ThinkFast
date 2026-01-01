@@ -17,8 +17,8 @@ android {
         applicationId = "dev.sadakat.thinkfaster"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.0.3"
+        versionCode = 4
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -52,6 +52,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["firebaseAnalyticsCollectionEnabled"] = false
+            manifestPlaceholders["firebaseCrashlyticsCollectionEnabled"] = false
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
@@ -59,6 +63,8 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            manifestPlaceholders["firebaseAnalyticsCollectionEnabled"] = true
+            manifestPlaceholders["firebaseCrashlyticsCollectionEnabled"] = true
         }
     }
 
@@ -200,6 +206,10 @@ dependencies {
 
     // Charts (MPAndroidChart)
     implementation(libs.mpandroidchart)
+
+    // Glance (App Widgets)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
 
     // Firebase Analytics
     implementation(platform(libs.firebase.bom))

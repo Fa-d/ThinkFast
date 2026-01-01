@@ -69,6 +69,29 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- Daily Progress Widget - Glance (Compose) -->
+        <receiver
+            android:name=".presentation.widget.DailyProgressGlanceReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/daily_progress_widget_info" />
+        </receiver>
+
+        <!-- Firebase Analytics - disabled for debug builds -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="${firebaseAnalyticsCollectionEnabled}" />
+
+        <!-- Firebase Crashlytics - disabled for debug builds -->
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="${firebaseCrashlyticsCollectionEnabled}" />
     </application>
 
 </manifest>
