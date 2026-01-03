@@ -558,62 +558,6 @@ private fun TodayAtAGlanceCard(
                         )
                     }
                 }
-
-                // Quick action buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // View Stats button
-                    OutlinedButton(
-                        onClick = {
-                            HapticFeedback.light(context)
-                            onViewStatsClick()
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            width = 1.dp
-                        )
-                    ) {
-                        Text(
-                            text = "📊",
-                            fontSize = 16.sp
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "View Stats",
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-
-                    // Adjust Goals button
-                    OutlinedButton(
-                        onClick = {
-                            HapticFeedback.light(context)
-                            onAdjustGoalsClick()
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            width = 1.dp
-                        )
-                    ) {
-                        Text(
-                            text = "⚙️",
-                            fontSize = 16.sp
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Adjust Goals",
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                }
             }
         }
     }

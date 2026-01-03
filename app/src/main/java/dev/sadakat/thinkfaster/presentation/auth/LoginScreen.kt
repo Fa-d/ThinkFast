@@ -117,7 +117,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(40.dp))
             
             // Facebook Login Button
-            SocialLoginButton(
+         /*   SocialLoginButton(
                 text = "Continue with Facebook",
                 icon = "f",
                 backgroundColor = MaterialTheme.colorScheme.primary,
@@ -139,7 +139,7 @@ fun LoginScreen(
                     }
                 },
                 enabled = !uiState.isLoading && activity != null
-            )
+            )*/
 
             Spacer(modifier = Modifier.height(12.dp))
 

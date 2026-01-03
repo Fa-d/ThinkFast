@@ -177,7 +177,7 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Hide bottom navigation on onboarding, permission request, analytics, and theme appearance screens
+    // Hide bottom navigation on onboarding, permission request, analytics, theme appearance, login, manage apps, and account management screens
     val showBottomBar = currentRoute != Screen.Onboarding.route &&
                         currentRoute != Screen.OnboardingWelcome.route &&
                         currentRoute != Screen.OnboardingGoals.route &&
@@ -187,7 +187,10 @@ fun MainScreen() {
                         currentRoute != Screen.OnboardingComplete.route &&
                         currentRoute != Screen.PermissionRequest.route &&
                         currentRoute != Screen.Analytics.route &&
-                        currentRoute != Screen.ThemeAppearance.route
+                        currentRoute != Screen.ThemeAppearance.route &&
+                        currentRoute != Screen.Login.route &&
+                        currentRoute != Screen.ManageApps.route &&
+                        currentRoute != Screen.AccountManagement.route
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

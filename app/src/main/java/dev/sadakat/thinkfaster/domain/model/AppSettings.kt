@@ -13,7 +13,7 @@ enum class OverlayStyle {
  */
 data class AppSettings(
     val timerAlertMinutes: Int = 10,        // Duration before showing timer alert (default 10 minutes)
-    val alwaysShowReminder: Boolean = true,  // Whether to show reminder every time app is opened (default true)
+    val alwaysShowReminder: Boolean = false,  // Whether to show reminder every time app is opened (default false)
     val lockedMode: Boolean = false,         // Phase F: Maximum friction mode for users who want extra control
     val overlayStyle: OverlayStyle = OverlayStyle.FULLSCREEN,  // Overlay display style (full-screen vs compact)
 

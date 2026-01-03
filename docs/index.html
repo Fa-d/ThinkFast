@@ -86,7 +86,7 @@
 <body>
     <div class="container">
         <h1>Privacy Policy for ThinkFast</h1>
-        <p class="updated"><strong>Last Updated:</strong> December 29, 2025</p>
+        <p class="updated"><strong>Last Updated:</strong> January 4, 2026</p>
 
         <h2>Introduction</h2>
         <p>ThinkFast is a digital wellbeing application designed to help you build mindful social media usage habits. This privacy policy explains how ThinkFast collects, uses, and protects your information.</p>
@@ -98,18 +98,27 @@
 
         <h2>Our Commitment to Privacy</h2>
         <div class="highlight">
-            <p><strong>ThinkFast is built with privacy as a core principle. Your personal data stays on your device. We use privacy-safe analytics to improve app quality while respecting your privacy.</strong></p>
+            <p><strong>ThinkFast is built with privacy as a core principle. Your data is encrypted and stored securely. Sign-in is optional - the app works fully without an account. When you choose to sync, your data is encrypted and only accessible by you.</strong></p>
         </div>
 
         <h2>Information We Collect</h2>
-        <h3>App Usage Data (Stored Locally)</h3>
+        <h3>App Usage Data</h3>
+        <p>All usage data is stored locally on your device. When you enable sync, data is encrypted and securely stored in the cloud.</p>
         <ul>
             <li><strong>Target App Detection:</strong> When you open monitored apps (e.g., Facebook, Instagram)</li>
             <li><strong>Usage Sessions:</strong> Start time, end time, and duration of app usage</li>
             <li><strong>Session Events:</strong> When reminders are shown, when timer alerts are triggered</li>
             <li><strong>Daily Statistics:</strong> Aggregated usage data per day</li>
             <li><strong>User Goals:</strong> Goals you set for managing your usage time</li>
-            <li><strong>Intervention Results:</strong> How you respond to mindfulness prompts (stored locally only)</li>
+            <li><strong>Intervention Results:</strong> How you respond to mindfulness prompts</li>
+        </ul>
+
+        <h3>Account Information (Optional)</h3>
+        <p>Sign-in is optional. When you choose to create an account:</p>
+        <ul>
+            <li><strong>Email Address:</strong> Used for authentication and account recovery</li>
+            <li><strong>Authentication Token:</strong> Secure token to access your synced data</li>
+            <li><strong>No Password Storage:</strong> Authentication is handled through Google Sign-In</li>
         </ul>
 
         <h3>Anonymous Analytics (Optional)</h3>
@@ -127,12 +136,11 @@
 
         <h3>What We DON'T Collect</h3>
         <ul class="no-collect">
-            <li><strong>❌ No personal information</strong> (name, email, phone number)</li>
+            <li><strong>❌ No passwords</strong> (authentication handled via Google Sign-In)</li>
             <li><strong>❌ No device identifiers</strong> (IMEI, advertising ID, device ID)</li>
             <li><strong>❌ No exact timestamps</strong> (only day-level buckets)</li>
             <li><strong>❌ No app content</strong> (posts, messages, photos)</li>
             <li><strong>❌ No app package names</strong> (only broad categories like "social_media")</li>
-            <li><strong>❌ No account credentials</strong></li>
             <li><strong>❌ No location data</strong></li>
             <li><strong>❌ No individual user behavior</strong></li>
         </ul>
@@ -158,12 +166,20 @@
         </div>
 
         <h2>Data Storage and Security</h2>
-        <h3>Local Storage (Primary)</h3>
+        <h3>Local Storage</h3>
         <ul>
-            <li>All personal usage data is stored <strong>locally on your device</strong> using Android's SQLite database</li>
+            <li>All usage data is stored <strong>locally on your device</strong> using Android's SQLite database</li>
             <li>Data is stored in your app's private storage directory</li>
             <li>Only ThinkFast can access its own data</li>
-            <li>Intervention results are stored for analysis and automatic content optimization</li>
+        </ul>
+
+        <h3>Cloud Sync (Optional)</h3>
+        <ul>
+            <li><strong>Only available when you sign in</strong></li>
+            <li><strong>Encrypted storage:</strong> Your data is encrypted before syncing</li>
+            <li><strong>Purpose:</strong> Backup your data and sync across multiple devices</li>
+            <li><strong>Service:</strong> Supabase (secure cloud database)</li>
+            <li><strong>Access Control:</strong> Only you can access your synced data using your authenticated account</li>
         </ul>
 
         <h3>Cloud Analytics (Optional)</h3>
@@ -176,22 +192,25 @@
 
         <h3>Data Retention</h3>
         <ul>
-            <li>Usage sessions older than <strong>90 days</strong> are automatically deleted</li>
+            <li>Usage sessions older than <strong>90 days</strong> are automatically deleted from local storage</li>
+            <li>Synced data remains in the cloud until you delete your account</li>
             <li>Analytics data sent to Firebase follows Firebase's retention policies</li>
             <li>You can manually clear all local data by uninstalling the app</li>
+            <li>You can delete your account and all associated data from the Settings screen</li>
         </ul>
 
         <h3>Data Security</h3>
         <ul>
             <li>Data is stored in Android's app-specific storage (protected by Android OS)</li>
-            <li>Firebase uses industry-standard encryption for data in transit and at rest</li>
+            <li>Synced data is encrypted during transmission and at rest</li>
+            <li>Firebase and Supabase use industry-standard encryption for data in transit and at rest</li>
             <li>Standard Android security protections apply</li>
         </ul>
 
         <h2>Data Sharing and Third Parties</h2>
         <h3>What We DON'T Share</h3>
         <div class="highlight">
-            <p><strong>We do not share, sell, or transmit your personal data to anyone.</strong></p>
+            <p><strong>We do not share, sell, or rent your personal data to third parties.</strong></p>
         </div>
         <ul class="no-collect">
             <li><strong>❌ No personal information shared</strong></li>
@@ -200,13 +219,23 @@
             <li><strong>❌ No data brokers</strong></li>
         </ul>
 
-        <h3>Third-Party Services (Only when Analytics is Enabled)</h3>
+        <h3>Third-Party Services</h3>
+        <h4>When Analytics is Enabled:</h4>
         <ul class="collect">
             <li><strong>✓ Firebase Analytics (Google)</strong> - For storing aggregated app analytics</li>
             <li><strong>✓ Firebase Crashlytics (Google)</strong> - For crash reporting to improve app stability</li>
         </ul>
         <div class="warning">
             <p><strong>⚠️ Important:</strong> Firebase receives only <strong>aggregated summaries</strong>. No personally identifiable information, device identifiers, or individual user behavior is transmitted.</p>
+        </div>
+
+        <h4>When You Sign In:</h4>
+        <ul class="collect">
+            <li><strong>✓ Google Sign-In</strong> - For secure authentication</li>
+            <li><strong>✓ Supabase</strong> - For encrypted data storage and sync</li>
+        </ul>
+        <div class="warning">
+            <p><strong>⚠️ Important:</strong> Your synced data is encrypted and only accessible by you. We do not have access to your Google account password.</p>
         </div>
 
         <h2>Permissions Explained</h2>
@@ -260,12 +289,12 @@
             <li><strong>Privacy:</strong> The app does NOT scan or access app content - it only shows the list of installed apps for your selection</li>
         </ul>
 
-        <h3>8. Internet Access (For Analytics Only)</h3>
+        <h3>8. Internet Access</h3>
         <ul>
-            <li><strong>Purpose:</strong> Send aggregated analytics to Firebase (only when enabled)</li>
-            <li><strong>When it's used:</strong> Only when sending aggregated summaries (not for core app functionality)</li>
-            <li><strong>User control:</strong> Analytics can be toggled OFF in Settings → Intervention Analytics</li>
-            <li><strong>Core app functionality:</strong> Works 100% offline without internet</li>
+            <li><strong>Purpose:</strong> Enable data sync and send analytics to Firebase</li>
+            <li><strong>When it's used:</strong> When syncing your data or sending analytics (when enabled)</li>
+            <li><strong>User control:</strong> Sync is optional - only when you sign in. Analytics can be toggled OFF in Settings</li>
+            <li><strong>Core app functionality:</strong> Works fully offline without internet (monitoring, reminders, stats)</li>
         </ul>
 
         <h2>Your Rights and Control</h2>
@@ -275,9 +304,10 @@
             <li><strong>Configure Target Apps:</strong> Choose which apps to monitor</li>
             <li><strong>Adjust Settings:</strong> Customize timer duration and reminder behavior</li>
             <li><strong>View Your Data:</strong> See all collected usage statistics in the Stats screen</li>
-            <li><strong>View Intervention Analytics:</strong> See how interventions are performing (Analytics screen)</li>
             <li><strong>Toggle Analytics:</strong> Enable/disable anonymous analytics in Settings → Intervention Analytics</li>
-            <li><strong>Delete All Data:</strong> Uninstalling ThinkFast permanently removes all local data</li>
+            <li><strong>Sign In/Out:</strong> Optional - use the app without an account, or sign in to enable sync</li>
+            <li><strong>Delete Account:</strong> Permanently delete your account and all synced data from Settings → Account & Sync</li>
+            <li><strong>Delete All Local Data:</strong> Uninstalling ThinkFast permanently removes all local data</li>
         </ul>
 
         <div class="toggle-info">
@@ -288,16 +318,17 @@
             <p><strong>When ON:</strong> Aggregated summaries are sent to Firebase to help improve the app</p>
         </div>
 
-        <h3>No Account Required:</h3>
+        <h3>Optional Account:</h3>
         <ul>
-            <li>ThinkFast does not require registration or login</li>
-            <li>No email, username, or password needed</li>
-            <li>No user profile created</li>
-            <li>All analytics are anonymous with no user identifiers</li>
+            <li><strong>ThinkFast works fully without an account</strong> - all core features available offline</li>
+            <li><strong>Optional Sign-In:</strong> Create an account to enable cloud sync across devices</li>
+            <li><strong>Google Sign-In:</strong> Secure authentication without password storage</li>
+            <li><strong>You Can Delete:</strong> Delete your account and all synced data anytime from Settings</li>
+            <li><strong>All analytics are anonymous</strong> with no user identifiers</li>
         </ul>
 
         <h2>Children's Privacy</h2>
-        <p>ThinkFast does not knowingly collect information from children under 13. The app is designed for general audiences and does not contain age-restricted content. Since all personal data is stored locally and analytics are fully anonymous with no personal identifiers, there is no risk of children's data being transmitted or shared inappropriately.</p>
+        <p>ThinkFast does not knowingly collect information from children under 13. The app is designed for general audiences and does not contain age-restricted content. All analytics are fully anonymous with no personal identifiers.</p>
 
         <h2>Changes to This Privacy Policy</h2>
         <p>We may update this privacy policy from time to time. Any changes will be reflected in:</p>
@@ -310,25 +341,25 @@
         <h2>Data Protection Rights (GDPR/CCPA Compliance)</h2>
         <p>If you are in the European Union or California, you have the following rights:</p>
         <ul>
-            <li><strong>Right to Access:</strong> View all data through the app's Stats and Analytics screens</li>
-            <li><strong>Right to Deletion:</strong> Uninstall the app to permanently delete all local data</li>
-            <li><strong>Right to Portability:</strong> Not applicable (no account or cloud storage)</li>
+            <li><strong>Right to Access:</strong> View all data through the app's Stats screen</li>
+            <li><strong>Right to Deletion:</strong> Delete your account and synced data from Settings → Account & Sync. Uninstall to delete all local data.</li>
+            <li><strong>Right to Portability:</strong> Not applicable (data is for app use only)</li>
             <li><strong>Right to Rectification:</strong> Modify goals and settings within the app</li>
-            <li><strong>Right to Object:</strong> Disable monitoring or disable analytics in Settings, or uninstall the app</li>
+            <li><strong>Right to Object:</strong> Disable monitoring, disable analytics, sign out, or delete your account</li>
             <li><strong>Right to Opt-Out:</strong> Toggle anonymous analytics OFF anytime in Settings → Intervention Analytics</li>
         </ul>
-        <p>Since all personal data is local and never transmitted, and analytics are fully anonymous with no identifiers, there is no personal data processing or sharing to object to.</p>
+        <p>All analytics are fully anonymous with no identifiers. Synced data is encrypted and only accessible by you.</p>
 
         <h2>Technical Implementation Details</h2>
         <p>For transparency, here's how ThinkFast works technically:</p>
         <ul>
             <li><strong>App Detection:</strong> Uses Android's UsageStatsManager API to detect foreground apps</li>
-            <li><strong>Storage:</strong> SQLite database via Android Room library (local only)</li>
-            <li><strong>Monitoring:</strong> Foreground service with adaptive polling (reduces frequency when screen is off or no activity detected)</li>
+            <li><strong>Local Storage:</strong> SQLite database via Android Room library</li>
+            <li><strong>Cloud Sync:</strong> Supabase for encrypted data backup and cross-device sync (optional)</li>
+            <li><strong>Authentication:</strong> Google Sign-In for secure account access</li>
+            <li><strong>Monitoring:</strong> Foreground service with adaptive polling</li>
             <li><strong>Overlays:</strong> WindowManager API to display reminders over apps</li>
             <li><strong>Analytics:</strong> Firebase Analytics & Crashlytics (optional, aggregated data only)</li>
-            <li><strong>Privacy Protection:</strong> All data aggregated locally before sending - no raw individual behavior transmitted</li>
-            <li><strong>User Identification:</strong> Anonymous session IDs only - no persistent identifiers</li>
         </ul>
 
         <h2>Contact Us</h2>
@@ -348,7 +379,7 @@
         <hr>
 
         <div class="highlight">
-            <p><strong>Summary:</strong> ThinkFast is a privacy-first app. Your personal usage data stays on your device and is automatically deleted after 90 days. We use optional anonymous analytics to improve app quality - only aggregated summaries are sent to Firebase, with no personal identifiers or individual user behavior. You can toggle analytics OFF anytime in Settings → Intervention Analytics.</p>
+            <p><strong>Summary:</strong> ThinkFast is a privacy-first app. Sign-in is optional - all core features work fully offline. Your usage data is stored locally and automatically deleted after 90 days. When you sign in, your data is encrypted and synced across devices. We use optional anonymous analytics to improve app quality. You can delete your account and all synced data anytime from Settings.</p>
         </div>
     </div>
 </body>

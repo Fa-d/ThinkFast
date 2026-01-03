@@ -341,9 +341,9 @@
       </form>
 
       <div class="footer">
-        <a href="/">← Back to Home</a>
+        <a href="/public/">← Back to Home</a>
         <span style="margin: 0 16px; color: #ccc;">|</span>
-        <a href="/privacy">Privacy Policy</a>
+        <a href="/">Privacy Policy</a>
       </div>
     </div>
 
@@ -360,7 +360,7 @@
         </p>
         <p style="margin-top: 16px;">
           If you have any questions, please contact us at
-          <a href="mailto:support@thinkfastapp.com">support@thinkfastapp.com</a>
+          <a href="mailto:contact@sadakat.dev">contact@sadakat.dev</a>
         </p>
       </div>
     </div>
@@ -396,12 +396,14 @@
 
       try {
         // Call Supabase Edge Function for account deletion
-        // Replace YOUR_SUPABASE_PROJECT_URL with your actual Supabase project URL
         const supabaseUrl = 'https://uoxmrsrvcorotvphzymb.supabase.co';
+        const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY'; // Get from: Dashboard → Settings → API → anon public
         const response = await fetch(`${supabaseUrl}/functions/v1/delete-account-request`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'apikey': supabaseAnonKey
           },
           body: JSON.stringify({ email, reason })
         });
@@ -414,13 +416,13 @@
           formContainer.style.display = 'none';
           successContainer.style.display = 'block';
         } else {
-          showError(data.error || 'Failed to submit request. Please try again or contact support@thinkfastapp.com');
+          showError(data.error || 'Failed to submit request. Please try again or contact contact@sadakat.dev');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Delete My Account';
         }
       } catch (error) {
         console.error('Error:', error);
-        showError('Unable to connect. Please email support@thinkfastapp.com with your deletion request.');
+        showError('Unable to connect. Please email contact@sadakat.dev with your deletion request.');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Delete My Account';
       }
