@@ -139,13 +139,19 @@ class SupabaseSyncBackend(
         return try {
             Log.d(TAG, "syncGoals: Starting with ${localGoals.size} local goals, userId=$userId, lastSyncTime=$lastSyncTime")
 
-            // Upload pending local changes
+            // Upload pending local changes and get back the records with cloudIds
+            val uploadedGoals = mutableListOf<GoalEntity>()
             val pendingGoals = localGoals.filter { it.syncStatus == "PENDING" }
             if (pendingGoals.isNotEmpty()) {
                 Log.d(TAG, "syncGoals: Uploading ${pendingGoals.size} pending goals")
                 val supabaseGoals = pendingGoals.map { it.toSupabase(userId) }
-                supabase.from("goals").upsert(supabaseGoals)
-                Log.d(TAG, "syncGoals: Successfully uploaded ${pendingGoals.size} pending goals")
+                val returnedGoals = supabase.from("goals")
+                    .upsert(supabaseGoals, onConflict = "user_id,target_app") {
+                        select()
+                    }
+                    .decodeList<SupabaseGoal>()
+                uploadedGoals.addAll(returnedGoals.map { it.toEntity() })
+                Log.d(TAG, "syncGoals: Successfully uploaded ${pendingGoals.size} pending goals, received ${returnedGoals.size} back with cloudIds")
             }
 
             // Download remote changes since last sync
@@ -161,8 +167,11 @@ class SupabaseSyncBackend(
 
             Log.d(TAG, "syncGoals: Downloaded ${remoteGoals.size} remote goals")
 
-            // Merge local and remote with conflict resolution
-            val mergedGoals = mergeGoals(localGoals, remoteGoals.map { it.toEntity() })
+            // Merge local, uploaded (with cloudIds), and remote
+            val mergedGoals = mergeGoals(
+                localGoals.filterNot { it.syncStatus == "PENDING" },  // Exclude uploaded items from local
+                uploadedGoals + remoteGoals.map { it.toEntity() }     // Include uploaded + remote
+            )
 
             Log.d(TAG, "syncGoals: Merged to ${mergedGoals.size} goals")
             SyncResult.Success(mergedGoals)
@@ -209,18 +218,33 @@ class SupabaseSyncBackend(
         lastSyncTime: Long
     ): SyncResult<List<UsageSessionEntity>> {
         return try {
-            // Upload pending local sessions
+            // Upload pending local sessions and get back records with cloudIds
+            val uploadedSessions = mutableListOf<UsageSessionEntity>()
             val pendingSessions = sessions.filter { it.syncStatus == "PENDING" }
             if (pendingSessions.isNotEmpty()) {
                 val supabaseSessions = pendingSessions.map { it.toSupabase(userId) }
-                supabase.from("usage_sessions").upsert(supabaseSessions)
+                val returnedSessions = supabase.from("usage_sessions")
+                    .upsert(supabaseSessions, onConflict = "id") {
+                        select()
+                    }
+                    .decodeList<SupabaseUsageSession>()
+
+                // Map returned sessions back to entities, preserving local IDs
+                val localIdMap = pendingSessions.associateBy { it.startTimestamp to it.targetApp }
+                returnedSessions.forEach { returned ->
+                    val localId = localIdMap[returned.startTimestamp to returned.targetApp]?.id ?: 0
+                    uploadedSessions.add(returned.toEntity(localId))
+                }
             }
 
             // Download remote changes since last sync (paginated for large datasets)
             val remoteSessions = downloadSessionsPaginated(userId, lastSyncTime)
 
             // Merge: Sessions are append-only, merge by unique cloud ID
-            val mergedSessions = mergeSessions(sessions, remoteSessions)
+            val mergedSessions = mergeSessions(
+                sessions.filterNot { it.syncStatus == "PENDING" },  // Exclude uploaded items
+                uploadedSessions + remoteSessions                    // Include uploaded + remote
+            )
 
             SyncResult.Success(mergedSessions)
         } catch (e: Exception) {
@@ -285,12 +309,23 @@ class SupabaseSyncBackend(
         lastSyncTime: Long
     ): SyncResult<List<UsageEventEntity>> {
         return try {
-
-            // Upload pending local events
+            // Upload pending local events and get back records with cloudIds
+            val uploadedEvents = mutableListOf<UsageEventEntity>()
             val pendingEvents = events.filter { it.syncStatus == "PENDING" }
             if (pendingEvents.isNotEmpty()) {
                 val supabaseEvents = pendingEvents.map { it.toSupabase(userId) }
-                supabase.from("usage_events").upsert(supabaseEvents)
+                val returnedEvents = supabase.from("usage_events")
+                    .upsert(supabaseEvents, onConflict = "id") {
+                        select()
+                    }
+                    .decodeList<SupabaseUsageEvent>()
+
+                // Map returned events back to entities, preserving local IDs
+                val localIdMap = pendingEvents.associateBy { it.sessionId to it.timestamp }
+                returnedEvents.forEach { returned ->
+                    val localId = localIdMap[returned.sessionId to returned.timestamp]?.id ?: 0
+                    uploadedEvents.add(returned.toEntity(localId))
+                }
             }
 
             // Download remote changes (append-only, similar to sessions)
@@ -304,7 +339,10 @@ class SupabaseSyncBackend(
                 .decodeList<SupabaseUsageEvent>()
 
             // Merge by cloud ID (append-only)
-            val mergedEvents = mergeEvents(events, remoteEvents.map { (it as SupabaseUsageEvent).toEntity() })
+            val mergedEvents = mergeEvents(
+                events.filterNot { it.syncStatus == "PENDING" },
+                uploadedEvents + remoteEvents.map { (it as SupabaseUsageEvent).toEntity() }
+            )
 
             SyncResult.Success(mergedEvents)
         } catch (e: Exception) {
@@ -336,12 +374,17 @@ class SupabaseSyncBackend(
         lastSyncTime: Long
     ): SyncResult<List<DailyStatsEntity>> {
         return try {
-
-            // Upload pending local stats
+            // Upload pending local stats and get back records with cloudIds
+            val uploadedStats = mutableListOf<DailyStatsEntity>()
             val pendingStats = stats.filter { it.syncStatus == "PENDING" }
             if (pendingStats.isNotEmpty()) {
                 val supabaseStats = pendingStats.map { it.toSupabase(userId) }
-                supabase.from("daily_stats").upsert(supabaseStats)
+                val returnedStats = supabase.from("daily_stats")
+                    .upsert(supabaseStats, onConflict = "user_id,target_app,date") {
+                        select()
+                    }
+                    .decodeList<SupabaseDailyStats>()
+                uploadedStats.addAll(returnedStats.map { it.toEntity() })
             }
 
             // Download remote changes since last sync
@@ -355,7 +398,10 @@ class SupabaseSyncBackend(
                 .decodeList<SupabaseDailyStats>()
 
             // Merge with last-write-wins strategy
-            val mergedStats = mergeDailyStats(stats, remoteStats.map { (it as SupabaseDailyStats).toEntity() })
+            val mergedStats = mergeDailyStats(
+                stats.filterNot { it.syncStatus == "PENDING" },
+                uploadedStats + remoteStats.map { (it as SupabaseDailyStats).toEntity() }
+            )
 
             SyncResult.Success(mergedStats)
         } catch (e: Exception) {
@@ -396,12 +442,23 @@ class SupabaseSyncBackend(
         lastSyncTime: Long
     ): SyncResult<List<InterventionResultEntity>> {
         return try {
-
-            // Upload pending results
+            // Upload pending results and get back records with cloudIds
+            val uploadedResults = mutableListOf<InterventionResultEntity>()
             val pendingResults = results.filter { it.syncStatus == "PENDING" }
             if (pendingResults.isNotEmpty()) {
                 val supabaseResults = pendingResults.map { it.toSupabase(userId) }
-                supabase.from("intervention_results").upsert(supabaseResults)
+                val returnedResults = supabase.from("intervention_results")
+                    .upsert(supabaseResults, onConflict = "id") {
+                        select()
+                    }
+                    .decodeList<SupabaseInterventionResult>()
+
+                // Map returned results back to entities, preserving local IDs
+                val localIdMap = pendingResults.associateBy { it.sessionId to it.timestamp }
+                returnedResults.forEach { returned ->
+                    val localId = localIdMap[returned.sessionId to returned.timestamp]?.id ?: 0
+                    uploadedResults.add(returned.toEntity(localId))
+                }
             }
 
             // Download remote changes (append-only analytics data)
@@ -415,7 +472,10 @@ class SupabaseSyncBackend(
                 .decodeList<SupabaseInterventionResult>()
 
             // Merge (append-only)
-            val mergedResults = mergeInterventionResults(results, remoteResults.map { (it as SupabaseInterventionResult).toEntity() })
+            val mergedResults = mergeInterventionResults(
+                results.filterNot { it.syncStatus == "PENDING" },
+                uploadedResults + remoteResults.map { (it as SupabaseInterventionResult).toEntity() }
+            )
 
             SyncResult.Success(mergedResults)
         } catch (e: Exception) {
@@ -447,12 +507,17 @@ class SupabaseSyncBackend(
         lastSyncTime: Long
     ): SyncResult<List<StreakRecoveryEntity>> {
         return try {
-
-            // Upload pending recoveries
+            // Upload pending recoveries and get back records with cloudIds
+            val uploadedRecoveries = mutableListOf<StreakRecoveryEntity>()
             val pendingRecoveries = recoveries.filter { it.syncStatus == "PENDING" }
             if (pendingRecoveries.isNotEmpty()) {
                 val supabaseRecoveries = pendingRecoveries.map { it.toSupabase(userId) }
-                supabase.from("streak_recoveries").upsert(supabaseRecoveries)
+                val returnedRecoveries = supabase.from("streak_recoveries")
+                    .upsert(supabaseRecoveries, onConflict = "user_id,target_app") {
+                        select()
+                    }
+                    .decodeList<SupabaseStreakRecovery>()
+                uploadedRecoveries.addAll(returnedRecoveries.map { it.toEntity() })
             }
 
             // Download remote changes
@@ -466,7 +531,10 @@ class SupabaseSyncBackend(
                 .decodeList<SupabaseStreakRecovery>()
 
             // Merge with last-write-wins
-            val mergedRecoveries = mergeStreakRecoveries(recoveries, remoteRecoveries.map { (it as SupabaseStreakRecovery).toEntity() })
+            val mergedRecoveries = mergeStreakRecoveries(
+                recoveries.filterNot { it.syncStatus == "PENDING" },
+                uploadedRecoveries + remoteRecoveries.map { (it as SupabaseStreakRecovery).toEntity() }
+            )
 
             SyncResult.Success(mergedRecoveries)
         } catch (e: Exception) {
@@ -507,15 +575,20 @@ class SupabaseSyncBackend(
         lastSyncTime: Long
     ): SyncResult<UserBaselineEntity?> {
         return try {
-
-            // Upload local baseline if exists and pending
+            // Upload local baseline if exists and pending, get back with cloudId
+            var uploadedBaseline: UserBaselineEntity? = null
             if (baseline != null && baseline.syncStatus == "PENDING") {
                 val supabaseBaseline = baseline.toSupabase(userId)
-                supabase.from("user_baseline").upsert(supabaseBaseline)
+                val returnedBaseline = supabase.from("user_baseline")
+                    .upsert(supabaseBaseline, onConflict = "user_id,target_app") {
+                        select()
+                    }
+                    .decodeList<SupabaseUserBaseline>()
+                uploadedBaseline = returnedBaseline.firstOrNull()?.toEntity()
             }
 
             // Download remote baseline (single row per user)
-            val remoteBaseline: SupabaseUserBaseline = try {
+            val remoteBaseline: SupabaseUserBaseline? = try {
                 val results = supabase.from("user_baseline")
                     .select {
                         filter {
@@ -523,17 +596,18 @@ class SupabaseSyncBackend(
                         }
                     }
                     .decodeList<SupabaseUserBaseline>()
-                results.firstOrNull() ?: throw Exception("No remote baseline found")
+                results.firstOrNull()
             } catch (e: Exception) {
                 // No remote baseline exists
-                return SyncResult.Success(baseline)
+                null
             }
 
-            // Use remote if it's newer or local doesn't exist
+            // Use the most recent: uploaded, remote, or local
             val mergedBaseline: UserBaselineEntity? = when {
-                baseline == null -> remoteBaseline.toEntity()
-                remoteBaseline.lastModified > baseline.lastModified -> remoteBaseline.toEntity()
-                else -> baseline.copy(syncStatus = "SYNCED")
+                uploadedBaseline != null -> uploadedBaseline
+                remoteBaseline != null && (baseline == null || remoteBaseline.lastModified > baseline.lastModified) -> remoteBaseline.toEntity()
+                baseline != null -> baseline.copy(syncStatus = "SYNCED", cloudId = remoteBaseline?.id)
+                else -> null
             }
 
             SyncResult.Success(mergedBaseline)
@@ -560,7 +634,7 @@ class SupabaseSyncBackend(
                 userId = userId,
                 settingsJson = settingsJson,
                 lastModified = System.currentTimeMillis()
-            ))
+            ), onConflict = "user_id")
 
             // Download latest settings (remote wins for settings)
             val remoteSettings: SupabaseSettings = try {

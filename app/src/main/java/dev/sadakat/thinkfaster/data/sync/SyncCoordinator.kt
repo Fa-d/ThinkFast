@@ -221,19 +221,34 @@ class SyncCoordinator(
         return try {
             val localEvents = usageEventDao.getEventsByUserId(userId)
             val syncResult = syncBackend.syncUsageEvents(localEvents, userId, lastSyncTime)
-            
+
             when (syncResult) {
                 is SyncResult.Success -> {
+                    var skippedCount = 0
                     syncResult.data.forEach { event ->
-                        usageEventDao.insertEvent(event)
-                        if (event.cloudId != null) {
-                            usageEventDao.updateSyncStatus(
-                                event.id,
-                                "SYNCED",
-                                event.cloudId,
-                                System.currentTimeMillis()
-                            )
+                        // Check if the session exists before inserting the event
+                        // This prevents foreign key constraint violations when syncing across devices
+                        val sessionExists = usageSessionDao.getSessionById(event.sessionId) != null
+
+                        if (sessionExists) {
+                            usageEventDao.insertEvent(event)
+                            if (event.cloudId != null) {
+                                usageEventDao.updateSyncStatus(
+                                    event.id,
+                                    "SYNCED",
+                                    event.cloudId,
+                                    System.currentTimeMillis()
+                                )
+                            }
+                        } else {
+                            // Skip events that reference non-existent sessions
+                            // This can happen when syncing events from another device
+                            skippedCount++
+                            Log.d(TAG, "Skipping event ${event.cloudId} - session ${event.sessionId} not found locally")
                         }
+                    }
+                    if (skippedCount > 0) {
+                        Log.d(TAG, "Skipped $skippedCount events due to missing sessions")
                     }
                     Result.success(Unit)
                 }
@@ -280,19 +295,34 @@ class SyncCoordinator(
         return try {
             val localResults = interventionResultDao.getResultsByUserId(userId)
             val syncResult = syncBackend.syncInterventionResults(localResults, userId, lastSyncTime)
-            
+
             when (syncResult) {
                 is SyncResult.Success -> {
+                    var skippedCount = 0
                     syncResult.data.forEach { result ->
-                        interventionResultDao.insertResult(result)
-                        if (result.cloudId != null) {
-                            interventionResultDao.updateSyncStatus(
-                                result.id,
-                                "SYNCED",
-                                result.cloudId,
-                                System.currentTimeMillis()
-                            )
+                        // Check if the session exists before inserting the intervention result
+                        // This prevents foreign key constraint violations when syncing across devices
+                        val sessionExists = usageSessionDao.getSessionById(result.sessionId) != null
+
+                        if (sessionExists) {
+                            interventionResultDao.insertResult(result)
+                            if (result.cloudId != null) {
+                                interventionResultDao.updateSyncStatus(
+                                    result.id,
+                                    "SYNCED",
+                                    result.cloudId,
+                                    System.currentTimeMillis()
+                                )
+                            }
+                        } else {
+                            // Skip intervention results that reference non-existent sessions
+                            // This can happen when syncing from another device
+                            skippedCount++
+                            Log.d(TAG, "Skipping intervention ${result.cloudId} - session ${result.sessionId} not found locally")
                         }
+                    }
+                    if (skippedCount > 0) {
+                        Log.d(TAG, "Skipped $skippedCount intervention results due to missing sessions")
                     }
                     Result.success(Unit)
                 }

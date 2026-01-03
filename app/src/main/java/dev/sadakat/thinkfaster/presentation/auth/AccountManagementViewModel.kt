@@ -94,14 +94,33 @@ class AccountManagementViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(syncStatus = "SYNCING")
             syncPreferences.setSyncStatus("SYNCING")
-            
+
             try {
                 // Trigger immediate sync
                 SyncScheduler.triggerImmediateSync(context)
-                
-                // Update UI after a delay (worker runs asynchronously)
-                kotlinx.coroutines.delay(1000)
-                loadAccountInfo()
+
+                // Poll sync status until it changes from SYNCING
+                // This ensures UI updates when sync actually completes
+                var pollCount = 0
+                val maxPolls = 60  // Max 30 seconds (60 * 500ms)
+
+                while (pollCount < maxPolls) {
+                    kotlinx.coroutines.delay(500)
+                    val currentStatus = syncPreferences.getSyncStatus()
+
+                    if (currentStatus != "SYNCING") {
+                        // Sync completed (either SUCCESS or ERROR)
+                        loadAccountInfo()
+                        break
+                    }
+
+                    pollCount++
+                }
+
+                // If still syncing after max polls, reload anyway
+                if (pollCount >= maxPolls) {
+                    loadAccountInfo()
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     syncStatus = "ERROR",
