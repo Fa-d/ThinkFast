@@ -54,3 +54,4 @@ keystore.properties
 /creating the SyncCoordinator to orchestrate sync operations across all entity types.
 /app/src/main/res/values/supabase.xml
 /docs/DESIGN_SYSTEM.md
+/docs/SUPABASE_DELETION_SETUP.md
