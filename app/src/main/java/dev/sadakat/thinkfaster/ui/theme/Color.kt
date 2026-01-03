@@ -2,6 +2,10 @@ package dev.sadakat.thinkfaster.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+// ============================================================================
+// LEGACY COLORS (Kept for backward compatibility)
+// ============================================================================
+
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
@@ -9,6 +13,102 @@ val Pink80 = Color(0xFFEFB8C8)
 val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
+
+// ============================================================================
+// PRIMARY PALETTE (BLUE - Based on iOS reference)
+// ============================================================================
+
+/**
+ * Blue primary colors - Main brand color
+ */
+object PrimaryColors {
+    /** Primary blue - Blue 500 */
+    val Blue500 = Color(0xFF2196F3)
+
+    /** Primary blue dark - Blue 800 */
+    val Blue800 = Color(0xFF1565C0)
+
+    /** Primary blue dark - Blue 300 (for dark mode) */
+    val Blue300 = Color(0xFF64B5F6)
+
+    /** Primary blue container - Blue 50 */
+    val Blue50 = Color(0xFFE3F2FD)
+
+    /** On primary color - White */
+    val OnPrimary = Color(0xFFFFFFFF)
+
+    /** On primary dark - Blue 900 */
+    val OnPrimaryDark = Color(0xFF0D47A1)
+}
+
+/**
+ * Secondary palette (Purple)
+ */
+object SecondaryColors {
+    /** Secondary purple - Purple 500 */
+    val Purple500 = Color(0xFF9C27B0)
+
+    /** Secondary purple dark - Purple 800 */
+    val Purple800 = Color(0xFF7B1FA2)
+
+    /** Secondary purple light - Purple 300 (for dark mode) */
+    val Purple300 = Color(0xFFBA68C8)
+
+    /** Secondary purple container - Purple 50 */
+    val Purple50 = Color(0xFFF3E5F5)
+
+    /** On secondary color - White */
+    val OnSecondary = Color(0xFFFFFFFF)
+
+    /** On secondary dark - Purple 900 */
+    val OnSecondaryDark = Color(0xFF4A148C)
+}
+
+// ============================================================================
+// SEMANTIC COLORS
+// ============================================================================
+
+/**
+ * Semantic colors for status and feedback
+ */
+object SemanticColors {
+
+    /**
+     * Success/Achievement - Green
+     */
+    val Success = Color(0xFF4CAF50)  // Green 500
+    val SuccessDark = Color(0xFF81C784)  // Green 300 (for dark mode)
+    val SuccessLight = Color(0xFFE8F5E9)  // Green 50 (container)
+    val OnSuccess = Color(0xFFFFFFFF)  // White text
+    val OnSuccessDark = Color(0xFF1B5E20)  // Green 900 text
+
+    /**
+     * Warning/Caution - Orange
+     */
+    val Warning = Color(0xFFFF9800)  // Orange 500
+    val WarningDark = Color(0xFFFFB74D)  // Orange 400 (for dark mode)
+    val WarningLight = Color(0xFFFFF3E0)  // Orange 50 (container)
+    val OnWarning = Color(0xFFFFFFFF)  // White text
+    val OnWarningDark = Color(0xFFE65100)  // Orange 900 text
+
+    /**
+     * Error/Over limit - Red
+     */
+    val Error = Color(0xFFF44336)  // Red 500
+    val ErrorDark = Color(0xFFE57373)  // Red 300 (for dark mode)
+    val ErrorLight = Color(0xFFFFEBEE)  // Red 50 (container)
+    val OnError = Color(0xFFFFFFFF)  // White text
+    val OnErrorDark = Color(0xFFB71C1C)  // Red 900 text
+
+    /**
+     * Informational - Blue
+     */
+    val Info = Color(0xFF2196F3)  // Blue 500
+    val InfoDark = Color(0xFF64B5F6)  // Blue 300 (for dark mode)
+    val InfoLight = Color(0xFFE3F2FD)  // Blue 50 (container)
+    val OnInfo = Color(0xFFFFFFFF)  // White text
+    val OnInfoDark = Color(0xFF0D47A1)  // Blue 900 text
+}
 
 /**
  * Intervention overlay color scheme

@@ -40,3 +40,17 @@ keystore.properties
 /docs/PREMIUM_FEATURES_RESEARCH_REPORT.md
 /docs/USER_RETENTION_AND_MONETIZATION_RECOMMENDATIONS.md
 /docs/FIRST_WEEK_RETENTION_TESTING_GUIDE.md
+/docs/SUPABASE_SETUP_COMPLETE.md
+/docs/SUPABASE_SCHEMA.md
+/docs/privacy-policy-template.md
+/docs/README.md
+/docs/OAUTH_SETUP_GUIDE.md
+/docs/functions/index.js
+/docs/firebase-data-deletion-guide.md
+/docs/public/delete-account.html
+/docs/AUTHENTICATION_STATUS.md
+/docs/functions/package.json
+
+/creating the SyncCoordinator to orchestrate sync operations across all entity types.
+/app/src/main/res/values/supabase.xml
+/docs/DESIGN_SYSTEM.md

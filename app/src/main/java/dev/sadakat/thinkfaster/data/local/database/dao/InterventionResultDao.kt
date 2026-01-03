@@ -229,6 +229,29 @@ interface InterventionResultDao {
         startTimestamp: Long,
         endTimestamp: Long
     ): List<DailyEffectivenessStat>
+
+    // ========== Sync Methods ==========
+
+    @Query("SELECT * FROM intervention_results WHERE user_id = :userId")
+    suspend fun getResultsByUserId(userId: String): List<InterventionResultEntity>
+
+    @Query("SELECT * FROM intervention_results WHERE sync_status = :status")
+    suspend fun getResultsBySyncStatus(status: String): List<InterventionResultEntity>
+
+    @Query("SELECT * FROM intervention_results WHERE user_id = :userId AND sync_status = :status")
+    suspend fun getResultsByUserAndSyncStatus(userId: String, status: String): List<InterventionResultEntity>
+
+    @Query("UPDATE intervention_results SET sync_status = :status, cloud_id = :cloudId, last_modified = :lastModified WHERE id = :id")
+    suspend fun updateSyncStatus(id: Long, status: String, cloudId: String?, lastModified: Long)
+
+    @Query("UPDATE intervention_results SET user_id = :userId WHERE id = :id")
+    suspend fun updateUserId(id: Long, userId: String)
+
+    @Query("UPDATE intervention_results SET last_modified = :lastModified WHERE id = :id")
+    suspend fun updateLastModified(id: Long, lastModified: Long)
+
+    @Query("SELECT * FROM intervention_results")
+    suspend fun getAllResults(): List<InterventionResultEntity>
 }
 
 /**

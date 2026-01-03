@@ -118,4 +118,37 @@ class StatsRepositoryImpl(
             upsertDailyStats(stats)
         }
     }
+
+    // ========== Sync Methods ==========
+
+    override suspend fun getStatsByUserId(userId: String): List<DailyStats> {
+        return dailyStatsDao.getStatsByUserId(userId).toDomain()
+    }
+
+    override suspend fun getUnsyncedStats(userId: String): List<DailyStats> {
+        return dailyStatsDao.getStatsByUserAndSyncStatus(userId, "PENDING").toDomain()
+    }
+
+    override suspend fun markStatsAsSynced(date: String, targetApp: String, cloudId: String) {
+        dailyStatsDao.updateSyncStatus(
+            date = date,
+            targetApp = targetApp,
+            status = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+    }
+
+    override suspend fun upsertStatsFromRemote(stats: DailyStats, cloudId: String) {
+        val entity = stats.toEntity().copy(
+            syncStatus = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+        dailyStatsDao.upsertDailyStats(entity)
+    }
+
+    override suspend fun updateStatsUserId(date: String, targetApp: String, userId: String) {
+        dailyStatsDao.updateUserId(date, targetApp, userId)
+    }
 }

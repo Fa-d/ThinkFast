@@ -4,6 +4,7 @@ import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 import dev.sadakat.thinkfaster.data.preferences.NotificationPreferences
 import dev.sadakat.thinkfaster.data.preferences.OnboardingQuestPreferences
 import dev.sadakat.thinkfaster.data.preferences.StreakFreezePreferences
+import dev.sadakat.thinkfaster.data.preferences.SyncPreferences
 import dev.sadakat.thinkfaster.data.repository.GoalRepositoryImpl
 import dev.sadakat.thinkfaster.data.repository.InterventionResultRepositoryImpl
 import dev.sadakat.thinkfaster.data.repository.SettingsRepositoryImpl
@@ -12,6 +13,12 @@ import dev.sadakat.thinkfaster.data.repository.StreakRecoveryRepositoryImpl
 import dev.sadakat.thinkfaster.data.repository.TrackedAppsRepositoryImpl
 import dev.sadakat.thinkfaster.data.repository.UsageRepositoryImpl
 import dev.sadakat.thinkfaster.data.repository.UserBaselineRepositoryImpl
+import dev.sadakat.thinkfaster.data.sync.PreferencesChangeListener
+import dev.sadakat.thinkfaster.data.sync.PreferencesSerializer
+import dev.sadakat.thinkfaster.data.sync.SettingsSyncManager
+import dev.sadakat.thinkfaster.data.sync.SyncCoordinator
+import dev.sadakat.thinkfaster.data.sync.backend.SupabaseSyncBackend
+import dev.sadakat.thinkfaster.data.sync.backend.SyncBackend
 import dev.sadakat.thinkfaster.domain.repository.GoalRepository
 import dev.sadakat.thinkfaster.domain.repository.InterventionResultRepository
 import dev.sadakat.thinkfaster.domain.repository.SettingsRepository
@@ -50,6 +57,11 @@ val repositoryModule = module {
     // NotificationPreferences (singleton) - Push Notification Strategy
     single {
         NotificationPreferences(androidContext())
+    }
+
+    // SyncPreferences (singleton) - Phase 5: Multi-device sync
+    single {
+        SyncPreferences(androidContext())
     }
 
     // UsageRepository
@@ -110,6 +122,56 @@ val repositoryModule = module {
         TrackedAppsRepositoryImpl(
             context = androidContext(),
             goalRepository = get()
+        )
+    }
+
+    // Phase 6 & 7: Settings Sync Components
+
+    // SyncBackend - Supabase (always available)
+    single<SyncBackend> {
+        SupabaseSyncBackend(androidContext())
+    }
+
+    // PreferencesSerializer - Serializes app preferences for sync
+    single {
+        PreferencesSerializer(
+            context = androidContext(),
+            interventionPrefs = get(),
+            notificationPrefs = get(),
+            questPrefs = get(),
+            streakFreezePrefs = get(),
+            settingsRepository = get<SettingsRepository>() as SettingsRepositoryImpl
+        )
+    }
+
+    // SettingsSyncManager - Manages settings sync with debouncing
+    single {
+        SettingsSyncManager(
+            syncBackend = get(),
+            preferencesSerializer = get(),
+            syncPreferences = get()
+        )
+    }
+
+    // PreferencesChangeListener - Auto-triggers sync on preference changes
+    single {
+        PreferencesChangeListener(
+            settingsSyncManager = get(),
+            syncPreferences = get()
+        )
+    }
+
+    // SyncCoordinator - Orchestrates sync operations across all entity types
+    single {
+        SyncCoordinator(
+            syncBackend = get(),
+            goalDao = get(),
+            usageSessionDao = get(),
+            usageEventDao = get(),
+            dailyStatsDao = get(),
+            interventionResultDao = get(),
+            streakRecoveryDao = get(),
+            userBaselineDao = get()
         )
     }
 }

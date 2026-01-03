@@ -241,4 +241,68 @@ class UsageRepositoryImpl(
     override suspend fun getSessionsWithHourOfDay(startDate: String, endDate: String): List<UsageSession> {
         return sessionDao.getSessionsWithHourOfDay(startDate, endDate).toDomain()
     }
+
+    // ========== Sync Methods for Sessions ==========
+
+    override suspend fun getSessionsByUserId(userId: String): List<UsageSession> {
+        return sessionDao.getSessionsByUserId(userId).toDomain()
+    }
+
+    override suspend fun getUnsyncedSessions(userId: String): List<UsageSession> {
+        return sessionDao.getSessionsByUserAndSyncStatus(userId, "PENDING").toDomain()
+    }
+
+    override suspend fun markSessionAsSynced(sessionId: Long, cloudId: String) {
+        sessionDao.updateSyncStatus(
+            id = sessionId,
+            status = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+    }
+
+    override suspend fun upsertSessionFromRemote(session: UsageSession, cloudId: String) {
+        val entity = session.toEntity().copy(
+            syncStatus = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+        sessionDao.insertSession(entity)
+    }
+
+    override suspend fun updateSessionUserId(sessionId: Long, userId: String) {
+        sessionDao.updateUserId(sessionId, userId)
+    }
+
+    // ========== Sync Methods for Events ==========
+
+    override suspend fun getEventsByUserId(userId: String): List<UsageEvent> {
+        return eventDao.getEventsByUserId(userId).toDomain()
+    }
+
+    override suspend fun getUnsyncedEvents(userId: String): List<UsageEvent> {
+        return eventDao.getEventsByUserAndSyncStatus(userId, "PENDING").toDomain()
+    }
+
+    override suspend fun markEventAsSynced(eventId: Long, cloudId: String) {
+        eventDao.updateSyncStatus(
+            id = eventId,
+            status = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+    }
+
+    override suspend fun upsertEventFromRemote(event: UsageEvent, cloudId: String) {
+        val entity = event.toEntity().copy(
+            syncStatus = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+        eventDao.insertEvent(entity)
+    }
+
+    override suspend fun updateEventUserId(eventId: Long, userId: String) {
+        eventDao.updateUserId(eventId, userId)
+    }
 }

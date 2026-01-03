@@ -1,6 +1,8 @@
 package dev.sadakat.thinkfaster.di
 
 import dev.sadakat.thinkfaster.presentation.analytics.AnalyticsViewModel
+import dev.sadakat.thinkfaster.presentation.auth.AccountManagementViewModel
+import dev.sadakat.thinkfaster.presentation.auth.LoginViewModel
 import dev.sadakat.thinkfaster.presentation.home.HomeViewModel
 import dev.sadakat.thinkfaster.presentation.manageapps.ManageAppsViewModel
 import dev.sadakat.thinkfaster.presentation.onboarding.OnboardingViewModel
@@ -8,6 +10,7 @@ import dev.sadakat.thinkfaster.presentation.overlay.ReminderOverlayViewModel
 import dev.sadakat.thinkfaster.presentation.overlay.TimerOverlayViewModel
 import dev.sadakat.thinkfaster.presentation.settings.GoalViewModel
 import dev.sadakat.thinkfaster.presentation.stats.StatsViewModel
+import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
@@ -76,6 +79,23 @@ val viewModelModule = module {
             getTrackedAppsWithDetailsUseCase = get(),
             getGoalProgressUseCase = get(),
             setGoalUseCase = get()
+        )
+    }
+
+    // Phase 5: Auth ViewModels
+    viewModel {
+        LoginViewModel(
+            syncPreferences = get(),
+            syncBackend = get(),
+            syncCoordinator = get(),
+            context = androidContext()
+        )
+    }
+    viewModel {
+        AccountManagementViewModel(
+            syncPreferences = get(),
+            syncBackend = get(),
+            context = androidContext()
         )
     }
 }

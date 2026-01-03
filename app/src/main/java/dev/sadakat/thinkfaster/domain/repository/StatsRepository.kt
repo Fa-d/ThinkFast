@@ -117,4 +117,31 @@ interface StatsRepository {
      * @param date the date to aggregate (YYYY-MM-DD)
      */
     suspend fun aggregateDailyStats(date: String)
+
+    // ========== Sync Methods ==========
+
+    /**
+     * Get all daily stats for a specific user
+     */
+    suspend fun getStatsByUserId(userId: String): List<DailyStats>
+
+    /**
+     * Get unsynced daily stats for a user (pending sync status)
+     */
+    suspend fun getUnsyncedStats(userId: String): List<DailyStats>
+
+    /**
+     * Mark daily stats as synced
+     */
+    suspend fun markStatsAsSynced(date: String, targetApp: String, cloudId: String)
+
+    /**
+     * Upsert daily stats from remote with sync metadata
+     */
+    suspend fun upsertStatsFromRemote(stats: DailyStats, cloudId: String)
+
+    /**
+     * Update user ID for daily stats
+     */
+    suspend fun updateStatsUserId(date: String, targetApp: String, userId: String)
 }

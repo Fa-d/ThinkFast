@@ -90,4 +90,27 @@ interface DailyStatsDao {
 
     @Query("SELECT * FROM daily_stats WHERE date = :date ORDER BY totalDuration DESC")
     fun observeStatsByDate(date: String): Flow<List<DailyStatsEntity>>
+
+    // ========== Sync Methods ==========
+
+    @Query("SELECT * FROM daily_stats WHERE user_id = :userId")
+    suspend fun getStatsByUserId(userId: String): List<DailyStatsEntity>
+
+    @Query("SELECT * FROM daily_stats WHERE sync_status = :status")
+    suspend fun getStatsBySyncStatus(status: String): List<DailyStatsEntity>
+
+    @Query("SELECT * FROM daily_stats WHERE user_id = :userId AND sync_status = :status")
+    suspend fun getStatsByUserAndSyncStatus(userId: String, status: String): List<DailyStatsEntity>
+
+    @Query("UPDATE daily_stats SET sync_status = :status, cloud_id = :cloudId, last_modified = :lastModified WHERE date = :date AND targetApp = :targetApp")
+    suspend fun updateSyncStatus(date: String, targetApp: String, status: String, cloudId: String?, lastModified: Long)
+
+    @Query("UPDATE daily_stats SET user_id = :userId WHERE date = :date AND targetApp = :targetApp")
+    suspend fun updateUserId(date: String, targetApp: String, userId: String)
+
+    @Query("UPDATE daily_stats SET last_modified = :lastModified WHERE date = :date AND targetApp = :targetApp")
+    suspend fun updateLastModified(date: String, targetApp: String, lastModified: Long)
+
+    @Query("SELECT * FROM daily_stats")
+    suspend fun getAllStats(): List<DailyStatsEntity>
 }

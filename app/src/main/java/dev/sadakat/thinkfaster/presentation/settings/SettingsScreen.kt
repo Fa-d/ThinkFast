@@ -25,9 +25,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import dev.sadakat.thinkfaster.data.preferences.SyncPreferences
 import dev.sadakat.thinkfaster.domain.model.AppSettings
 import dev.sadakat.thinkfaster.domain.model.GoalProgress
 import dev.sadakat.thinkfaster.presentation.navigation.Screen
+import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
@@ -506,6 +508,11 @@ fun SettingsScreen(
                         )
                     }
                 }
+            }
+
+            // Account & Sync card
+            item {
+                AccountAndSyncCard(navController = navController)
             }
 
             // Info section
@@ -1406,5 +1413,105 @@ private fun parseTime(timeString: String): Pair<Int, Int> {
     }
 
     return Pair(hour, minute)
+}
+
+/**
+ * Account & Sync card - shows authentication status and provides access to sync settings
+ */
+@Composable
+private fun AccountAndSyncCard(
+    navController: NavHostController,
+    syncPreferences: SyncPreferences = koinInject()
+) {
+    val isAuthenticated = syncPreferences.isAuthenticated()
+    val userEmail = syncPreferences.getUserEmail()
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                if (isAuthenticated) {
+                    navController.navigate(Screen.AccountManagement.route)
+                } else {
+                    navController.navigate(Screen.Login.route)
+                }
+            },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isAuthenticated) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = if (isAuthenticated) "☁️" else "🔐",
+                        fontSize = 24.sp
+                    )
+                    Text(
+                        text = "Account & Sync",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isAuthenticated) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (isAuthenticated) {
+                        "Signed in • Tap to manage"
+                    } else {
+                        "Sign in to sync your data across devices"
+                    },
+                    fontSize = 14.sp,
+                    color = if (isAuthenticated) {
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    lineHeight = 20.sp
+                )
+                // Show email below if authenticated
+                if (isAuthenticated && userEmail != null) {
+                    Text(
+                        text = userEmail,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = if (isAuthenticated) "Manage account" else "Sign in",
+                tint = if (isAuthenticated) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier
+                    .size(32.dp)
+                    .rotate(270f)
+            )
+        }
+    }
 }
 

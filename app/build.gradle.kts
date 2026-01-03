@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     // google-services plugin applied conditionally below
 }
@@ -21,6 +22,18 @@ android {
         versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Load Google Web Client ID from keystore.properties
+        val keystorePropertiesFile = rootProject.file("keystore.properties")
+        val keystoreProperties = Properties()
+        if (keystorePropertiesFile.exists()) {
+            keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+        }
+
+        // Google Sign-In Web Client ID (for Supabase integration)
+        // Stored in keystore.properties as: google_web_client_id=your_client_id
+        val googleWebClientId = keystoreProperties.getProperty("google_web_client_id", "")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${googleWebClientId}\"")
     }
 
     // Load keystore properties for release signing
@@ -53,8 +66,14 @@ android {
 
     buildTypes {
         debug {
+            // Completely disable Firebase Analytics
             manifestPlaceholders["firebaseAnalyticsCollectionEnabled"] = false
             manifestPlaceholders["firebaseCrashlyticsCollectionEnabled"] = false
+            // Disable automatic Firebase collection
+            manifestPlaceholders["firebaseAutomaticScreenReportingEnabled"] = false
+            // BuildConfig flags for runtime checks
+            buildConfigField("boolean", "ENABLE_ANALYTICS", "false")
+            buildConfigField("boolean", "ENABLE_CRASHLYTICS", "false")
         }
         release {
             isMinifyEnabled = true
@@ -65,10 +84,13 @@ android {
             signingConfig = signingConfigs.getByName("release")
             manifestPlaceholders["firebaseAnalyticsCollectionEnabled"] = true
             manifestPlaceholders["firebaseCrashlyticsCollectionEnabled"] = true
+            manifestPlaceholders["firebaseAutomaticScreenReportingEnabled"] = true
+            buildConfigField("boolean", "ENABLE_ANALYTICS", "true")
+            buildConfigField("boolean", "ENABLE_CRASHLYTICS", "true")
         }
     }
 
-    flavorDimensions += "persona"
+    flavorDimensions += listOf("persona", "backend")
 
     productFlavors {
         create("production") {
@@ -141,6 +163,12 @@ android {
             versionNameSuffix = "-newUser"
             buildConfigField("String", "USER_PERSONA", "\"NEW_USER\"")
         }
+
+        // Backend flavors for sync
+        create("selfHosted") {
+            dimension = "backend"
+            buildConfigField("String", "SYNC_BACKEND", "\"SELF_HOSTED\"")
+        }
     }
 
     compileOptions {
@@ -196,6 +224,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
+    // Serialization (required for Supabase models)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
     // ProfileInstaller
     implementation(libs.androidx.profileinstaller)
 
@@ -211,10 +242,20 @@ dependencies {
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
 
-    // Firebase Analytics
+    // Firebase (Analytics and Crashlytics only - no auth/sync)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics.ktx)
     implementation(libs.firebase.crashlytics.ktx)
+
+    // Authentication
+    implementation(libs.facebook.login)
+    implementation(libs.play.services.auth)
+
+    // Supabase (available in all variants)
+    implementation(libs.supabase.postgrest.kt)
+    implementation(libs.supabase.gotrue.kt)
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.core)
 
     // Testing
     testImplementation(libs.junit)

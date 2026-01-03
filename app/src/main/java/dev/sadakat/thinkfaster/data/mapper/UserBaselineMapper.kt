@@ -47,3 +47,10 @@ fun UserBaseline.toEntity(): UserBaselineEntity {
         timestamp = System.currentTimeMillis()
     )
 }
+
+/**
+ * Convert list of UserBaselineEntity to list of UserBaseline
+ */
+fun List<UserBaselineEntity>.toDomain(): List<UserBaseline> {
+    return map { it.toDomain() }
+}

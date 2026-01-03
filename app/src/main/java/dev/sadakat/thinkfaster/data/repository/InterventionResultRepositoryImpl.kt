@@ -215,4 +215,36 @@ class InterventionResultRepositoryImpl(
                 )
             }
     }
+
+    // ========== Sync Methods ==========
+
+    override suspend fun getResultsByUserId(userId: String): List<InterventionResult> {
+        return resultDao.getResultsByUserId(userId).toDomain()
+    }
+
+    override suspend fun getUnsyncedResults(userId: String): List<InterventionResult> {
+        return resultDao.getResultsByUserAndSyncStatus(userId, "PENDING").toDomain()
+    }
+
+    override suspend fun markResultAsSynced(resultId: Long, cloudId: String) {
+        resultDao.updateSyncStatus(
+            id = resultId,
+            status = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+    }
+
+    override suspend fun upsertResultFromRemote(result: InterventionResult, cloudId: String) {
+        val entity = result.toEntity().copy(
+            syncStatus = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+        resultDao.insertResult(entity)
+    }
+
+    override suspend fun updateResultUserId(resultId: Long, userId: String) {
+        resultDao.updateUserId(resultId, userId)
+    }
 }

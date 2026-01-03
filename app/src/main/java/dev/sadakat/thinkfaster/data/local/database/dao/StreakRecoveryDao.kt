@@ -38,4 +38,27 @@ interface StreakRecoveryDao {
 
     @Query("UPDATE streak_recovery SET notificationShown = 1 WHERE targetApp = :targetApp")
     suspend fun markNotificationShown(targetApp: String)
+
+    // ========== Sync Methods ==========
+
+    @Query("SELECT * FROM streak_recovery WHERE user_id = :userId")
+    suspend fun getRecoveriesByUserId(userId: String): List<StreakRecoveryEntity>
+
+    @Query("SELECT * FROM streak_recovery WHERE sync_status = :status")
+    suspend fun getRecoveriesBySyncStatus(status: String): List<StreakRecoveryEntity>
+
+    @Query("SELECT * FROM streak_recovery WHERE user_id = :userId AND sync_status = :status")
+    suspend fun getRecoveriesByUserAndSyncStatus(userId: String, status: String): List<StreakRecoveryEntity>
+
+    @Query("UPDATE streak_recovery SET sync_status = :status, cloud_id = :cloudId, last_modified = :lastModified WHERE targetApp = :targetApp")
+    suspend fun updateSyncStatus(targetApp: String, status: String, cloudId: String?, lastModified: Long)
+
+    @Query("UPDATE streak_recovery SET user_id = :userId WHERE targetApp = :targetApp")
+    suspend fun updateUserId(targetApp: String, userId: String)
+
+    @Query("UPDATE streak_recovery SET last_modified = :lastModified WHERE targetApp = :targetApp")
+    suspend fun updateLastModified(targetApp: String, lastModified: Long)
+
+    @Query("SELECT * FROM streak_recovery")
+    suspend fun getAllRecoveries(): List<StreakRecoveryEntity>
 }

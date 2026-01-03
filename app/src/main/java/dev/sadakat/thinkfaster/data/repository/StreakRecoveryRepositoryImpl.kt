@@ -59,4 +59,45 @@ class StreakRecoveryRepositoryImpl(
         val cutoffTimestamp = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(daysOld.toLong())
         streakRecoveryDao.deleteCompletedRecoveriesOlderThan(cutoffTimestamp)
     }
+
+    // ========== Sync Methods ==========
+
+    override suspend fun getRecoveriesByUserId(userId: String): List<StreakRecovery> {
+        return streakRecoveryDao.getRecoveriesByUserId(userId).toDomain()
+    }
+
+    override suspend fun getUnsyncedRecoveries(userId: String): List<StreakRecovery> {
+        return streakRecoveryDao.getRecoveriesByUserAndSyncStatus(userId, "PENDING").toDomain()
+    }
+
+    override suspend fun markRecoveryAsSynced(targetApp: String, cloudId: String) {
+        streakRecoveryDao.updateSyncStatus(
+            targetApp = targetApp,
+            status = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+    }
+
+    override suspend fun upsertRecoveryFromRemote(recovery: StreakRecovery, cloudId: String) {
+        val entity = StreakRecoveryEntity(
+            targetApp = recovery.targetApp,
+            previousStreak = recovery.previousStreak,
+            recoveryStartDate = recovery.recoveryStartDate,
+            currentRecoveryDays = recovery.currentRecoveryDays,
+            isRecoveryComplete = recovery.isRecoveryComplete,
+            recoveryCompletedDate = recovery.recoveryCompletedDate,
+            notificationShown = recovery.notificationShown,
+            timestamp = recovery.timestamp,
+            syncStatus = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis(),
+            userId = null  // Will be set by caller
+        )
+        streakRecoveryDao.upsertRecovery(entity)
+    }
+
+    override suspend fun updateRecoveryUserId(targetApp: String, userId: String) {
+        streakRecoveryDao.updateUserId(targetApp, userId)
+    }
 }

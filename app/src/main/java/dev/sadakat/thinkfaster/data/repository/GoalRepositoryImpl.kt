@@ -53,4 +53,36 @@ class GoalRepositoryImpl(
     override suspend fun deleteGoal(targetApp: String) {
         goalDao.deleteGoal(targetApp)
     }
+
+    // ========== Sync Methods ==========
+
+    override suspend fun getGoalsByUserId(userId: String): List<Goal> {
+        return goalDao.getGoalsByUserId(userId).toDomain()
+    }
+
+    override suspend fun getUnsyncedGoals(userId: String): List<Goal> {
+        return goalDao.getGoalsByUserAndSyncStatus(userId, "PENDING").toDomain()
+    }
+
+    override suspend fun markGoalAsSynced(targetApp: String, cloudId: String) {
+        goalDao.updateSyncStatus(
+            targetApp = targetApp,
+            status = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+    }
+
+    override suspend fun upsertGoalFromRemote(goal: Goal, cloudId: String) {
+        val entity = goal.toEntity().copy(
+            syncStatus = "SYNCED",
+            cloudId = cloudId,
+            lastModified = System.currentTimeMillis()
+        )
+        goalDao.upsertGoal(entity)
+    }
+
+    override suspend fun updateGoalUserId(targetApp: String, userId: String) {
+        goalDao.updateUserId(targetApp, userId)
+    }
 }

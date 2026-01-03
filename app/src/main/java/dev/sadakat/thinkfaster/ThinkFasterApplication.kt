@@ -6,12 +6,15 @@ import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.facebook.FacebookSdk
+import com.facebook.appevents.AppEventsLogger
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
 import dev.sadakat.thinkfaster.analytics.AppLifecycleObserver
 import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 import dev.sadakat.thinkfaster.data.preferences.NotificationPreferences
+import dev.sadakat.thinkfaster.data.sync.supabase.SupabaseClientProvider
 import dev.sadakat.thinkfaster.di.analyticsModule
 import dev.sadakat.thinkfaster.di.databaseModule
 import dev.sadakat.thinkfaster.di.repositoryModule
@@ -51,16 +54,35 @@ class ThinkFasterApplication : Application(), KoinComponent {
             )
         }
 
+        // Initialize Supabase client on main thread (required for lifecycle observers)
+        // This must be done before any sync operations run on background threads
+        try {
+            SupabaseClientProvider.getInstance(this)
+        } catch (e: Exception) {
+            // Supabase not available in this build variant (firebase/selfHosted)
+            // Silently ignore
+        }
+
+        // Initialize Facebook SDK for authentication
+        try {
+            FacebookSdk.sdkInitialize(applicationContext)
+            AppEventsLogger.activateApp(this)
+        } catch (e: Exception) {
+            // Facebook SDK initialization failed - likely missing Facebook App ID
+            // App will work but Facebook login won't be available
+        }
+
         // Set install date if first launch
         val interventionPrefs = InterventionPreferences(this)
         if (interventionPrefs.getInstallDate() == 0L) {
             interventionPrefs.setInstallDate(System.currentTimeMillis())
         }
 
-        // Initialize Firebase Crashlytics
-        // Note: This will only work if google-services.json is present
-        // Otherwise it will safely do nothing
-        initializeCrashlytics()
+        // Initialize Firebase Crashlytics ONLY for release builds
+        // Debug builds have analytics completely disabled via BuildConfig
+        if (BuildConfig.ENABLE_CRASHLYTICS) {
+            initializeCrashlytics()
+        }
 
         // Track app launch AFTER analytics is initialized
         val daysSinceInstall = interventionPrefs.getDaysSinceInstall()
@@ -183,6 +205,13 @@ class ThinkFasterApplication : Application(), KoinComponent {
 
         // Schedule daily analytics upload (runs every 24 hours when connected to WiFi and charging)
         analyticsManager.scheduleDailyUpload()
+
+        // Schedule background sync (Phase 4: Sync Worker)
+        // Only schedule if auto-sync is enabled
+        val syncPrefs = dev.sadakat.thinkfaster.data.preferences.SyncPreferences(this)
+        if (syncPrefs.isAutoSyncEnabled() && syncPrefs.isAuthenticated()) {
+            dev.sadakat.thinkfaster.util.SyncScheduler.schedulePeriodicSync(this)
+        }
     }
 
     /**

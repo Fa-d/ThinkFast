@@ -17,6 +17,8 @@
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <!-- Internet permission for authentication and sync -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name=".ThinkFasterApplication"
@@ -92,6 +94,39 @@
         <meta-data
             android:name="firebase_crashlytics_collection_enabled"
             android:value="${firebaseCrashlyticsCollectionEnabled}" />
+
+        <!-- Firebase Automatic Screen Reporting - disabled for debug builds -->
+        <meta-data
+            android:name="firebase_analytics_collection_deactivated"
+            android:value="${firebaseAnalyticsCollectionEnabled}" />
+
+        <meta-data
+            android:name="firebase_screen_reporting_enabled"
+            android:value="${firebaseAutomaticScreenReportingEnabled}" />
+
+        <!-- Facebook SDK Configuration -->
+        <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            android:value="@string/facebook_app_id" />
+        <meta-data
+            android:name="com.facebook.sdk.ClientToken"
+            android:value="@string/facebook_client_token" />
+
+        <!-- Facebook Login Activity -->
+        <activity
+            android:name="com.facebook.FacebookActivity"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+            android:label="@string/app_name" />
+        <activity
+            android:name="com.facebook.CustomTabActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/fb_login_protocol_scheme" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

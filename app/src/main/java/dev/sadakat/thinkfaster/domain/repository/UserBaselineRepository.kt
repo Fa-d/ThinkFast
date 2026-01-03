@@ -27,4 +27,31 @@ interface UserBaselineRepository {
      * @return Flow of UserBaseline updates
      */
     fun observeBaseline(): Flow<UserBaseline?>
+
+    // ========== Sync Methods ==========
+
+    /**
+     * Get baseline for a specific user
+     */
+    suspend fun getBaselineByUserId(userId: String): UserBaseline?
+
+    /**
+     * Get unsynced baselines for a user (pending sync status)
+     */
+    suspend fun getUnsyncedBaselines(userId: String): List<UserBaseline>
+
+    /**
+     * Mark baseline as synced
+     */
+    suspend fun markBaselineAsSynced(baselineId: Int, cloudId: String)
+
+    /**
+     * Upsert baseline from remote with sync metadata
+     */
+    suspend fun upsertBaselineFromRemote(baseline: UserBaseline, cloudId: String)
+
+    /**
+     * Update user ID for baseline
+     */
+    suspend fun updateBaselineUserId(baselineId: Int, userId: String)
 }

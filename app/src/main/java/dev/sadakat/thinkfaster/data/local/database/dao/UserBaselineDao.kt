@@ -42,4 +42,24 @@ interface UserBaselineDao {
      */
     @Query("DELETE FROM user_baseline")
     suspend fun deleteBaseline()
+
+    // ========== Sync Methods ==========
+
+    @Query("SELECT * FROM user_baseline WHERE user_id = :userId")
+    suspend fun getBaselineByUserId(userId: String): UserBaselineEntity?
+
+    @Query("SELECT * FROM user_baseline WHERE sync_status = :status")
+    suspend fun getBaselinesBySyncStatus(status: String): List<UserBaselineEntity>
+
+    @Query("SELECT * FROM user_baseline WHERE user_id = :userId AND sync_status = :status")
+    suspend fun getBaselinesByUserAndSyncStatus(userId: String, status: String): List<UserBaselineEntity>
+
+    @Query("UPDATE user_baseline SET sync_status = :status, cloud_id = :cloudId, last_modified = :lastModified WHERE id = :id")
+    suspend fun updateSyncStatus(id: Int, status: String, cloudId: String?, lastModified: Long)
+
+    @Query("UPDATE user_baseline SET user_id = :userId WHERE id = :id")
+    suspend fun updateUserId(id: Int, userId: String)
+
+    @Query("UPDATE user_baseline SET last_modified = :lastModified WHERE id = :id")
+    suspend fun updateLastModified(id: Int, lastModified: Long)
 }

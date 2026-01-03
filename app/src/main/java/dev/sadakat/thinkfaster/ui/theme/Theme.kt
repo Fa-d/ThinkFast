@@ -17,20 +17,20 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 /**
- * Light color scheme with better contrast and accessibility
+ * Light color scheme with blue primary (based on iOS reference)
  */
 private val LightColorScheme = lightColorScheme(
-    // Primary colors - calm purple tones
-    primary = Color(0xFF6750A4),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFEADDFF),
-    onPrimaryContainer = Color(0xFF21005E),
+    // Primary colors - blue tones (iOS-inspired)
+    primary = PrimaryColors.Blue500,
+    onPrimary = PrimaryColors.OnPrimary,
+    primaryContainer = PrimaryColors.Blue50,
+    onPrimaryContainer = PrimaryColors.OnPrimaryDark,
 
-    // Secondary colors - soft teal tones for better distinction
-    secondary = Color(0xFF006C4C),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFF89F8C7),
-    onSecondaryContainer = Color(0xFF002114),
+    // Secondary colors - purple tones for distinction
+    secondary = SecondaryColors.Purple500,
+    onSecondary = SecondaryColors.OnSecondary,
+    secondaryContainer = SecondaryColors.Purple50,
+    onSecondaryContainer = SecondaryColors.OnSecondaryDark,
 
     // Tertiary colors
     tertiary = Color(0xFF7D5260),
@@ -39,10 +39,10 @@ private val LightColorScheme = lightColorScheme(
     onTertiaryContainer = Color(0xFF31111D),
 
     // Error colors - high contrast for visibility
-    error = Color(0xFFBA1A1A),
-    onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF410002),
+    error = SemanticColors.Error,
+    onError = SemanticColors.OnError,
+    errorContainer = SemanticColors.ErrorLight,
+    onErrorContainer = SemanticColors.OnErrorDark,
 
     // Background colors - warm off-white for reduced eye strain
     background = Color(0xFFFFFBFE),
@@ -59,27 +59,27 @@ private val LightColorScheme = lightColorScheme(
     // Inverse colors for elevated elements
     inverseSurface = Color(0xFF313033),
     inverseOnSurface = Color(0xFFF4EFF4),
-    inversePrimary = Color(0xFFD0BCFF),
+    inversePrimary = PrimaryColors.Blue300,
 
     // scrim for overlays
     scrim = Color(0xFF000000)
 )
 
 /**
- * Dark color scheme with improved contrast and readability
+ * Dark color scheme with blue primary (based on iOS reference)
  */
 private val DarkColorScheme = darkColorScheme(
-    // Primary colors - lighter purples for dark backgrounds
-    primary = Color(0xFFD0BCFF),
-    onPrimary = Color(0xFF381E72),
-    primaryContainer = Color(0xFF4F378B),
-    onPrimaryContainer = Color(0xFFEADDFF),
+    // Primary colors - lighter blues for dark backgrounds
+    primary = PrimaryColors.Blue300,
+    onPrimary = PrimaryColors.OnPrimaryDark,
+    primaryContainer = PrimaryColors.Blue800,
+    onPrimaryContainer = PrimaryColors.Blue50,
 
-    // Secondary colors
-    secondary = Color(0xFF6CDBAA),
-    onSecondary = Color(0xFF003828),
-    secondaryContainer = Color(0xFF005138),
-    onSecondaryContainer = Color(0xFF89F8C7),
+    // Secondary colors - lighter purples for dark backgrounds
+    secondary = SecondaryColors.Purple300,
+    onSecondary = SecondaryColors.OnSecondaryDark,
+    secondaryContainer = SecondaryColors.Purple800,
+    onSecondaryContainer = SecondaryColors.Purple50,
 
     // Tertiary colors
     tertiary = Color(0xFFEFB8C8),
@@ -88,12 +88,12 @@ private val DarkColorScheme = darkColorScheme(
     onTertiaryContainer = Color(0xFFFFD9E3),
 
     // Error colors
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
+    error = SemanticColors.ErrorDark,
+    onError = SemanticColors.OnErrorDark,
     errorContainer = Color(0xFF93000A),
-    onErrorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = SemanticColors.ErrorLight,
 
-    // Background colors - true black for OLED efficiency
+    // Background colors - dark gray for OLED efficiency
     background = Color(0xFF1C1B1F),
     onBackground = Color(0xFFE6E1E5),
     surface = Color(0xFF1C1B1F),
@@ -108,7 +108,7 @@ private val DarkColorScheme = darkColorScheme(
     // Inverse colors
     inverseSurface = Color(0xFFE6E1E5),
     inverseOnSurface = Color(0xFF313033),
-    inversePrimary = Color(0xFF6750A4),
+    inversePrimary = PrimaryColors.Blue500,
 
     // scrim for overlays
     scrim = Color(0xFF000000)

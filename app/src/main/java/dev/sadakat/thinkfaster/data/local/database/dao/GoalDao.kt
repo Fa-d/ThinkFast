@@ -40,4 +40,24 @@ interface GoalDao {
 
     @Query("DELETE FROM goals WHERE targetApp = :targetApp")
     suspend fun deleteGoal(targetApp: String)
+
+    // ========== Sync Methods ==========
+
+    @Query("SELECT * FROM goals WHERE user_id = :userId")
+    suspend fun getGoalsByUserId(userId: String): List<GoalEntity>
+
+    @Query("SELECT * FROM goals WHERE sync_status = :status")
+    suspend fun getGoalsBySyncStatus(status: String): List<GoalEntity>
+
+    @Query("SELECT * FROM goals WHERE user_id = :userId AND sync_status = :status")
+    suspend fun getGoalsByUserAndSyncStatus(userId: String, status: String): List<GoalEntity>
+
+    @Query("UPDATE goals SET sync_status = :status, cloud_id = :cloudId, last_modified = :lastModified WHERE targetApp = :targetApp")
+    suspend fun updateSyncStatus(targetApp: String, status: String, cloudId: String?, lastModified: Long)
+
+    @Query("UPDATE goals SET user_id = :userId WHERE targetApp = :targetApp")
+    suspend fun updateUserId(targetApp: String, userId: String)
+
+    @Query("UPDATE goals SET last_modified = :lastModified WHERE targetApp = :targetApp")
+    suspend fun updateLastModified(targetApp: String, lastModified: Long)
 }

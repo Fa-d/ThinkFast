@@ -40,4 +40,27 @@ interface UsageEventDao {
 
     @Query("DELETE FROM usage_events WHERE timestamp < :cutoffTimestamp")
     suspend fun deleteEventsOlderThan(cutoffTimestamp: Long): Int
+
+    // ========== Sync Methods ==========
+
+    @Query("SELECT * FROM usage_events WHERE user_id = :userId")
+    suspend fun getEventsByUserId(userId: String): List<UsageEventEntity>
+
+    @Query("SELECT * FROM usage_events WHERE sync_status = :status")
+    suspend fun getEventsBySyncStatus(status: String): List<UsageEventEntity>
+
+    @Query("SELECT * FROM usage_events WHERE user_id = :userId AND sync_status = :status")
+    suspend fun getEventsByUserAndSyncStatus(userId: String, status: String): List<UsageEventEntity>
+
+    @Query("UPDATE usage_events SET sync_status = :status, cloud_id = :cloudId, last_modified = :lastModified WHERE id = :id")
+    suspend fun updateSyncStatus(id: Long, status: String, cloudId: String?, lastModified: Long)
+
+    @Query("UPDATE usage_events SET user_id = :userId WHERE id = :id")
+    suspend fun updateUserId(id: Long, userId: String)
+
+    @Query("UPDATE usage_events SET last_modified = :lastModified WHERE id = :id")
+    suspend fun updateLastModified(id: Long, lastModified: Long)
+
+    @Query("SELECT * FROM usage_events")
+    suspend fun getAllEvents(): List<UsageEventEntity>
 }

@@ -75,6 +75,16 @@ sealed class Screen(val route: String) {
      * Manage Apps screen - select and manage tracked apps with goals
      */
     data object ManageApps : Screen("manage_apps")
+
+    /**
+     * Login screen - social authentication (Facebook/Google)
+     */
+    data object Login : Screen("login")
+
+    /**
+     * Account Management screen - view account info, sign out, delete account
+     */
+    data object AccountManagement : Screen("account_management")
 }
 
 /**

@@ -12,6 +12,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import dev.sadakat.thinkfaster.analytics.FirebaseAnalyticsReporter
 import dev.sadakat.thinkfaster.presentation.analytics.AnalyticsScreen
+import dev.sadakat.thinkfaster.presentation.auth.AccountManagementScreen
+import dev.sadakat.thinkfaster.presentation.auth.LoginScreen
 import dev.sadakat.thinkfaster.presentation.home.HomeScreen
 import dev.sadakat.thinkfaster.presentation.manageapps.ManageAppsScreen
 import dev.sadakat.thinkfaster.presentation.onboarding.OnboardingScreen
@@ -172,6 +174,32 @@ fun NavGraph(
                 onBack = { navController.popBackStack() }
             )
         }
+
+        // Login screen - social authentication (no bottom nav)
+        composable(route = Screen.Login.route) {
+            LoginScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onLoginSuccess = {
+                    // Navigate to Settings after successful login
+                    navController.navigate(Screen.Settings.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Account Management screen - account info, sign out, delete (no bottom nav)
+        composable(route = Screen.AccountManagement.route) {
+            AccountManagementScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSignedOut = {
+                    // Navigate to Settings after sign out
+                    navController.navigate(Screen.Settings.route) {
+                        popUpTo(Screen.AccountManagement.route) { inclusive = true }
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -194,6 +222,8 @@ private fun getScreenName(route: String?): String {
         Screen.Analytics.route -> "Analytics"
         Screen.ThemeAppearance.route -> "ThemeAppearance"
         Screen.ManageApps.route -> "ManageApps"
+        Screen.Login.route -> "Login"
+        Screen.AccountManagement.route -> "AccountManagement"
         else -> route?.substringBeforeLast("/")?.substringAfterLast("/") ?: "Unknown"
     }
 }

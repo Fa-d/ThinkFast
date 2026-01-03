@@ -29,7 +29,7 @@ import dev.sadakat.thinkfaster.data.local.database.entities.UsageSessionEntity
         StreakRecoveryEntity::class,  // Broken Streak Recovery feature
         UserBaselineEntity::class  // First-Week Retention feature
     ],
-    version = 5,  // Phase 1: Bumped for feedback system
+    version = 6,  // Phase 2: Bumped for sync columns
     exportSchema = true
 )
 abstract class ThinkFastDatabase : RoomDatabase() {
@@ -240,6 +240,49 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
             ON intervention_results(user_feedback)
             """.trimIndent()
         )
+    }
+}
+
+/**
+ * Migration from version 5 to 6
+ * Phase 2: Adds sync metadata columns to all tables for multi-device sync support
+ * Columns added: user_id, sync_status, last_modified, cloud_id
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        val tables = listOf(
+            "goals",
+            "usage_sessions",
+            "usage_events",
+            "daily_stats",
+            "intervention_results",
+            "streak_recovery",
+            "user_baseline"
+        )
+
+        tables.forEach { table ->
+            // Add sync metadata columns
+            database.execSQL(
+                "ALTER TABLE $table ADD COLUMN user_id TEXT DEFAULT NULL"
+            )
+            database.execSQL(
+                "ALTER TABLE $table ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'PENDING'"
+            )
+            database.execSQL(
+                "ALTER TABLE $table ADD COLUMN last_modified INTEGER NOT NULL DEFAULT 0"
+            )
+            database.execSQL(
+                "ALTER TABLE $table ADD COLUMN cloud_id TEXT DEFAULT NULL"
+            )
+
+            // Create indices for sync queries
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_${table}_user_id ON $table(user_id)"
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_${table}_sync_status ON $table(sync_status)"
+            )
+        }
     }
 }
 

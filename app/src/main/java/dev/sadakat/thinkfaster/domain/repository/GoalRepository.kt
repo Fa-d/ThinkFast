@@ -60,4 +60,39 @@ interface GoalRepository {
      * @param targetApp the package name of the target app
      */
     suspend fun deleteGoal(targetApp: String)
+
+    // ========== Sync Methods ==========
+
+    /**
+     * Get all goals for a specific user
+     * @param userId the user ID
+     */
+    suspend fun getGoalsByUserId(userId: String): List<Goal>
+
+    /**
+     * Get unsynced goals for a user (pending sync status)
+     * @param userId the user ID
+     */
+    suspend fun getUnsyncedGoals(userId: String): List<Goal>
+
+    /**
+     * Mark a goal as synced
+     * @param targetApp the package name of the target app
+     * @param cloudId the cloud document ID
+     */
+    suspend fun markGoalAsSynced(targetApp: String, cloudId: String)
+
+    /**
+     * Upsert a goal from remote with sync metadata
+     * @param goal the goal to insert/update
+     * @param cloudId the cloud document ID
+     */
+    suspend fun upsertGoalFromRemote(goal: Goal, cloudId: String)
+
+    /**
+     * Update user ID for a goal
+     * @param targetApp the package name of the target app
+     * @param userId the user ID
+     */
+    suspend fun updateGoalUserId(targetApp: String, userId: String)
 }

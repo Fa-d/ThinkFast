@@ -1,5 +1,6 @@
 package dev.sadakat.thinkfaster.data.local.database.entities
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -22,5 +23,18 @@ data class UserBaselineEntity(
     val facebookAverageMinutes: Int,          // Facebook baseline
     val instagramAverageMinutes: Int,         // Instagram baseline
     val calculatedDate: String,               // When baseline was calculated
-    val timestamp: Long                       // System.currentTimeMillis()
+    val timestamp: Long,                      // System.currentTimeMillis()
+
+    // Sync metadata for multi-device sync
+    @ColumnInfo(name = "user_id", defaultValue = "NULL")
+    val userId: String? = null,
+
+    @ColumnInfo(name = "sync_status", defaultValue = "PENDING")
+    val syncStatus: String = "PENDING",
+
+    @ColumnInfo(name = "last_modified", defaultValue = "0")
+    val lastModified: Long = System.currentTimeMillis(),
+
+    @ColumnInfo(name = "cloud_id", defaultValue = "NULL")
+    val cloudId: String? = null
 )

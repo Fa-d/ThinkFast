@@ -222,4 +222,58 @@ interface UsageRepository {
      * Get all sessions with their hour of day extracted
      */
     suspend fun getSessionsWithHourOfDay(startDate: String, endDate: String): List<UsageSession>
+
+    // ========== Sync Methods for Sessions ==========
+
+    /**
+     * Get all sessions for a specific user
+     */
+    suspend fun getSessionsByUserId(userId: String): List<UsageSession>
+
+    /**
+     * Get unsynced sessions for a user (pending sync status)
+     */
+    suspend fun getUnsyncedSessions(userId: String): List<UsageSession>
+
+    /**
+     * Mark a session as synced
+     */
+    suspend fun markSessionAsSynced(sessionId: Long, cloudId: String)
+
+    /**
+     * Upsert a session from remote with sync metadata
+     */
+    suspend fun upsertSessionFromRemote(session: UsageSession, cloudId: String)
+
+    /**
+     * Update user ID for a session
+     */
+    suspend fun updateSessionUserId(sessionId: Long, userId: String)
+
+    // ========== Sync Methods for Events ==========
+
+    /**
+     * Get all events for a specific user
+     */
+    suspend fun getEventsByUserId(userId: String): List<UsageEvent>
+
+    /**
+     * Get unsynced events for a user (pending sync status)
+     */
+    suspend fun getUnsyncedEvents(userId: String): List<UsageEvent>
+
+    /**
+     * Mark an event as synced
+     */
+    suspend fun markEventAsSynced(eventId: Long, cloudId: String)
+
+    /**
+     * Upsert an event from remote with sync metadata
+     */
+    suspend fun upsertEventFromRemote(event: UsageEvent, cloudId: String)
+
+    /**
+     * Update user ID for an event
+     */
+    suspend fun updateEventUserId(eventId: Long, userId: String)
 }

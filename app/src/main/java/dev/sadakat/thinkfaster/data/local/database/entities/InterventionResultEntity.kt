@@ -59,5 +59,18 @@ data class InterventionResultEntity(
     // Outcome (optional - filled after session ends)
     val finalSessionDurationMs: Long?,    // Total session duration
     val sessionEndedNormally: Boolean?,   // true if ended normally, false if force-closed
-    val timestamp: Long                   // When intervention was shown
+    val timestamp: Long,                  // When intervention was shown
+
+    // Sync metadata for multi-device sync
+    @ColumnInfo(name = "user_id", defaultValue = "NULL")
+    val userId: String? = null,
+
+    @ColumnInfo(name = "sync_status", defaultValue = "PENDING")
+    val syncStatus: String = "PENDING",
+
+    @ColumnInfo(name = "last_modified", defaultValue = "0")
+    val lastModified: Long = System.currentTimeMillis(),
+
+    @ColumnInfo(name = "cloud_id", defaultValue = "NULL")
+    val cloudId: String? = null
 )

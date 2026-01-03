@@ -34,3 +34,10 @@ fun StreakRecovery.toEntity(): StreakRecoveryEntity {
         timestamp = timestamp
     )
 }
+
+/**
+ * Convert list of StreakRecoveryEntity to list of StreakRecovery
+ */
+fun List<StreakRecoveryEntity>.toDomain(): List<StreakRecovery> {
+    return map { it.toDomain() }
+}

@@ -152,4 +152,27 @@ interface UsageSessionDao {
         ORDER BY startTimestamp ASC
     """)
     suspend fun getSessionsWithHourOfDay(startDate: String, endDate: String): List<UsageSessionEntity>
+
+    // ========== Sync Methods ==========
+
+    @Query("SELECT * FROM usage_sessions WHERE user_id = :userId")
+    suspend fun getSessionsByUserId(userId: String): List<UsageSessionEntity>
+
+    @Query("SELECT * FROM usage_sessions WHERE sync_status = :status")
+    suspend fun getSessionsBySyncStatus(status: String): List<UsageSessionEntity>
+
+    @Query("SELECT * FROM usage_sessions WHERE user_id = :userId AND sync_status = :status")
+    suspend fun getSessionsByUserAndSyncStatus(userId: String, status: String): List<UsageSessionEntity>
+
+    @Query("UPDATE usage_sessions SET sync_status = :status, cloud_id = :cloudId, last_modified = :lastModified WHERE id = :id")
+    suspend fun updateSyncStatus(id: Long, status: String, cloudId: String?, lastModified: Long)
+
+    @Query("UPDATE usage_sessions SET user_id = :userId WHERE id = :id")
+    suspend fun updateUserId(id: Long, userId: String)
+
+    @Query("UPDATE usage_sessions SET last_modified = :lastModified WHERE id = :id")
+    suspend fun updateLastModified(id: Long, lastModified: Long)
+
+    @Query("SELECT * FROM usage_sessions")
+    suspend fun getAllSessions(): List<UsageSessionEntity>
 }

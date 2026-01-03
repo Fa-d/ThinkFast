@@ -177,6 +177,33 @@ interface InterventionResultRepository {
         startTimestamp: Long,
         endTimestamp: Long
     ): List<DailyEffectivenessStat>
+
+    // ========== Sync Methods ==========
+
+    /**
+     * Get all intervention results for a specific user
+     */
+    suspend fun getResultsByUserId(userId: String): List<InterventionResult>
+
+    /**
+     * Get unsynced intervention results for a user (pending sync status)
+     */
+    suspend fun getUnsyncedResults(userId: String): List<InterventionResult>
+
+    /**
+     * Mark an intervention result as synced
+     */
+    suspend fun markResultAsSynced(resultId: Long, cloudId: String)
+
+    /**
+     * Upsert an intervention result from remote with sync metadata
+     */
+    suspend fun upsertResultFromRemote(result: InterventionResult, cloudId: String)
+
+    /**
+     * Update user ID for an intervention result
+     */
+    suspend fun updateResultUserId(resultId: Long, userId: String)
 }
 
 /**
