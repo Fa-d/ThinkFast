@@ -2,6 +2,8 @@ package dev.sadakat.thinkfaster.presentation.home
 
 import android.app.ActivityManager
 import android.content.Context
+import android.graphics.drawable.Drawable
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.sadakat.thinkfaster.analytics.AnalyticsManager
@@ -35,10 +37,13 @@ import java.util.concurrent.TimeUnit
  * Phase 1.2: Enhanced with "Today at a Glance" card showing usage, goals, and streaks
  * Broken Streak Recovery: Added freeze and recovery support
  * First-Week Retention: Added quest and baseline tracking
+ * Per-App Goals: Added tracked apps goal management
  */
 class HomeViewModel(
+    private val context: Context,
     private val usageRepository: UsageRepository,
     private val goalRepository: GoalRepository,
+    private val trackedAppsRepository: dev.sadakat.thinkfaster.domain.repository.TrackedAppsRepository,
     private val getStreakFreezeStatusUseCase: GetStreakFreezeStatusUseCase,
     private val activateStreakFreezeUseCase: ActivateStreakFreezeUseCase,
     private val getRecoveryProgressUseCase: GetRecoveryProgressUseCase,
@@ -47,7 +52,8 @@ class HomeViewModel(
     private val getOnboardingQuestStatusUseCase: GetOnboardingQuestStatusUseCase,
     private val baselineRepository: UserBaselineRepository,
     private val questPreferences: OnboardingQuestPreferences,
-    private val analyticsManager: AnalyticsManager
+    private val analyticsManager: AnalyticsManager,
+    private val getInstalledAppsUseCase: dev.sadakat.thinkfaster.domain.usecase.apps.GetInstalledAppsUseCase
 ) : ViewModel() {
 
     private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -57,6 +63,7 @@ class HomeViewModel(
 
     /**
      * Load today's usage summary with goals and streaks
+     * Calculates aggregated data across ALL tracked apps
      * @param isRefresh true for periodic refresh, false for initial load
      */
     fun loadTodaySummary(isRefresh: Boolean = false) {
@@ -69,58 +76,56 @@ class HomeViewModel(
                     _uiState.value = _uiState.value.copy(isLoading = true)
                 }
 
-                // Get usage for both apps
-                val facebookUsageMs = usageRepository.getTodayUsageForApp("com.facebook.katana")
-                val instagramUsageMs = usageRepository.getTodayUsageForApp("com.instagram.android")
-                val totalUsageMs = facebookUsageMs + instagramUsageMs
+                // Get all tracked apps and calculate aggregated usage
+                val trackedPackages = trackedAppsRepository.getTrackedApps()
 
-                // Get goals
-                val facebookGoal = goalRepository.getGoalByApp("com.facebook.katana")
-                val instagramGoal = goalRepository.getGoalByApp("com.instagram.android")
+                // Calculate total usage across all tracked apps
+                var totalUsageMs = 0L
+                var combinedGoalMinutes = 0
 
-                // Calculate combined goal (use max if both exist, otherwise single goal)
-                val combinedGoalMinutes = when {
-                    facebookGoal != null && instagramGoal != null -> {
-                        // Both have goals - use combined limit
-                        facebookGoal.dailyLimitMinutes + instagramGoal.dailyLimitMinutes
+                trackedPackages.forEach { packageName ->
+                    totalUsageMs += usageRepository.getTodayUsageForApp(packageName)
+                    val goal = goalRepository.getGoalByApp(packageName)
+                    if (goal != null) {
+                        combinedGoalMinutes += goal.dailyLimitMinutes
                     }
-                    facebookGoal != null -> facebookGoal.dailyLimitMinutes
-                    instagramGoal != null -> instagramGoal.dailyLimitMinutes
-                    else -> null
                 }
+
+                // If no tracked apps have goals set, combinedGoalMinutes remains 0 (no goal)
+                val finalGoalMinutes = if (combinedGoalMinutes > 0) combinedGoalMinutes else null
 
                 // Get current streak (system-wide)
                 val currentStreak = usageRepository.getCurrentStreak()
 
                 // Calculate progress
                 val usageMinutes = TimeUnit.MILLISECONDS.toMinutes(totalUsageMs).toInt()
-                val remainingMinutes = if (combinedGoalMinutes != null) {
-                    (combinedGoalMinutes - usageMinutes).coerceAtLeast(0)
+                val remainingMinutes = if (finalGoalMinutes != null) {
+                    (finalGoalMinutes - usageMinutes).coerceAtLeast(0)
                 } else {
                     null
                 }
 
-                val progressPercentage = if (combinedGoalMinutes != null && combinedGoalMinutes > 0) {
-                    ((usageMinutes.toFloat() / combinedGoalMinutes) * 100).toInt().coerceAtMost(100)
+                val progressPercentage = if (finalGoalMinutes != null && finalGoalMinutes > 0) {
+                    ((usageMinutes.toFloat() / finalGoalMinutes) * 100).toInt().coerceAtMost(100)
                 } else {
                     null
                 }
 
-                val isOverLimit = combinedGoalMinutes != null && usageMinutes > combinedGoalMinutes
+                val isOverLimit = finalGoalMinutes != null && usageMinutes > finalGoalMinutes
 
                 // Determine celebration message
                 val celebrationMessage = when {
-                    combinedGoalMinutes == null -> null
+                    finalGoalMinutes == null -> null
                     isOverLimit -> null // No celebration if over limit
-                    remainingMinutes != null && remainingMinutes > combinedGoalMinutes / 2 -> {
+                    remainingMinutes != null && remainingMinutes > finalGoalMinutes / 2 -> {
                         // More than 50% remaining
                         "Great start! 🌟"
                     }
                     remainingMinutes != null && remainingMinutes > 0 -> {
                         // Some remaining, but less than 50%
-                        "$remainingMinutes min left today! 💪"
+                        "Stay strong! You've got this! 💪"
                     }
-                    usageMinutes == combinedGoalMinutes -> {
+                    usageMinutes == finalGoalMinutes -> {
                         // Exactly at goal
                         "Perfect! Right on target! 🎯"
                     }
@@ -131,13 +136,13 @@ class HomeViewModel(
                     isLoading = false,
                     isRefreshing = false,
                     totalUsageMinutes = usageMinutes,
-                    goalMinutes = combinedGoalMinutes,
+                    goalMinutes = finalGoalMinutes,
                     remainingMinutes = remainingMinutes,
                     progressPercentage = progressPercentage,
                     currentStreak = currentStreak,
                     isOverLimit = isOverLimit,
                     celebrationMessage = celebrationMessage,
-                    hasGoalsSet = combinedGoalMinutes != null
+                    hasGoalsSet = finalGoalMinutes != null
                 )
 
                 // Update freeze button visibility based on new usage data
@@ -437,6 +442,225 @@ class HomeViewModel(
     }
 
     /**
+     * Load tracked apps with their goals and progress
+     * Per-App Goals feature
+     */
+    fun loadTrackedAppsGoals() {
+        viewModelScope.launch {
+            try {
+                val trackedPackages = trackedAppsRepository.getTrackedApps()
+                val pm = context.packageManager
+
+                val appsWithGoals = trackedPackages.mapNotNull { packageName ->
+                    try {
+                        // Get app info
+                        val appInfo = pm.getApplicationInfo(packageName, 0)
+                        val appName = pm.getApplicationLabel(appInfo).toString()
+                        val appIcon = pm.getApplicationIcon(appInfo)
+
+                        // Get goal (may be null if no goal set yet)
+                        val goal = goalRepository.getGoalByApp(packageName)
+
+                        // Get today's usage
+                        val usageMs = usageRepository.getTodayUsageForApp(packageName)
+                        val usageMinutes = TimeUnit.MILLISECONDS.toMinutes(usageMs).toInt()
+
+                        // Calculate progress
+                        val remainingMinutes = goal?.dailyLimitMinutes?.let { limit ->
+                            (limit - usageMinutes).coerceAtLeast(0)
+                        }
+
+                        val percentageUsed = goal?.dailyLimitMinutes?.let { limit ->
+                            if (limit > 0) {
+                                ((usageMinutes.toFloat() / limit) * 100).toInt()
+                            } else null
+                        }
+
+                        val isOverLimit = goal?.dailyLimitMinutes?.let { limit ->
+                            usageMinutes > limit
+                        } ?: false
+
+                        // Determine streak color from goal
+                        val streakColor = if (goal != null) {
+                            dev.sadakat.thinkfaster.ui.theme.AppColors.Streak.getColorForStreak(goal.currentStreak)
+                        } else {
+                            androidx.compose.ui.graphics.Color.Gray
+                        }
+
+                        PerAppGoalUiModel(
+                            packageName = packageName,
+                            appName = appName,
+                            appIcon = appIcon,
+                            goal = goal,  // Goal object as per plan specification
+                            todayUsageMinutes = usageMinutes,
+                            remainingMinutes = remainingMinutes,
+                            percentageUsed = percentageUsed,
+                            isOverLimit = isOverLimit,
+                            streakColor = streakColor
+                        )
+                    } catch (e: Exception) {
+                        // Skip apps that can't be loaded
+                        null
+                    }
+                }
+
+                _uiState.value = _uiState.value.copy(trackedAppsGoals = appsWithGoals)
+            } catch (e: Exception) {
+                // Silently fail - tracked apps feature is optional
+            }
+        }
+    }
+
+    /**
+     * Load curated apps for the "Add Apps" bottom sheet
+     */
+    fun loadCuratedApps() {
+        viewModelScope.launch {
+            try {
+                val curated = dev.sadakat.thinkfaster.data.local.CuratedApps.getCuratedByCategory()
+                _uiState.value = _uiState.value.copy(curatedApps = curated)
+            } catch (e: Exception) {
+                // Silently fail
+            }
+        }
+    }
+
+    /**
+     * Load all installed apps for the "Add Apps" bottom sheet
+     */
+    fun loadInstalledApps() {
+        viewModelScope.launch {
+            try {
+                val installed = getInstalledAppsUseCase()
+                _uiState.value = _uiState.value.copy(installedApps = installed)
+            } catch (e: Exception) {
+                // Silently fail
+            }
+        }
+    }
+
+    /**
+     * Load tracked apps list (package names only)
+     */
+    fun loadTrackedAppsList() {
+        viewModelScope.launch {
+            try {
+                val tracked = trackedAppsRepository.getTrackedApps()
+                _uiState.value = _uiState.value.copy(trackedApps = tracked)
+            } catch (e: Exception) {
+                // Silently fail
+            }
+        }
+    }
+
+    /**
+     * Add an app to the tracked list
+     */
+    fun addTrackedApp(packageName: String) {
+        viewModelScope.launch {
+            try {
+                trackedAppsRepository.addTrackedApp(packageName)
+                // Reload both the tracked apps list and the goals
+                loadTrackedAppsList()
+                loadTrackedAppsGoals()
+            } catch (e: Exception) {
+                // Silently fail
+            }
+        }
+    }
+
+    /**
+     * Remove an app from the tracked list
+     */
+    fun removeTrackedApp(packageName: String) {
+        viewModelScope.launch {
+            try {
+                trackedAppsRepository.removeTrackedApp(packageName)
+                // Reload both the tracked apps list and the goals
+                loadTrackedAppsList()
+                loadTrackedAppsGoals()
+            } catch (e: Exception) {
+                // Silently fail
+            }
+        }
+    }
+
+    /**
+     * Toggle goal editor for a specific app
+     */
+    fun toggleGoalEditor(packageName: String) {
+        val currentExpanded = _uiState.value.expandedAppForGoalEdit
+        _uiState.value = _uiState.value.copy(
+            expandedAppForGoalEdit = if (currentExpanded == packageName) null else packageName
+        )
+    }
+
+    /**
+     * Update goal for a specific app
+     */
+    fun updateAppGoal(packageName: String, dailyLimitMinutes: Int) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isUpdatingGoal = true)
+
+                // Get existing goal or create new one
+                val existingGoal = goalRepository.getGoalByApp(packageName)
+                val currentDate = dateFormatter.format(Date())
+
+                val newGoal = if (existingGoal != null) {
+                    // Update existing goal
+                    existingGoal.copy(
+                        dailyLimitMinutes = dailyLimitMinutes,
+                        lastUpdated = System.currentTimeMillis()
+                    )
+                } else {
+                    // Create new goal
+                    dev.sadakat.thinkfaster.domain.model.Goal(
+                        targetApp = packageName,
+                        dailyLimitMinutes = dailyLimitMinutes,
+                        startDate = currentDate,
+                        currentStreak = 0,
+                        longestStreak = 0,
+                        lastUpdated = System.currentTimeMillis()
+                    )
+                }
+
+                // Save goal
+                goalRepository.upsertGoal(newGoal)
+
+                // Reload tracked apps goals
+                loadTrackedAppsGoals()
+
+                // Refresh hero card with updated aggregated percentage
+                loadTodaySummary(isRefresh = true)
+
+                // Collapse editor
+                _uiState.value = _uiState.value.copy(
+                    expandedAppForGoalEdit = null,
+                    isUpdatingGoal = false
+                )
+
+                // Track analytics
+                val daysSinceInstall = TimeUnit.MILLISECONDS.toDays(
+                    System.currentTimeMillis() - usageRepository.getInstallDate()
+                ).toInt()
+
+                if (existingGoal != null) {
+                    analyticsManager.trackGoalUpdated(packageName, dailyLimitMinutes, daysSinceInstall)
+                } else {
+                    analyticsManager.trackGoalCreated(packageName, dailyLimitMinutes, daysSinceInstall)
+                }
+
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isUpdatingGoal = false,
+                    errorMessage = "Failed to update goal: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /**
      * Check if UsageMonitorService is running
      */
     private fun isMonitorServiceRunning(context: Context): Boolean {
@@ -446,6 +670,27 @@ class HomeViewModel(
             it.service.className == UsageMonitorService::class.java.name
         }
     }
+}
+
+/**
+ * UI Model for per-app goal display
+ * Matches plan specification with goal: Goal? instead of flattened fields
+ */
+data class PerAppGoalUiModel(
+    val packageName: String,
+    val appName: String,
+    val appIcon: Drawable?,
+    val goal: dev.sadakat.thinkfaster.domain.model.Goal?,
+    val todayUsageMinutes: Int,
+    val remainingMinutes: Int?,
+    val percentageUsed: Int?,
+    val isOverLimit: Boolean,
+    val streakColor: Color
+) {
+    // Convenience properties for backward compatibility during transition
+    val dailyLimitMinutes: Int? get() = goal?.dailyLimitMinutes
+    val currentStreak: Int get() = goal?.currentStreak ?: 0
+    val bestStreak: Int get() = goal?.longestStreak ?: 0
 }
 
 /**
@@ -479,5 +724,13 @@ data class HomeUiState(
     val questStatus: OnboardingQuest? = null,
     val showQuestCard: Boolean = false,
     val userBaseline: UserBaseline? = null,
-    val showBaselineCard: Boolean = false
+    val showBaselineCard: Boolean = false,
+    // Per-app goal management
+    val trackedAppsGoals: List<PerAppGoalUiModel> = emptyList(),
+    val expandedAppForGoalEdit: String? = null,
+    val isUpdatingGoal: Boolean = false,
+    // Add apps functionality
+    val curatedApps: Map<dev.sadakat.thinkfaster.domain.model.AppCategory, List<dev.sadakat.thinkfaster.domain.model.TrackedApp>>? = null,
+    val trackedApps: List<String>? = null,
+    val installedApps: List<dev.sadakat.thinkfaster.domain.model.InstalledAppInfo> = emptyList()
 )

@@ -21,12 +21,15 @@ import org.koin.dsl.module
  * Phase 1.2: Added HomeViewModel
  * Broken Streak Recovery: Added freeze and recovery use cases to HomeViewModel
  * First-Week Retention: Added quest and baseline use cases to HomeViewModel
+ * Per-App Goals: Added tracked apps and context to HomeViewModel
  */
 val viewModelModule = module {
     viewModel {
         HomeViewModel(
+            context = androidContext(),
             usageRepository = get(),
             goalRepository = get(),
+            trackedAppsRepository = get(),
             getStreakFreezeStatusUseCase = get(),
             activateStreakFreezeUseCase = get(),
             getRecoveryProgressUseCase = get(),
@@ -35,12 +38,13 @@ val viewModelModule = module {
             getOnboardingQuestStatusUseCase = get(),
             baselineRepository = get(),
             questPreferences = get(),
-            analyticsManager = get()
+            analyticsManager = get(),
+            getInstalledAppsUseCase = get()
         )
     }
     viewModel { OnboardingViewModel(goalRepository = get(), analyticsManager = get()) }
-    viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), interventionPreferences = get()) }
-    viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), settingsRepository = get(), interventionPreferences = get()) }
+    viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), interventionPreferences = get(), rateLimiter = get()) }
+    viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), settingsRepository = get(), interventionPreferences = get(), rateLimiter = get()) }
     viewModel { AnalyticsViewModel(resultRepository = get()) }
     viewModel {
         StatsViewModel(

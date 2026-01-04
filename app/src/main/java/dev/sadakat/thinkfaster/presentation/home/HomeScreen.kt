@@ -8,10 +8,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -74,6 +79,16 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     var hasAllPermissions by remember { mutableStateOf(PermissionHelper.hasAllRequiredPermissions(context)) }
 
+    // Bottom sheet state for goal management
+    var showManageAppsSheet by remember { mutableStateOf(false) }
+    var showGoalEditorSheet by remember { mutableStateOf(false) }
+    var showAddAppsSheet by remember { mutableStateOf(false) }
+    var selectedAppForGoalEdit by remember { mutableStateOf<PerAppGoalUiModel?>(null) }
+
+    // Track newly added apps for sequential goal setting
+    var appsNeedingGoals by remember { mutableStateOf<List<PerAppGoalUiModel>>(emptyList()) }
+    var currentGoalEditorIndex by remember { mutableIntStateOf(0) }
+
     // Load data on first composition and periodically refresh
     LaunchedEffect(Unit) {
         // Initial load
@@ -81,6 +96,10 @@ fun HomeScreen(
         viewModel.checkServiceStatus(context)
         viewModel.loadFreezeStatus()      // Broken Streak Recovery
         viewModel.loadRecoveryStatus()    // Broken Streak Recovery
+        viewModel.loadTrackedAppsGoals()  // Per-App Goals
+        viewModel.loadCuratedApps()       // Load curated apps
+        viewModel.loadTrackedAppsList()   // Load tracked apps list
+        viewModel.loadInstalledApps()     // Load all installed apps
 
         // Refresh every 30 seconds without showing loading spinner
         while (true) {
@@ -89,6 +108,7 @@ fun HomeScreen(
             viewModel.checkServiceStatus(context)
             viewModel.loadFreezeStatus()      // Refresh freeze status
             viewModel.loadRecoveryStatus()    // Refresh recovery status
+            viewModel.loadTrackedAppsGoals()  // Refresh tracked apps goals
             hasAllPermissions = PermissionHelper.hasAllRequiredPermissions(context)
         }
     }
@@ -174,9 +194,10 @@ fun HomeScreen(
                 actions = {
                     IconButton(onClick = {
                         HapticFeedback.light(context)
-                        // Manual refresh - user expects to see loading state
-                        viewModel.loadTodaySummary(isRefresh = false)
+                        // Manual refresh - use isRefresh=true for smooth refresh
+                        viewModel.loadTodaySummary(isRefresh = true)
                         viewModel.checkServiceStatus(context)
+                        viewModel.loadTrackedAppsGoals()
                         hasAllPermissions = PermissionHelper.hasAllRequiredPermissions(context)
                     }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
@@ -185,11 +206,23 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(
+        val pullToRefreshState = rememberPullToRefreshState()
+
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = {
+                viewModel.loadTodaySummary(isRefresh = true)
+                viewModel.checkServiceStatus(context)
+                viewModel.loadTrackedAppsGoals()
+            },
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(
                 start = Spacing.md,
                 end = Spacing.md,
                 top = Spacing.sm,
@@ -207,30 +240,38 @@ fun HomeScreen(
                 TodayAtAGlanceCard(
                     uiState = uiState,
                     context = context,
+                    hasPermissions = hasAllPermissions,
                     onSetGoalsClick = {
                         navController.navigate(Screen.Settings.route)
                     },
                     onManageAppsClick = {
                         navController.navigate(Screen.ManageApps.route)
-                    }
-                )
-            }
-
-            // Service Status Card (compact)
-            item {
-                CompactServiceStatusCard(
-                    isRunning = uiState.isServiceRunning,
-                    hasPermissions = hasAllPermissions,
-                    onStartClick = {
+                    },
+                    onStartService = {
                         HapticFeedback.success(context)
                         startMonitoringService(context)
                         viewModel.updateServiceState(true)
                     },
-                    onStopClick = {
+                    onStopService = {
                         HapticFeedback.medium(context)
                         stopMonitoringService(context)
                         viewModel.updateServiceState(false)
                     }
+                )
+            }
+
+            // Tracked Apps Section (Per-App Goals feature)
+            item {
+                TrackedAppsSection(
+                    trackedAppsGoals = uiState.trackedAppsGoals,
+                    expandedAppForGoalEdit = uiState.expandedAppForGoalEdit,
+                    isUpdatingGoal = uiState.isUpdatingGoal,
+                    onToggleExpanded = viewModel::toggleGoalEditor,
+                    onUpdateGoal = viewModel::updateAppGoal,
+                    onAddAppsClick = {
+                        navController.navigate(Screen.ManageApps.route)
+                    },
+                    onManageClick = { showManageAppsSheet = true }
                 )
             }
 
@@ -311,6 +352,89 @@ fun HomeScreen(
                 }
             }
         }
+        }
+    }
+
+    // Manage Apps Bottom Sheet
+    if (showManageAppsSheet) {
+        dev.sadakat.thinkfaster.ui.components.ManageAppsBottomSheet(
+            trackedApps = uiState.trackedAppsGoals,
+            onAppClick = { app ->
+                selectedAppForGoalEdit = app
+                showManageAppsSheet = false
+                showGoalEditorSheet = true
+            },
+            onDismiss = { showManageAppsSheet = false },
+            onAddAppsClick = {
+                showManageAppsSheet = false
+                showAddAppsSheet = true
+            },
+            onRemoveApp = { packageName ->
+                viewModel.removeTrackedApp(packageName)
+            }
+        )
+    }
+
+    // Add Apps Bottom Sheet
+    if (showAddAppsSheet) {
+        dev.sadakat.thinkfaster.ui.components.AddAppsBottomSheet(
+            installedApps = uiState.installedApps,
+            trackedApps = uiState.trackedApps ?: emptyList(),
+            isLimitReached = (uiState.trackedApps?.size ?: 0) >= 10,
+            onAddApp = { packageName ->
+                viewModel.addTrackedApp(packageName)
+            },
+            onRemoveApp = { packageName ->
+                viewModel.removeTrackedApp(packageName)
+            },
+            onDismiss = {
+                showAddAppsSheet = false
+                // Find all apps that were added but don't have goals yet
+                val newAppsWithoutGoals = uiState.trackedAppsGoals.filter {
+                    it.goal == null
+                }
+                if (newAppsWithoutGoals.isNotEmpty()) {
+                    appsNeedingGoals = newAppsWithoutGoals
+                    currentGoalEditorIndex = 0
+                    selectedAppForGoalEdit = appsNeedingGoals.first()
+                    showGoalEditorSheet = true
+                } else {
+                    showManageAppsSheet = true
+                }
+            }
+        )
+    }
+
+    // Goal Editor Bottom Sheet
+    if (showGoalEditorSheet && selectedAppForGoalEdit != null) {
+        dev.sadakat.thinkfaster.ui.components.GoalEditorBottomSheet(
+            app = selectedAppForGoalEdit!!,
+            progressText = if (appsNeedingGoals.size > 1) {
+                "${currentGoalEditorIndex + 1} of ${appsNeedingGoals.size}"
+            } else null,
+            onDismiss = {
+                showGoalEditorSheet = false
+                selectedAppForGoalEdit = null
+                // Reset sequential flow if user cancels
+                appsNeedingGoals = emptyList()
+                currentGoalEditorIndex = 0
+            },
+            onSaveGoal = { minutes ->
+                viewModel.updateAppGoal(selectedAppForGoalEdit!!.packageName, minutes)
+                // Check if there are more apps needing goals
+                if (currentGoalEditorIndex < appsNeedingGoals.size - 1) {
+                    // Move to next app
+                    currentGoalEditorIndex++
+                    selectedAppForGoalEdit = appsNeedingGoals[currentGoalEditorIndex]
+                } else {
+                    // All done, close and reset
+                    showGoalEditorSheet = false
+                    selectedAppForGoalEdit = null
+                    appsNeedingGoals = emptyList()
+                    currentGoalEditorIndex = 0
+                }
+            }
+        )
     }
 }
 
@@ -322,8 +446,11 @@ fun HomeScreen(
 private fun TodayAtAGlanceCard(
     uiState: HomeUiState,
     context: Context,
+    hasPermissions: Boolean,
     onSetGoalsClick: () -> Unit,
-    onManageAppsClick: () -> Unit
+    onManageAppsClick: () -> Unit,
+    onStartService: () -> Unit,
+    onStopService: () -> Unit
 ) {
     val alpha = rememberFadeInAnimation(durationMillis = 600)
 
@@ -364,168 +491,426 @@ private fun TodayAtAGlanceCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(Spacing.sm))
 
             // Loading state
             if (uiState.isLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp),
+                        .height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
                 }
             }
-            // No goals set
+            // No goals set - Simple empty state
             else if (!uiState.hasGoalsSet) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Spacing.verticalArrangementMD
                 ) {
                     Text(
                         text = "🎯",
-                        fontSize = 48.sp
+                        fontSize = 64.sp
                     )
                     Text(
-                        text = "Set a daily goal to get started!",
+                        text = "Set your first goal to get started",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center
                     )
+                    Text(
+                        text = "Track your usage and build healthy habits",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+
                     Button(
                         onClick = {
-                            HapticFeedback.light(context)
+                            HapticFeedback.success(context)
                             onSetGoalsClick()
                         },
+                        shape = Shapes.button,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
-                        Text("Set Goals")
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.sm))
+                        Text("Set Goals", style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
-            // Goals set - show progress
+            // Goals set - Show progress in new layout
             else {
-                // Usage vs Goal
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            text = "Usage Today",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = "${uiState.totalUsageMinutes} min",
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = if (uiState.isOverLimit) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            }
-                        )
-                    }
-
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "Daily Goal",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = "${uiState.goalMinutes} min",
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-
-                // Progress bar
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Spacing.verticalArrangementMD
                 ) {
-                    val progress = (uiState.progressPercentage ?: 0) / 100f
-
-                    LinearProgressIndicator(
-                        progress = { progress.coerceIn(0f, 1f) },
+                    // Progress section with percentage on left and circular ring on right
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(12.dp)
-                            .clip(RoundedCornerShape(6.dp)),
-                        color = ProgressColors.getColorForProgress(uiState.progressPercentage ?: 0),
-                        trackColor = ProgressColors.getLightColorForProgress(uiState.progressPercentage ?: 0).copy(alpha = 0.2f)
-                    )
-
-                    // Progress percentage
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .clip(Shapes.button)
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                            .padding(Spacing.lg),
+                        verticalArrangement = Spacing.verticalArrangementMD
                     ) {
-                        if (!uiState.isOverLimit && uiState.remainingMinutes != null) {
+                        // Header: Icon + "Your Progress"
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Spacing.horizontalArrangementSM
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "📊", fontSize = 20.sp)
+                            }
                             Text(
-                                text = "${uiState.remainingMinutes} min remaining",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            )
-                        } else if (uiState.isOverLimit) {
-                            Text(
-                                text = "Over limit",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = MaterialTheme.colorScheme.error
+                                text = "Your Progress",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
-                        Text(
-                            text = "${uiState.progressPercentage}%",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
+                        // Main content row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Left side: Percentage and info
+                            Column(
+                                verticalArrangement = Spacing.verticalArrangementSM
+                            ) {
+                                Text(
+                                    text = "${uiState.progressPercentage ?: 0}%",
+                                    style = MaterialTheme.typography.displayLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 56.sp
+                                )
 
-                // Celebration message
-                AnimatedVisibility(
-                    visible = uiState.celebrationMessage != null,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (uiState.isOverLimit) {
-                                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                            } else {
-                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                                // Info text below percentage (remaining minutes or streak)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Spacing.horizontalArrangementXS
+                                ) {
+                                    if (uiState.remainingMinutes != null && uiState.remainingMinutes > 0 && !uiState.isOverLimit) {
+                                        Text(
+                                            text = "${uiState.remainingMinutes} min left",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    } else if (uiState.isOverLimit) {
+                                        Text(
+                                            text = "Over limit",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "Today",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
                             }
-                        )
+
+                            // Right side: Circular progress ring with flame icon
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.size(120.dp)
+                            ) {
+                                val progress = (uiState.progressPercentage ?: 0) / 100f
+                                val progressColor = AppColors.Progress.getColorForPercentage(uiState.progressPercentage ?: 0)
+
+                                // Background circle
+                                Canvas(modifier = Modifier.size(120.dp)) {
+                                    drawArc(
+                                        color = progressColor.copy(alpha = 0.2f),
+                                        startAngle = -90f,
+                                        sweepAngle = 360f,
+                                        useCenter = false,
+                                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                            width = 10.dp.toPx(),
+                                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                                        )
+                                    )
+
+                                    // Progress arc
+                                    drawArc(
+                                        color = progressColor,
+                                        startAngle = -90f,
+                                        sweepAngle = 360f * progress.coerceIn(0f, 1f),
+                                        useCenter = false,
+                                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                            width = 10.dp.toPx(),
+                                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                                        )
+                                    )
+                                }
+
+                                // Flame icon badge at top-right
+                                if (uiState.currentStreak > 0) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .offset(x = 8.dp, y = (-8).dp)
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.errorContainer),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = "🔥", fontSize = 16.sp)
+                                    }
+                                }
+
+                                // Center content
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Spacing.verticalArrangementXS
+                                ) {
+                                    Text(
+                                        text = "${uiState.totalUsageMinutes}",
+                                        style = MaterialTheme.typography.headlineLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "minutes",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        // Streak info below if exists
+                        if (uiState.currentStreak > 0) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Spacing.horizontalArrangementXS,
+                                modifier = Modifier
+                                    .clip(Shapes.button)
+                                    .background(AppColors.Streak.getColorForStreak(uiState.currentStreak).copy(alpha = 0.15f))
+                                    .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
+                            ) {
+                                Text(text = "🔥", fontSize = 14.sp)
+                                Text(
+                                    text = "${uiState.currentStreak} day streak",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = AppColors.Streak.getColorForStreak(uiState.currentStreak)
+                                )
+                            }
+                        }
+                    }
+
+                    // Celebration message
+                    AnimatedVisibility(
+                        visible = uiState.celebrationMessage != null,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = Shapes.button,
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (uiState.isOverLimit) {
+                                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                                } else {
+                                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                                }
+                            )
+                        ) {
+                            Text(
+                                text = uiState.celebrationMessage ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (uiState.isOverLimit) {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onTertiaryContainer
+                                },
+                                modifier = Modifier.padding(Spacing.md),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = Spacing.md),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    // Quick Actions - Only Set Goals and View Apps
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Spacing.verticalArrangementSM
                     ) {
                         Text(
-                            text = uiState.celebrationMessage ?: "",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = if (uiState.isOverLimit) {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSecondaryContainer
-                            },
-                            modifier = Modifier.padding(12.dp)
+                            text = "Quick Actions",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.SemiBold
                         )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Spacing.horizontalArrangementSM
+                        ) {
+                            // Set Goals button
+                            OutlinedButton(
+                                onClick = {
+                                    HapticFeedback.light(context)
+                                    onSetGoalsClick()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = Shapes.button
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Spacing.verticalArrangementXS,
+                                    modifier = Modifier.padding(vertical = Spacing.sm)
+                                ) {
+                                    Text(text = "⚙️", fontSize = 24.sp)
+                                    Text(
+                                        text = "Set Goals",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            // View Apps button
+                            OutlinedButton(
+                                onClick = {
+                                    HapticFeedback.light(context)
+                                    onManageAppsClick()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = Shapes.button
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Spacing.verticalArrangementXS,
+                                    modifier = Modifier.padding(vertical = Spacing.sm)
+                                ) {
+                                    Text(text = "📱", fontSize = 24.sp)
+                                    Text(
+                                        text = "View Apps",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = Spacing.md),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    // Usage Monitoring Status
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(Shapes.button)
+                            .background(
+                                if (uiState.isServiceRunning && hasPermissions) {
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                }
+                            )
+                            .padding(Spacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Left side: Status
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Spacing.horizontalArrangementSM
+                        ) {
+                            Icon(
+                                imageVector = if (uiState.isServiceRunning && hasPermissions) {
+                                    Icons.Default.Check
+                                } else {
+                                    Icons.Default.Close
+                                },
+                                contentDescription = null,
+                                tint = if (uiState.isServiceRunning && hasPermissions) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Usage Monitoring",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (uiState.isServiceRunning && hasPermissions) {
+                                        "Active"
+                                    } else if (!hasPermissions) {
+                                        "Permissions required"
+                                    } else {
+                                        "Paused"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Right side: Toggle switch (only if has permissions)
+                        if (hasPermissions) {
+                            Switch(
+                                checked = uiState.isServiceRunning,
+                                onCheckedChange = { checked ->
+                                    if (checked) {
+                                        onStartService()
+                                    } else {
+                                        onStopService()
+                                    }
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -542,18 +927,18 @@ private fun PermissionWarningCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = Shapes.button,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Spacing.verticalArrangementSM
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Spacing.horizontalArrangementMD
             ) {
                 Icon(
                     imageVector = Icons.Default.Warning,
@@ -564,9 +949,8 @@ private fun PermissionWarningCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Permissions Required",
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Text(
@@ -599,7 +983,7 @@ private fun CompactServiceStatusCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = Shapes.card,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
@@ -608,8 +992,8 @@ private fun CompactServiceStatusCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(Spacing.lg),
+            verticalArrangement = Spacing.verticalArrangementMD
         ) {
             // Header row with icon and toggle
             Row(
@@ -620,7 +1004,7 @@ private fun CompactServiceStatusCard(
                 // Left side: Icon + Status text
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Spacing.horizontalArrangementMD
                 ) {
                     // Status icon
                     Box(
@@ -763,12 +1147,12 @@ private fun CompleteSetupBanner(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer
             ),
-            shape = RoundedCornerShape(12.dp)
+            shape = Shapes.button
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(Spacing.md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -778,17 +1162,16 @@ private fun CompleteSetupBanner(
                     modifier = Modifier.size(32.dp)
                 )
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(Spacing.md))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Complete Setup Required",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
                         text = "ThinkFast isn't active yet. Complete the setup to start protecting your time.",
                         style = MaterialTheme.typography.bodySmall,
@@ -796,13 +1179,14 @@ private fun CompleteSetupBanner(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.sm))
 
                 Button(
                     onClick = {
                         // Navigate to onboarding welcome screen (Step 1) for complete flow
                         navController.navigate(Screen.OnboardingWelcome.route)
                     },
+                    shape = Shapes.button,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )
@@ -815,112 +1199,126 @@ private fun CompleteSetupBanner(
 }
 
 /**
- * Manage Apps & Goals Card - Quick access to manage tracked apps and goals
+ * Tracked Apps Section - Displays per-app goal cards
+ * Per-App Goals feature with bottom sheet integration
  */
 @Composable
-private fun ManageAppsAndGoalsCard(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+private fun TrackedAppsSection(
+    trackedAppsGoals: List<PerAppGoalUiModel>,
+    expandedAppForGoalEdit: String?,
+    isUpdatingGoal: Boolean,
+    onToggleExpanded: (String) -> Unit,
+    onUpdateGoal: (String, Int) -> Unit,
+    onAddAppsClick: () -> Unit,
+    onManageClick: () -> Unit,  // NEW: Opens bottom sheet
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Spacing.verticalArrangementMD
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        // Section header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Header row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(text = "⚙️", fontSize = 24.sp)
-                    Text(
-                        text = "Manage Apps & Goals",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Manage apps",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .rotate(270f)
-                )
-            }
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
-                thickness = 1.dp
+            Text(
+                text = "Tracked Apps",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
-            // Info sections
-            Row(
+            // Show "Add Apps" button when empty, "Manage" button when has apps
+            if (trackedAppsGoals.isEmpty()) {
+                TextButton(
+                    onClick = onAddAppsClick,
+                    shape = Shapes.button
+                ) {
+                    Text(
+                        text = "Add Apps",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            } else {
+                TextButton(
+                    onClick = onManageClick,
+                    shape = Shapes.button
+                ) {
+                    Text(
+                        text = "Manage",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+
+        // Empty state
+        if (trackedAppsGoals.isEmpty()) {
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                shape = Shapes.card,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.xl),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Spacing.verticalArrangementMD
                 ) {
                     Text(
                         text = "📱",
-                        fontSize = 20.sp
+                        fontSize = 48.sp
                     )
-                    Column {
-                        Text(
-                            text = "Tracked apps",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = "View & edit",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
                     Text(
-                        text = "🎯",
-                        fontSize = 20.sp
+                        text = "No Apps Tracked Yet",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
                     )
-                    Column {
-                        Text(
-                            text = "Daily goals",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                    Text(
+                        text = "Start tracking apps to set goals and monitor your usage",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+
+                    Button(
+                        onClick = onAddAppsClick,
+                        shape = Shapes.button,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
+                    ) {
                         Text(
-                            text = "Set limits",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            text = "Add Apps to Track",
+                            style = MaterialTheme.typography.labelLarge
                         )
                     }
                 }
+            }
+        } else {
+            // Goal cards
+            trackedAppsGoals.forEach { app ->
+                dev.sadakat.thinkfaster.ui.components.GoalCard(
+                    app = app,
+                    isExpanded = expandedAppForGoalEdit == app.packageName,
+                    onToggleExpanded = { onToggleExpanded(app.packageName) },
+                    onSaveGoal = { dailyLimit -> onUpdateGoal(app.packageName, dailyLimit) }
+                )
+
+                Spacer(modifier = Modifier.height(Spacing.sm))
             }
         }
     }
 }
+

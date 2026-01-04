@@ -15,6 +15,7 @@ import dev.sadakat.thinkfaster.domain.repository.InterventionResultRepository
 import dev.sadakat.thinkfaster.domain.repository.UsageRepository
 import dev.sadakat.thinkfaster.util.Constants
 import dev.sadakat.thinkfaster.analytics.AnalyticsManager
+import dev.sadakat.thinkfaster.service.InterventionRateLimiter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,7 +31,8 @@ class ReminderOverlayViewModel(
     private val usageRepository: UsageRepository,
     private val resultRepository: InterventionResultRepository,
     private val analyticsManager: AnalyticsManager,
-    private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
+    private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences,
+    private val rateLimiter: InterventionRateLimiter
 ) : ViewModel() {
 
     private val contentSelector = ContentSelector()
@@ -108,6 +110,12 @@ class ReminderOverlayViewModel(
         viewModelScope.launch {
             val decisionTime = System.currentTimeMillis() - interventionShownTime
 
+            // Reset consecutive snoozes - user engaged with app instead of snoozing
+            interventionPreferences.resetConsecutiveSnoozes()
+
+            // Escalate cooldown - user dismissed intervention without positive outcome
+            rateLimiter.escalateCooldown()
+
             // Phase G: Record intervention result
             recordInterventionResult(
                 sessionId = currentState.sessionId!!,
@@ -143,6 +151,12 @@ class ReminderOverlayViewModel(
 
         viewModelScope.launch {
             val decisionTime = System.currentTimeMillis() - interventionShownTime
+
+            // Reset consecutive snoozes - user chose to go back (positive engagement)
+            interventionPreferences.resetConsecutiveSnoozes()
+
+            // Reset cooldown - user engaged positively with intervention
+            rateLimiter.resetCooldown()
 
             // Phase G: Record intervention result (success!)
             recordInterventionResult(
@@ -303,6 +317,12 @@ class ReminderOverlayViewModel(
 
         viewModelScope.launch {
             try {
+                // Record snooze for abuse tracking
+                interventionPreferences.recordSnooze()
+
+                // Escalate cooldown - user avoided intervention
+                rateLimiter.escalateCooldown()
+
                 // Get user's selected snooze duration
                 val snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration()
                 val snoozeDurationMs = snoozeDurationMinutes * 60 * 1000L

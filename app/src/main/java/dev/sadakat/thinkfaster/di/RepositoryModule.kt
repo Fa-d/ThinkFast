@@ -5,6 +5,7 @@ import dev.sadakat.thinkfaster.data.preferences.NotificationPreferences
 import dev.sadakat.thinkfaster.data.preferences.OnboardingQuestPreferences
 import dev.sadakat.thinkfaster.data.preferences.StreakFreezePreferences
 import dev.sadakat.thinkfaster.data.preferences.SyncPreferences
+import dev.sadakat.thinkfaster.service.InterventionRateLimiter
 import dev.sadakat.thinkfaster.data.repository.GoalRepositoryImpl
 import dev.sadakat.thinkfaster.data.repository.InterventionResultRepositoryImpl
 import dev.sadakat.thinkfaster.data.repository.SettingsRepositoryImpl
@@ -42,6 +43,14 @@ val repositoryModule = module {
     // InterventionPreferences (singleton)
     single {
         InterventionPreferences.getInstance(androidContext())
+    }
+
+    // InterventionRateLimiter (singleton) - Rate limiting for interventions
+    single {
+        InterventionRateLimiter(
+            context = androidContext(),
+            interventionPreferences = get()
+        )
     }
 
     // StreakFreezePreferences (singleton) - Broken Streak Recovery

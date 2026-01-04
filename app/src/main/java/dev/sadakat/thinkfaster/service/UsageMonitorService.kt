@@ -53,6 +53,7 @@ class UsageMonitorService : Service() {
     private lateinit var appLaunchDetector: AppLaunchDetector
     private lateinit var sessionDetector: SessionDetector
     private lateinit var contextDetector: ContextDetector
+    private lateinit var rateLimiter: InterventionRateLimiter
 
     // WindowManager-based overlays (full-screen and compact)
     private lateinit var reminderOverlay: ReminderOverlayWindow
@@ -144,6 +145,13 @@ class UsageMonitorService : Service() {
         )
         contextDetector = ContextDetector(
             context = this
+        )
+
+        // Initialize rate limiter for intervention frequency control
+        val interventionPrefs = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences.getInstance(this)
+        rateLimiter = InterventionRateLimiter(
+            context = this,
+            interventionPreferences = interventionPrefs
         )
 
         // Initialize WindowManager-based overlays (full-screen and compact)
@@ -556,6 +564,21 @@ class UsageMonitorService : Service() {
      * Show reminder overlay when app is first opened
      */
     private fun showReminderOverlay(sessionState: SessionDetector.SessionState) {
+        // Phase 1: Rate limiting check
+        val sessionDuration = System.currentTimeMillis() - sessionState.startTimestamp
+        val rateLimitResult = rateLimiter.canShowIntervention(
+            InterventionRateLimiter.InterventionType.REMINDER,
+            sessionDuration
+        )
+
+        if (!rateLimitResult.allowed) {
+            ErrorLogger.info(
+                "Skipping reminder overlay - rate limit: ${rateLimitResult.reason}",
+                context = "UsageMonitorService.showReminderOverlay"
+            )
+            return
+        }
+
         // Phase 2: Check if interventions are snoozed
         val interventionPrefs = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences.getInstance(this)
         if (interventionPrefs.isSnoozed()) {
@@ -568,8 +591,10 @@ class UsageMonitorService : Service() {
         }
 
         // Phase 3: Check context-based conditions
+        val sessionDurationForContext = System.currentTimeMillis() - sessionState.startTimestamp
         val contextResult = contextDetector.shouldShowInterventionType(
-            ContextDetector.InterventionType.REMINDER
+            ContextDetector.InterventionType.REMINDER,
+            sessionDurationForContext
         )
         if (!contextResult.shouldShowIntervention) {
             ErrorLogger.info(
@@ -598,13 +623,12 @@ class UsageMonitorService : Service() {
             return
         }
 
-        // Reset the timer so it starts counting fresh after reminder dismissal
-        // This prevents timer from triggering immediately after reminder is dismissed
-        sessionDetector.resetTimer()
-
         // Track that reminder overlay is showing
         reminderOverlayShowing = true
         reminderOverlayShownTime = System.currentTimeMillis()
+
+        // Record that we showed an intervention (for rate limiting)
+        rateLimiter.recordIntervention(InterventionRateLimiter.InterventionType.REMINDER)
 
         // Show WindowManager-based overlay via OverlayManager (prevents simultaneity)
         overlayManager.showReminder(
@@ -667,6 +691,21 @@ class UsageMonitorService : Service() {
             context = "UsageMonitorService.showTimerOverlay"
         )
 
+        // Phase 1: Rate limiting check
+        val sessionDuration = System.currentTimeMillis() - sessionState.startTimestamp
+        val rateLimitResult = rateLimiter.canShowIntervention(
+            InterventionRateLimiter.InterventionType.TIMER,
+            sessionDuration
+        )
+
+        if (!rateLimitResult.allowed) {
+            ErrorLogger.info(
+                "Skipping timer overlay - rate limit: ${rateLimitResult.reason}",
+                context = "UsageMonitorService.showTimerOverlay"
+            )
+            return
+        }
+
         // Phase 2: Check if interventions are snoozed
         val interventionPrefs = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences.getInstance(this)
         if (interventionPrefs.isSnoozed()) {
@@ -679,8 +718,10 @@ class UsageMonitorService : Service() {
         }
 
         // Phase 3: Check context-based conditions
+        val sessionDurationForContext = System.currentTimeMillis() - sessionState.startTimestamp
         val contextResult = contextDetector.shouldShowInterventionType(
-            ContextDetector.InterventionType.TIMER
+            ContextDetector.InterventionType.TIMER,
+            sessionDurationForContext
         )
         if (!contextResult.shouldShowIntervention) {
             ErrorLogger.info(
@@ -716,6 +757,9 @@ class UsageMonitorService : Service() {
 
         // Track that timer overlay is being shown
         timerOverlayShownTime = System.currentTimeMillis()
+
+        // Record that we showed an intervention (for rate limiting)
+        rateLimiter.recordIntervention(InterventionRateLimiter.InterventionType.TIMER)
 
         // Show WindowManager-based overlay via OverlayManager (prevents simultaneity)
         overlayManager.showTimer(
@@ -776,9 +820,12 @@ class UsageMonitorService : Service() {
             else -> 0.8f
         }
 
-        // Always show interventions but with varying effectiveness
+        // Threshold for showing intervention - skip if effectiveness is too low
+        val threshold = 0.4f
+
+        // Show intervention only if effectiveness score meets threshold
         return PredictionResult(
-            shouldShowIntervention = true,
+            shouldShowIntervention = effectivenessScore >= threshold,
             effectivenessScore = effectivenessScore,
             confidence = 0.7f
         )

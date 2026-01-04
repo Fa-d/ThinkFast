@@ -37,7 +37,8 @@ class TimerOverlayViewModel(
     private val resultRepository: InterventionResultRepository,
     private val analyticsManager: AnalyticsManager,
     private val settingsRepository: SettingsRepository,
-    private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
+    private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences,
+    private val rateLimiter: dev.sadakat.thinkfaster.service.InterventionRateLimiter
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerOverlayState())
@@ -189,6 +190,12 @@ class TimerOverlayViewModel(
         viewModelScope.launch {
             val decisionTime = System.currentTimeMillis() - interventionShownTime
 
+            // Reset consecutive snoozes - user engaged with app instead of snoozing
+            interventionPreferences.resetConsecutiveSnoozes()
+
+            // Escalate cooldown - user dismissed intervention without positive outcome
+            rateLimiter.escalateCooldown()
+
             // Phase G: Record intervention result
             recordInterventionResult(
                 sessionId = currentState.sessionId!!,
@@ -225,6 +232,12 @@ class TimerOverlayViewModel(
 
         viewModelScope.launch {
             val decisionTime = System.currentTimeMillis() - interventionShownTime
+
+            // Reset consecutive snoozes - user chose to go back (positive engagement)
+            interventionPreferences.resetConsecutiveSnoozes()
+
+            // Reset cooldown - user engaged positively with intervention
+            rateLimiter.resetCooldown()
 
             // Phase G: Record intervention result (success!)
             recordInterventionResult(
