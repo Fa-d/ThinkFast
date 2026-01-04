@@ -27,7 +27,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import dev.sadakat.thinkfaster.ui.theme.ProgressColors
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
+import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
+import dev.sadakat.thinkfaster.ui.theme.AppColors
 import dev.sadakat.thinkfaster.util.HapticFeedback
 import kotlinx.coroutines.delay
 
@@ -70,8 +72,8 @@ fun CelebrationDialog(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
-                shape = RoundedCornerShape(28.dp),
+                    .padding(Spacing.lg),
+                shape = Shapes.card,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -79,9 +81,9 @@ fun CelebrationDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(32.dp),
+                        .padding(Spacing.xl),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Spacing.verticalArrangementMD
                 ) {
                     // Animated emoji
                     AnimatedEmoji(emoji = emoji, size = 80.sp)
@@ -89,7 +91,7 @@ fun CelebrationDialog(
                     // Title
                     Text(
                         text = title,
-                        fontSize = 28.sp,
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -98,7 +100,7 @@ fun CelebrationDialog(
                     // Message
                     Text(
                         text = message,
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
@@ -107,20 +109,20 @@ fun CelebrationDialog(
                     if (streakDays != null) {
                         Box(
                             modifier = Modifier
-                                .padding(top = 8.dp)
+                                .padding(top = Spacing.sm)
                                 .background(
                                     brush = Brush.horizontalGradient(
                                         colors = listOf(
-                                            ProgressColors.Streak.getColorForStreak(streakDays),
-                                            ProgressColors.Streak.getColorForStreak(streakDays).copy(alpha = 0.7f)
+                                            AppColors.Streak.getColorForStreak(streakDays),
+                                            AppColors.Streak.getColorForStreak(streakDays).copy(alpha = 0.7f)
                                         )
                                     ),
-                                    shape = RoundedCornerShape(16.dp)
+                                    shape = Shapes.card
                                 )
-                                .padding(horizontal = 20.dp, vertical = 10.dp)
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                         ) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Spacing.horizontalArrangementSM,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
@@ -129,7 +131,7 @@ fun CelebrationDialog(
                                 )
                                 Text(
                                     text = "$streakDays ${if (streakDays == 1) "Day" else "Days"} Streak!",
-                                    fontSize = 18.sp,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
@@ -190,7 +192,7 @@ fun CompactCelebrationCard(
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = Shapes.card,
             colors = CardDefaults.cardColors(
                 containerColor = backgroundColor
             ),
@@ -199,8 +201,8 @@ fun CompactCelebrationCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(Spacing.lg),
+                horizontalArrangement = Spacing.horizontalArrangementMD,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Emoji in circle
@@ -222,17 +224,17 @@ fun CompactCelebrationCard(
                 // Text content
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Spacing.verticalArrangementXS
                 ) {
                     Text(
                         text = title,
-                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = textColor
                     )
                     Text(
                         text = message,
-                        fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = textColor.copy(alpha = 0.8f)
                     )
                 }
@@ -249,7 +251,7 @@ fun AchievementBadge(
     emoji: String,
     text: String,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = ProgressColors.Achievement
+    backgroundColor: Color = AppColors.Semantic.Success.Default
 ) {
     val pulseScale = rememberPulseAnimation(
         minScale = 0.98f,
@@ -262,12 +264,12 @@ fun AchievementBadge(
             .scale(pulseScale)
             .background(
                 color = backgroundColor.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(20.dp)
+                shape = Shapes.card
             )
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm)
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Spacing.horizontalArrangementSM,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -276,7 +278,7 @@ fun AchievementBadge(
             )
             Text(
                 text = text,
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = backgroundColor
             )
@@ -299,19 +301,19 @@ fun StreakFireBadge(
         durationMillis = 1000
     )
 
-    val backgroundColor = ProgressColors.Streak.getColorForStreak(streakDays)
+    val backgroundColor = AppColors.Streak.getColorForStreak(streakDays)
 
     Box(
         modifier = modifier
             .scale(pulseScale)
             .background(
                 color = backgroundColor.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(20.dp)
+                shape = Shapes.card
             )
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm)
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Spacing.horizontalArrangementSM,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -320,13 +322,13 @@ fun StreakFireBadge(
             )
             Text(
                 text = "$streakDays",
-                fontSize = 18.sp,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = backgroundColor
             )
             Text(
                 text = if (streakDays == 1) "day" else "days",
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = backgroundColor.copy(alpha = 0.8f)
             )
@@ -417,8 +419,8 @@ fun StreakBrokenRecoveryDialog(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
-                shape = RoundedCornerShape(28.dp),
+                    .padding(Spacing.lg),
+                shape = Shapes.card,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 )
@@ -426,9 +428,9 @@ fun StreakBrokenRecoveryDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(32.dp),
+                        .padding(Spacing.xl),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Spacing.verticalArrangementMD
                 ) {
                     // Animated emoji
                     AnimatedEmoji(emoji = "💔", size = 80.sp)
@@ -436,7 +438,7 @@ fun StreakBrokenRecoveryDialog(
                     // Title
                     Text(
                         text = "Streak Ended",
-                        fontSize = 28.sp,
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onErrorContainer
@@ -445,7 +447,7 @@ fun StreakBrokenRecoveryDialog(
                     // Message
                     Text(
                         text = "Your $previousStreak-day $appName streak was amazing! Don't give up—you're just 1 day away from starting your comeback.",
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
                         lineHeight = 22.sp
@@ -454,15 +456,15 @@ fun StreakBrokenRecoveryDialog(
                     // Recovery badge
                     Box(
                         modifier = Modifier
-                            .padding(top = 8.dp)
+                            .padding(top = Spacing.sm)
                             .background(
-                                color = ProgressColors.Approaching.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(16.dp)
+                                color = AppColors.Progress.Approaching.copy(alpha = 0.3f),
+                                shape = Shapes.card
                             )
-                            .padding(horizontal = 20.dp, vertical = 10.dp)
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                     ) {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Spacing.horizontalArrangementSM,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -471,7 +473,7 @@ fun StreakBrokenRecoveryDialog(
                             )
                             Text(
                                 text = "Recovery Mode Active",
-                                fontSize = 16.sp,
+                                style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
@@ -479,20 +481,20 @@ fun StreakBrokenRecoveryDialog(
                     }
 
                     // Button
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.sm))
                     Button(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = Shapes.button,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
                         Text(
                             text = "Let's Get Back on Track",
-                            fontSize = 16.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            modifier = Modifier.padding(vertical = Spacing.xs)
                         )
                     }
                 }
@@ -539,8 +541,8 @@ fun RecoveryCompleteDialog(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
-                shape = RoundedCornerShape(28.dp),
+                    .padding(Spacing.lg),
+                shape = Shapes.card,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -548,9 +550,9 @@ fun RecoveryCompleteDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(32.dp),
+                        .padding(Spacing.xl),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Spacing.verticalArrangementMD
                 ) {
                     // Animated emoji
                     AnimatedEmoji(emoji = "🎉", size = 80.sp)
@@ -558,7 +560,7 @@ fun RecoveryCompleteDialog(
                     // Title
                     Text(
                         text = "You're Back on Track!",
-                        fontSize = 28.sp,
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -567,7 +569,7 @@ fun RecoveryCompleteDialog(
                     // Message
                     Text(
                         text = "You recovered in just $daysToRecover ${if (daysToRecover == 1) "day" else "days"}! This shows incredible resilience.",
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                         lineHeight = 22.sp
@@ -576,19 +578,19 @@ fun RecoveryCompleteDialog(
                     // Stats badge
                     Box(
                         modifier = Modifier
-                            .padding(top = 8.dp)
+                            .padding(top = Spacing.sm)
                             .background(
-                                color = ProgressColors.OnTrack.copy(alpha = 0.2f),
-                                shape = RoundedCornerShape(16.dp)
+                                color = AppColors.Progress.OnTrack.copy(alpha = 0.2f),
+                                shape = Shapes.card
                             )
-                            .padding(horizontal = 20.dp, vertical = 12.dp)
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.md)
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            verticalArrangement = Spacing.verticalArrangementXS
                         ) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Spacing.horizontalArrangementSM,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
@@ -597,35 +599,35 @@ fun RecoveryCompleteDialog(
                                 )
                                 Text(
                                     text = "Comeback Complete",
-                                    fontSize = 18.sp,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = ProgressColors.OnTrack
+                                    color = AppColors.Progress.OnTrack
                                 )
                             }
                             Text(
                                 text = "Previous streak: $previousStreak ${if (previousStreak == 1) "day" else "days"}",
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                             )
                         }
                     }
 
                     // Button
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.sm))
                     Button(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = Shapes.button,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = ProgressColors.OnTrack
+                            containerColor = AppColors.Progress.OnTrack
                         )
                     ) {
                         Text(
                             text = "Keep Going!",
-                            fontSize = 16.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            modifier = Modifier.padding(vertical = Spacing.xs)
                         )
                     }
                 }

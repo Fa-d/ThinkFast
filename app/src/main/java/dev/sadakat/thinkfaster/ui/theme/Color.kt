@@ -1,5 +1,6 @@
 package dev.sadakat.thinkfaster.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 // ============================================================================
@@ -15,100 +16,434 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // ============================================================================
-// PRIMARY PALETTE (BLUE - Based on iOS reference)
+// UNIFIED APP COLORS
 // ============================================================================
 
 /**
- * Blue primary colors - Main brand color
+ * Unified color system for ThinkFast
+ *
+ * Consolidates all app colors into a single, well-organized structure:
+ * - Primary (Blue) - Brand colors
+ * - Secondary (Purple) - Accent colors
+ * - Semantic - Success, Warning, Error, Info
+ * - Progress - On track, approaching, over limit states
+ * - Streak - Milestone colors for streaks
+ * - Gradients - Pre-defined color gradients
+ *
+ * See docs/Colors.md for detailed usage guidelines.
  */
+object AppColors {
+
+    // ========================================================================
+    // PRIMARY PALETTE (Blue - Brand)
+    // ========================================================================
+
+    object Primary {
+        /** Primary blue - Blue 500 */
+        val Default = Color(0xFF2196F3)
+
+        /** Primary blue dark - Blue 800 */
+        val Dark = Color(0xFF1565C0)
+
+        /** Primary blue light - Blue 300 (for dark mode) */
+        val Light = Color(0xFF64B5F6)
+
+        /** Primary blue container - Blue 50 */
+        val Container = Color(0xFFE3F2FD)
+
+        /** On primary color - White */
+        val OnPrimary = Color(0xFFFFFFFF)
+
+        /** On primary container - Blue 900 */
+        val OnContainer = Color(0xFF0D47A1)
+    }
+
+    // ========================================================================
+    // SECONDARY PALETTE (Purple - Accent)
+    // ========================================================================
+
+    object Secondary {
+        /** Secondary purple - Purple 500 */
+        val Default = Color(0xFF9C27B0)
+
+        /** Secondary purple dark - Purple 800 */
+        val Dark = Color(0xFF7B1FA2)
+
+        /** Secondary purple light - Purple 300 (for dark mode) */
+        val Light = Color(0xFFBA68C8)
+
+        /** Secondary purple container - Purple 50 */
+        val Container = Color(0xFFF3E5F5)
+
+        /** On secondary color - White */
+        val OnSecondary = Color(0xFFFFFFFF)
+
+        /** On secondary container - Purple 900 */
+        val OnContainer = Color(0xFF4A148C)
+    }
+
+    // ========================================================================
+    // SEMANTIC COLORS (Status & Feedback)
+    // ========================================================================
+
+    object Semantic {
+
+        object Success {
+            /** Success green - Green 500 */
+            val Default = Color(0xFF4CAF50)
+
+            /** Success green light - Green 300 */
+            val Light = Color(0xFF81C784)
+
+            /** Success green dark - Green 700 */
+            val Dark = Color(0xFF388E3C)
+
+            /** Success container - Green 50 */
+            val Container = Color(0xFFE8F5E9)
+
+            /** On success - White */
+            val OnSuccess = Color(0xFFFFFFFF)
+
+            /** On success container - Green 900 */
+            val OnContainer = Color(0xFF1B5E20)
+        }
+
+        object Warning {
+            /** Warning orange - Orange 500 */
+            val Default = Color(0xFFFF9800)
+
+            /** Warning orange light - Orange 300 */
+            val Light = Color(0xFFFFB74D)
+
+            /** Warning orange dark - Orange 700 */
+            val Dark = Color(0xFFF57C00)
+
+            /** Warning container - Orange 50 */
+            val Container = Color(0xFFFFF3E0)
+
+            /** On warning - White */
+            val OnWarning = Color(0xFFFFFFFF)
+
+            /** On warning container - Orange 900 */
+            val OnContainer = Color(0xFFE65100)
+        }
+
+        object Error {
+            /** Error red - Red 500 */
+            val Default = Color(0xFFF44336)
+
+            /** Error red light - Red 300 */
+            val Light = Color(0xFFE57373)
+
+            /** Error red dark - Red 700 */
+            val Dark = Color(0xFFD32F2F)
+
+            /** Error container - Red 50 */
+            val Container = Color(0xFFFFEBEE)
+
+            /** On error - White */
+            val OnError = Color(0xFFFFFFFF)
+
+            /** On error container - Red 900 */
+            val OnContainer = Color(0xFFB71C1C)
+        }
+
+        object Info {
+            /** Info blue - Blue 500 */
+            val Default = Color(0xFF2196F3)
+
+            /** Info blue light - Blue 300 */
+            val Light = Color(0xFF64B5F6)
+
+            /** Info blue dark - Blue 700 */
+            val Dark = Color(0xFF1976D2)
+
+            /** Info container - Blue 50 */
+            val Container = Color(0xFFE3F2FD)
+
+            /** On info - White */
+            val OnInfo = Color(0xFFFFFFFF)
+
+            /** On info container - Blue 900 */
+            val OnContainer = Color(0xFF0D47A1)
+        }
+    }
+
+    // ========================================================================
+    // PROGRESS STATES
+    // ========================================================================
+
+    object Progress {
+        /** Green - On track, under limit (0-75%) */
+        val OnTrack = Semantic.Success.Default
+
+        /** Yellow/Orange - Approaching limit (75-100%) */
+        val Approaching = Color(0xFFFFA726)
+
+        /** Red - Over limit (>100%) */
+        val OverLimit = Color(0xFFFF5252)
+
+        /** Blue - Neutral/Info states */
+        val Neutral = Semantic.Info.Default
+
+        /** Purple - Achievements and milestones */
+        val Achievement = Secondary.Default
+
+        /**
+         * Get progress color based on percentage
+         *
+         * @param percentage Usage percentage (0-100+)
+         * @return Semantic color: Green (0-75%), Orange (75-100%), Red (>100%)
+         */
+        fun getColorForPercentage(percentage: Int): Color {
+            return when {
+                percentage <= 75 -> OnTrack
+                percentage <= 100 -> Approaching
+                else -> OverLimit
+            }
+        }
+    }
+
+    // ========================================================================
+    // STREAK MILESTONE COLORS
+    // ========================================================================
+
+    object Streak {
+        /** Orange - Starting streaks (1-6 days) */
+        val Day1to6 = Color(0xFFFF9800)
+
+        /** Deep Orange - Building momentum (7-13 days) */
+        val Day7to13 = Color(0xFFFF5722)
+
+        /** Red - Getting serious (14-29 days) */
+        val Day14to29 = Color(0xFFF44336)
+
+        /** Purple - Major achievement! (30+ days) */
+        val Day30Plus = Secondary.Default
+
+        /**
+         * Get streak color based on days
+         *
+         * @param days Current streak days
+         * @return Color that intensifies with streak length
+         */
+        fun getColorForStreak(days: Int): Color {
+            return when {
+                days < 7 -> Day1to6
+                days < 14 -> Day7to13
+                days < 30 -> Day14to29
+                else -> Day30Plus
+            }
+        }
+    }
+
+    // ========================================================================
+    // GRADIENTS
+    // ========================================================================
+
+    object Gradients {
+        /**
+         * Primary gradient (Blue → Purple)
+         * Usage: PrimaryButton background, hero sections
+         */
+        fun primary() = listOf(
+            Primary.Default.copy(alpha = 0.9f),
+            Secondary.Default.copy(alpha = 0.9f)
+        )
+
+        /**
+         * Success gradient (Light Green → Green)
+         * Usage: Achievement celebrations, positive feedback
+         */
+        fun success() = listOf(
+            Semantic.Success.Light.copy(alpha = 0.8f),
+            Semantic.Success.Default
+        )
+
+        /**
+         * Warning gradient (Light Orange → Orange)
+         * Usage: Approaching limit indicators
+         */
+        fun warning() = listOf(
+            Semantic.Warning.Light.copy(alpha = 0.8f),
+            Semantic.Warning.Default
+        )
+
+        /**
+         * Error gradient (Light Red → Red)
+         * Usage: Over limit warnings, destructive actions
+         */
+        fun error() = listOf(
+            Semantic.Error.Light.copy(alpha = 0.8f),
+            Semantic.Error.Default
+        )
+
+        /**
+         * Helper to create linear gradient brush
+         */
+        fun primaryBrush() = Brush.linearGradient(primary())
+        fun successBrush() = Brush.linearGradient(success())
+        fun warningBrush() = Brush.linearGradient(warning())
+        fun errorBrush() = Brush.linearGradient(error())
+    }
+
+    // ========================================================================
+    // SPECIAL COLORS
+    // ========================================================================
+
+    /** Streak fire emoji color - Orange-red fire */
+    val StreakFire = Color(0xFFFF6B35)
+}
+
+// ============================================================================
+// DEPRECATED COLOR OBJECTS (For backward compatibility)
+// ============================================================================
+
+/**
+ * @deprecated Use AppColors.Primary instead
+ *
+ * Migration:
+ * - PrimaryColors.Blue500 → AppColors.Primary.Default
+ * - PrimaryColors.Blue800 → AppColors.Primary.Dark
+ * - PrimaryColors.Blue300 → AppColors.Primary.Light
+ * - PrimaryColors.Blue50 → AppColors.Primary.Container
+ * - PrimaryColors.OnPrimary → AppColors.Primary.OnPrimary
+ * - PrimaryColors.OnPrimaryDark → AppColors.Primary.OnContainer
+ */
+@Deprecated(
+    message = "Use AppColors.Primary instead",
+    replaceWith = ReplaceWith("AppColors.Primary", "dev.sadakat.thinkfaster.ui.theme.AppColors")
+)
 object PrimaryColors {
-    /** Primary blue - Blue 500 */
-    val Blue500 = Color(0xFF2196F3)
+    @Deprecated("Use AppColors.Primary.Default", ReplaceWith("AppColors.Primary.Default"))
+    val Blue500 = AppColors.Primary.Default
 
-    /** Primary blue dark - Blue 800 */
-    val Blue800 = Color(0xFF1565C0)
+    @Deprecated("Use AppColors.Primary.Dark", ReplaceWith("AppColors.Primary.Dark"))
+    val Blue800 = AppColors.Primary.Dark
 
-    /** Primary blue dark - Blue 300 (for dark mode) */
-    val Blue300 = Color(0xFF64B5F6)
+    @Deprecated("Use AppColors.Primary.Light", ReplaceWith("AppColors.Primary.Light"))
+    val Blue300 = AppColors.Primary.Light
 
-    /** Primary blue container - Blue 50 */
-    val Blue50 = Color(0xFFE3F2FD)
+    @Deprecated("Use AppColors.Primary.Container", ReplaceWith("AppColors.Primary.Container"))
+    val Blue50 = AppColors.Primary.Container
 
-    /** On primary color - White */
-    val OnPrimary = Color(0xFFFFFFFF)
+    @Deprecated("Use AppColors.Primary.OnPrimary", ReplaceWith("AppColors.Primary.OnPrimary"))
+    val OnPrimary = AppColors.Primary.OnPrimary
 
-    /** On primary dark - Blue 900 */
-    val OnPrimaryDark = Color(0xFF0D47A1)
+    @Deprecated("Use AppColors.Primary.OnContainer", ReplaceWith("AppColors.Primary.OnContainer"))
+    val OnPrimaryDark = AppColors.Primary.OnContainer
 }
 
 /**
- * Secondary palette (Purple)
+ * @deprecated Use AppColors.Secondary instead
+ *
+ * Migration:
+ * - SecondaryColors.Purple500 → AppColors.Secondary.Default
+ * - SecondaryColors.Purple800 → AppColors.Secondary.Dark
+ * - SecondaryColors.Purple300 → AppColors.Secondary.Light
  */
+@Deprecated(
+    message = "Use AppColors.Secondary instead",
+    replaceWith = ReplaceWith("AppColors.Secondary", "dev.sadakat.thinkfaster.ui.theme.AppColors")
+)
 object SecondaryColors {
-    /** Secondary purple - Purple 500 */
-    val Purple500 = Color(0xFF9C27B0)
+    @Deprecated("Use AppColors.Secondary.Default", ReplaceWith("AppColors.Secondary.Default"))
+    val Purple500 = AppColors.Secondary.Default
 
-    /** Secondary purple dark - Purple 800 */
-    val Purple800 = Color(0xFF7B1FA2)
+    @Deprecated("Use AppColors.Secondary.Dark", ReplaceWith("AppColors.Secondary.Dark"))
+    val Purple800 = AppColors.Secondary.Dark
 
-    /** Secondary purple light - Purple 300 (for dark mode) */
-    val Purple300 = Color(0xFFBA68C8)
+    @Deprecated("Use AppColors.Secondary.Light", ReplaceWith("AppColors.Secondary.Light"))
+    val Purple300 = AppColors.Secondary.Light
 
-    /** Secondary purple container - Purple 50 */
-    val Purple50 = Color(0xFFF3E5F5)
+    @Deprecated("Use AppColors.Secondary.Container", ReplaceWith("AppColors.Secondary.Container"))
+    val Purple50 = AppColors.Secondary.Container
 
-    /** On secondary color - White */
-    val OnSecondary = Color(0xFFFFFFFF)
+    @Deprecated("Use AppColors.Secondary.OnSecondary", ReplaceWith("AppColors.Secondary.OnSecondary"))
+    val OnSecondary = AppColors.Secondary.OnSecondary
 
-    /** On secondary dark - Purple 900 */
-    val OnSecondaryDark = Color(0xFF4A148C)
+    @Deprecated("Use AppColors.Secondary.OnContainer", ReplaceWith("AppColors.Secondary.OnContainer"))
+    val OnSecondaryDark = AppColors.Secondary.OnContainer
 }
-
-// ============================================================================
-// SEMANTIC COLORS
-// ============================================================================
 
 /**
- * Semantic colors for status and feedback
+ * @deprecated Use AppColors.Semantic instead
+ *
+ * Migration:
+ * - SemanticColors.Success → AppColors.Semantic.Success.Default
+ * - SemanticColors.Warning → AppColors.Semantic.Warning.Default
+ * - SemanticColors.Error → AppColors.Semantic.Error.Default
+ * - SemanticColors.Info → AppColors.Semantic.Info.Default
  */
+@Deprecated(
+    message = "Use AppColors.Semantic instead",
+    replaceWith = ReplaceWith("AppColors.Semantic", "dev.sadakat.thinkfaster.ui.theme.AppColors")
+)
 object SemanticColors {
+    @Deprecated("Use AppColors.Semantic.Success.Default", ReplaceWith("AppColors.Semantic.Success.Default"))
+    val Success = AppColors.Semantic.Success.Default
 
-    /**
-     * Success/Achievement - Green
-     */
-    val Success = Color(0xFF4CAF50)  // Green 500
-    val SuccessDark = Color(0xFF81C784)  // Green 300 (for dark mode)
-    val SuccessLight = Color(0xFFE8F5E9)  // Green 50 (container)
-    val OnSuccess = Color(0xFFFFFFFF)  // White text
-    val OnSuccessDark = Color(0xFF1B5E20)  // Green 900 text
+    @Deprecated("Use AppColors.Semantic.Success.Light", ReplaceWith("AppColors.Semantic.Success.Light"))
+    val SuccessDark = AppColors.Semantic.Success.Light
 
-    /**
-     * Warning/Caution - Orange
-     */
-    val Warning = Color(0xFFFF9800)  // Orange 500
-    val WarningDark = Color(0xFFFFB74D)  // Orange 400 (for dark mode)
-    val WarningLight = Color(0xFFFFF3E0)  // Orange 50 (container)
-    val OnWarning = Color(0xFFFFFFFF)  // White text
-    val OnWarningDark = Color(0xFFE65100)  // Orange 900 text
+    @Deprecated("Use AppColors.Semantic.Success.Container", ReplaceWith("AppColors.Semantic.Success.Container"))
+    val SuccessLight = AppColors.Semantic.Success.Container
 
-    /**
-     * Error/Over limit - Red
-     */
-    val Error = Color(0xFFF44336)  // Red 500
-    val ErrorDark = Color(0xFFE57373)  // Red 300 (for dark mode)
-    val ErrorLight = Color(0xFFFFEBEE)  // Red 50 (container)
-    val OnError = Color(0xFFFFFFFF)  // White text
-    val OnErrorDark = Color(0xFFB71C1C)  // Red 900 text
+    @Deprecated("Use AppColors.Semantic.Success.OnSuccess", ReplaceWith("AppColors.Semantic.Success.OnSuccess"))
+    val OnSuccess = AppColors.Semantic.Success.OnSuccess
 
-    /**
-     * Informational - Blue
-     */
-    val Info = Color(0xFF2196F3)  // Blue 500
-    val InfoDark = Color(0xFF64B5F6)  // Blue 300 (for dark mode)
-    val InfoLight = Color(0xFFE3F2FD)  // Blue 50 (container)
-    val OnInfo = Color(0xFFFFFFFF)  // White text
-    val OnInfoDark = Color(0xFF0D47A1)  // Blue 900 text
+    @Deprecated("Use AppColors.Semantic.Success.OnContainer", ReplaceWith("AppColors.Semantic.Success.OnContainer"))
+    val OnSuccessDark = AppColors.Semantic.Success.OnContainer
+
+    @Deprecated("Use AppColors.Semantic.Warning.Default", ReplaceWith("AppColors.Semantic.Warning.Default"))
+    val Warning = AppColors.Semantic.Warning.Default
+
+    @Deprecated("Use AppColors.Semantic.Warning.Light", ReplaceWith("AppColors.Semantic.Warning.Light"))
+    val WarningDark = AppColors.Semantic.Warning.Light
+
+    @Deprecated("Use AppColors.Semantic.Warning.Container", ReplaceWith("AppColors.Semantic.Warning.Container"))
+    val WarningLight = AppColors.Semantic.Warning.Container
+
+    @Deprecated("Use AppColors.Semantic.Warning.OnWarning", ReplaceWith("AppColors.Semantic.Warning.OnWarning"))
+    val OnWarning = AppColors.Semantic.Warning.OnWarning
+
+    @Deprecated("Use AppColors.Semantic.Warning.OnContainer", ReplaceWith("AppColors.Semantic.Warning.OnContainer"))
+    val OnWarningDark = AppColors.Semantic.Warning.OnContainer
+
+    @Deprecated("Use AppColors.Semantic.Error.Default", ReplaceWith("AppColors.Semantic.Error.Default"))
+    val Error = AppColors.Semantic.Error.Default
+
+    @Deprecated("Use AppColors.Semantic.Error.Light", ReplaceWith("AppColors.Semantic.Error.Light"))
+    val ErrorDark = AppColors.Semantic.Error.Light
+
+    @Deprecated("Use AppColors.Semantic.Error.Container", ReplaceWith("AppColors.Semantic.Error.Container"))
+    val ErrorLight = AppColors.Semantic.Error.Container
+
+    @Deprecated("Use AppColors.Semantic.Error.OnError", ReplaceWith("AppColors.Semantic.Error.OnError"))
+    val OnError = AppColors.Semantic.Error.OnError
+
+    @Deprecated("Use AppColors.Semantic.Error.OnContainer", ReplaceWith("AppColors.Semantic.Error.OnContainer"))
+    val OnErrorDark = AppColors.Semantic.Error.OnContainer
+
+    @Deprecated("Use AppColors.Semantic.Info.Default", ReplaceWith("AppColors.Semantic.Info.Default"))
+    val Info = AppColors.Semantic.Info.Default
+
+    @Deprecated("Use AppColors.Semantic.Info.Light", ReplaceWith("AppColors.Semantic.Info.Light"))
+    val InfoDark = AppColors.Semantic.Info.Light
+
+    @Deprecated("Use AppColors.Semantic.Info.Container", ReplaceWith("AppColors.Semantic.Info.Container"))
+    val InfoLight = AppColors.Semantic.Info.Container
+
+    @Deprecated("Use AppColors.Semantic.Info.OnInfo", ReplaceWith("AppColors.Semantic.Info.OnInfo"))
+    val OnInfo = AppColors.Semantic.Info.OnInfo
+
+    @Deprecated("Use AppColors.Semantic.Info.OnContainer", ReplaceWith("AppColors.Semantic.Info.OnContainer"))
+    val OnInfoDark = AppColors.Semantic.Info.OnContainer
 }
+
+// ============================================================================
+// INTERVENTION COLORS (Specialized, Keep Separate)
+// ============================================================================
 
 /**
  * Intervention overlay color scheme
@@ -118,6 +453,9 @@ object SemanticColors {
  * - Cool colors (blue) → Calm reflection
  * - Green → Nature, breathing, positive action
  * - Red → Urgency (used sparingly)
+ *
+ * NOTE: These colors are specialized for intervention overlays only.
+ * Do NOT use for general app UI - use AppColors instead.
  */
 object InterventionColors {
 
@@ -248,46 +586,29 @@ object InterventionColors {
     val InstagramOrange = Color(0xFFF77737)
     val InstagramPurple = Color(0xFFC13584)
 
-    // ACCENT COLORS
+    // ACCENT COLORS (for intervention content)
 
-    /**
-     * Success/Achievement
-     */
-    val Success = Color(0xFF4CAF50)  // Green
-    val SuccessDark = Color(0xFF81C784)
+    @Deprecated("Use AppColors.Semantic.Success.Default", ReplaceWith("AppColors.Semantic.Success.Default"))
+    val Success = AppColors.Semantic.Success.Default
 
-    /**
-     * Warning/Caution
-     */
-    val Warning = Color(0xFFFF9800)  // Orange
-    val WarningDark = Color(0xFFFFB74D)
+    @Deprecated("Use AppColors.Semantic.Success.Light", ReplaceWith("AppColors.Semantic.Success.Light"))
+    val SuccessDark = AppColors.Semantic.Success.Light
 
-    /**
-     * Error/Over limit
-     */
-    val Error = Color(0xFFF44336)  // Red
-    val ErrorDark = Color(0xFFE57373)
+    @Deprecated("Use AppColors.Semantic.Warning.Default", ReplaceWith("AppColors.Semantic.Warning.Default"))
+    val Warning = AppColors.Semantic.Warning.Default
 
-    /**
-     * Goal line/target
-     */
-    val GoalLine = Color(0xFF2196F3)  // Blue
-    val GoalLineDark = Color(0xFF64B5F6)
-}
+    @Deprecated("Use AppColors.Semantic.Warning.Light", ReplaceWith("AppColors.Semantic.Warning.Light"))
+    val WarningDark = AppColors.Semantic.Warning.Light
 
-/**
- * App-specific semantic colors
- */
-object AppColors {
-    /**
-     * Progress states
-     */
-    val OnTrack = InterventionColors.Success  // Green - under goal
-    val ApproachingLimit = InterventionColors.Warning  // Yellow - near goal
-    val OverLimit = InterventionColors.Error  // Red - over goal
+    @Deprecated("Use AppColors.Semantic.Error.Default", ReplaceWith("AppColors.Semantic.Error.Default"))
+    val Error = AppColors.Semantic.Error.Default
 
-    /**
-     * Streak fire emoji color
-     */
-    val StreakFire = Color(0xFFFF6B35)  // Orange-red fire
+    @Deprecated("Use AppColors.Semantic.Error.Light", ReplaceWith("AppColors.Semantic.Error.Light"))
+    val ErrorDark = AppColors.Semantic.Error.Light
+
+    @Deprecated("Use AppColors.Semantic.Info.Default", ReplaceWith("AppColors.Semantic.Info.Default"))
+    val GoalLine = AppColors.Semantic.Info.Default
+
+    @Deprecated("Use AppColors.Semantic.Info.Light", ReplaceWith("AppColors.Semantic.Info.Light"))
+    val GoalLineDark = AppColors.Semantic.Info.Light
 }

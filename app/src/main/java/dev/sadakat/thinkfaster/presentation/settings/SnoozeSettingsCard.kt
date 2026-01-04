@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
+import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
 
 /**
  * Snooze Settings Card - Opens bottom sheet to configure snooze
@@ -33,7 +35,7 @@ fun SnoozeSettingsCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { showBottomSheet = true },
-        shape = RoundedCornerShape(16.dp),
+        shape = Shapes.card,
         colors = CardDefaults.cardColors(
             containerColor = if (snoozeActive)
                 MaterialTheme.colorScheme.tertiaryContainer
@@ -45,14 +47,14 @@ fun SnoozeSettingsCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(Spacing.lg),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Spacing.horizontalArrangementSM
                 ) {
                     Text(text = "⏸️", fontSize = 24.sp)
                     Text(
@@ -66,7 +68,7 @@ fun SnoozeSettingsCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
 
                 Text(
                     text = "Temporarily pause interventions. Tap to configure duration.",
@@ -80,10 +82,10 @@ fun SnoozeSettingsCard(
 
                 // Show remaining time if active
                 if (snoozeActive && remainingMinutes > 0) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Spacing.md))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Spacing.horizontalArrangementSM
                     ) {
                         Icon(
                             imageVector = Icons.Default.Pause,
@@ -101,11 +103,11 @@ fun SnoozeSettingsCard(
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
 
             // Status indicator
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = Shapes.button,
                 color = if (snoozeActive)
                     MaterialTheme.colorScheme.tertiary
                 else
@@ -113,7 +115,7 @@ fun SnoozeSettingsCard(
             ) {
                 Text(
                     text = if (snoozeActive) "Active" else "Off",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (snoozeActive)
@@ -138,9 +140,9 @@ fun SnoozeSettingsCard(
                 ) {
                     Surface(
                         modifier = Modifier
-                            .padding(vertical = 16.dp)
+                            .padding(vertical = Spacing.md)
                             .width(32.dp)
-                            .height(4.dp),
+                            .height(Spacing.xs),
                         shape = RoundedCornerShape(2.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     ) {}
@@ -181,9 +183,9 @@ private fun SnoozeBottomSheetContent(
             .fillMaxWidth()
             .heightIn(max = screenHeight * 0.85f)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = Spacing.lg)
+            .padding(bottom = Spacing.xl),
+        verticalArrangement = Spacing.verticalArrangementMD
     ) {
         // Title
         Column {
@@ -206,7 +208,7 @@ private fun SnoozeBottomSheetContent(
         // Toggle Switch
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = Shapes.button,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
@@ -214,7 +216,7 @@ private fun SnoozeBottomSheetContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(Spacing.md),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -224,7 +226,7 @@ private fun SnoozeBottomSheetContent(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
                         text = if (snoozeActive) "Reminders are paused" else "Reminders are active",
                         fontSize = 13.sp,
@@ -248,7 +250,7 @@ private fun SnoozeBottomSheetContent(
         // Duration Selection
         if (snoozeActive || true) { // Always show duration options
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Spacing.verticalArrangementMD
             ) {
                 Text(
                     text = "Snooze Duration",
@@ -269,7 +271,7 @@ private fun SnoozeBottomSheetContent(
                 durations.chunked(3).forEach { row ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Spacing.horizontalArrangementSM
                     ) {
                         row.forEach { (minutes, label) ->
                             val isSelected = selectedDuration == minutes
@@ -309,7 +311,7 @@ private fun SnoozeBottomSheetContent(
         if (snoozeActive && remainingMinutes > 0) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = Shapes.button,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
                 )
@@ -317,9 +319,9 @@ private fun SnoozeBottomSheetContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(Spacing.md),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Spacing.horizontalArrangementMD
                 ) {
                     Icon(
                         imageVector = Icons.Default.Pause,

@@ -13,6 +13,13 @@ import android.os.VibratorManager
 object HapticFeedback {
 
     /**
+     * Provide selection haptic feedback for button presses and UI selections
+     */
+    fun selection(context: Context) {
+        vibrate(context, 5L)
+    }
+
+    /**
      * Provide light haptic feedback for UI interactions
      */
     fun light(context: Context) {

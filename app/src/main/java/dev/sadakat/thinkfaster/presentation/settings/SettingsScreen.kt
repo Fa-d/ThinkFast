@@ -29,6 +29,9 @@ import dev.sadakat.thinkfaster.data.preferences.SyncPreferences
 import dev.sadakat.thinkfaster.domain.model.AppSettings
 import dev.sadakat.thinkfaster.domain.model.GoalProgress
 import dev.sadakat.thinkfaster.presentation.navigation.Screen
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
+import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
+import dev.sadakat.thinkfaster.ui.theme.AppColors
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
@@ -62,12 +65,12 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(paddingValues),
             contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 16.dp,
-                bottom = contentPadding.calculateBottomPadding() + 16.dp
+                start = Spacing.md,
+                end = Spacing.md,
+                top = Spacing.md,
+                bottom = contentPadding.calculateBottomPadding() + Spacing.md
             ),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Spacing.verticalArrangementLG
         ) {
 
 
@@ -76,14 +79,15 @@ fun SettingsScreen(
                 uiState.successMessage?.let { message ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = Shapes.button,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer
                         )
                     ) {
                         Text(
                             text = "✓ $message",
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(Spacing.md),
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             fontWeight = FontWeight.Medium
                         )
@@ -93,7 +97,7 @@ fun SettingsScreen(
                 uiState.error?.let { error ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = Shapes.button,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         )
@@ -101,7 +105,7 @@ fun SettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(Spacing.md),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -124,7 +128,7 @@ fun SettingsScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = Shapes.card,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
@@ -132,9 +136,9 @@ fun SettingsScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp),
+                                .padding(Spacing.lg),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Spacing.verticalArrangementSM
                         ) {
                             Text(
                                 text = "💡 Tip",
@@ -164,7 +168,7 @@ fun SettingsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = Shapes.card,
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
@@ -173,14 +177,14 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
+                            .padding(Spacing.lg),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Spacing.horizontalArrangementSM
                             ) {
                                 Text(text = "🔔", fontSize = 24.sp)
                                 Text(
@@ -210,12 +214,12 @@ fun SettingsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = Shapes.card,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp)
+                        modifier = Modifier.padding(Spacing.lg)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -225,7 +229,7 @@ fun SettingsScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Spacing.horizontalArrangementSM
                                 ) {
                                     Text(text = "📐", fontSize = 24.sp)
                                     Text(
@@ -252,7 +256,7 @@ fun SettingsScreen(
                         // Segmented control style toggle
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Spacing.horizontalArrangementSM
                         ) {
                             // Full-screen option
                             OutlinedButton(
@@ -306,7 +310,7 @@ fun SettingsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = Shapes.card,
                     colors = CardDefaults.cardColors(
                         containerColor = if (uiState.appSettings.lockedMode) {
                             MaterialTheme.colorScheme.errorContainer
@@ -325,14 +329,14 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
+                            .padding(Spacing.lg),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Spacing.horizontalArrangementSM
                             ) {
                                 Text(
                                     text = if (uiState.appSettings.lockedMode) "🔒" else "🔓",
@@ -412,7 +416,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { navController.navigate("theme_appearance") },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = Shapes.card,
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer
                     ),
@@ -421,14 +425,14 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
+                            .padding(Spacing.lg),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Spacing.horizontalArrangementSM
                             ) {
                                 Text(text = "🎨", fontSize = 24.sp)
                                 Text(
@@ -464,7 +468,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { navController.navigate("analytics") },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = Shapes.card,
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer
                     ),
@@ -473,14 +477,14 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
+                            .padding(Spacing.lg),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Spacing.horizontalArrangementSM
                             ) {
                                 Text(text = "📊", fontSize = 24.sp)
                                 Text(
@@ -519,14 +523,14 @@ fun SettingsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = Shapes.button,
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.padding(Spacing.md),
+                        verticalArrangement = Spacing.verticalArrangementSM
                     ) {
                         Text(
                             text = "ℹ️ How it works",
@@ -574,15 +578,15 @@ private fun GoalCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = Shapes.card,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.padding(Spacing.lg),
+            verticalArrangement = Spacing.verticalArrangementMD
         ) {
             // App header
             Row(
@@ -592,7 +596,7 @@ private fun GoalCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Spacing.horizontalArrangementSM
                 ) {
                     Text(text = appIcon, fontSize = 32.sp)
                     Text(
@@ -623,7 +627,7 @@ private fun GoalCard(
             if (progress != null) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = Shapes.button,
                     colors = CardDefaults.cardColors(
                         containerColor = when (progress.getProgressColor()) {
                             dev.sadakat.thinkfaster.domain.model.ProgressColor.GREEN ->
@@ -641,8 +645,8 @@ private fun GoalCard(
                     )
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.padding(Spacing.md),
+                        verticalArrangement = Spacing.verticalArrangementSM
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -691,7 +695,7 @@ private fun GoalCard(
 
             // Goal setting slider
             Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Spacing.verticalArrangementSM
             ) {
                 Text(
                     text = "Daily Limit: ${sliderValue.roundToInt()} minutes",
@@ -731,7 +735,7 @@ private fun GoalCard(
                     .fillMaxWidth()
                     .height(48.dp),
                 enabled = !isSaving && sliderValue.roundToInt() != currentLimit,
-                shape = RoundedCornerShape(12.dp)
+                shape = Shapes.button
             ) {
                 if (isSaving) {
                     CircularProgressIndicator(
@@ -760,20 +764,20 @@ private fun TimerDurationCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = Shapes.card,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(Spacing.lg),
+            verticalArrangement = Spacing.verticalArrangementMD
         ) {
             // Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Spacing.horizontalArrangementSM
             ) {
                 Text(text = "⏰", fontSize = 24.sp)
                 Text(
@@ -833,7 +837,7 @@ private fun TimerDurationCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = Shapes.button
                 ) {
                     Text(
                         text = "Apply",
@@ -871,14 +875,14 @@ private fun FrictionLevelCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { showBottomSheet = true },
-        shape = RoundedCornerShape(16.dp),
+        shape = Shapes.card,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(Spacing.lg),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -886,7 +890,7 @@ private fun FrictionLevelCard(
                 // Header
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Spacing.horizontalArrangementSM
                 ) {
                     Text(text = "⚙️", fontSize = 24.sp)
                     Text(
@@ -910,7 +914,7 @@ private fun FrictionLevelCard(
                 // Current selection display
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Spacing.horizontalArrangementSM
                 ) {
                     Text(
                         text = "Current:",
@@ -990,7 +994,7 @@ private fun FrictionLevelBottomSheetContent(
             .heightIn(max = screenHeight * 0.7f)
             .padding(horizontal = 16.dp)
             .padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Spacing.verticalArrangementMD
     ) {
         // Title
         Row(
@@ -1055,7 +1059,7 @@ private fun FrictionLevelOption(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = Shapes.button,
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -1071,14 +1075,14 @@ private fun FrictionLevelOption(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(Spacing.md),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Spacing.horizontalArrangementSM
                 ) {
                     Text(
                         text = title,
@@ -1147,7 +1151,7 @@ private fun NotificationSettingsCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { showBottomSheet = true },
-        shape = RoundedCornerShape(16.dp),
+        shape = Shapes.card,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -1156,14 +1160,14 @@ private fun NotificationSettingsCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(Spacing.lg),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Spacing.horizontalArrangementSM
                 ) {
                     Text(text = "🔔", fontSize = 24.sp)
                     Text(
@@ -1246,7 +1250,7 @@ private fun NotificationSettingsBottomSheet(
         // Enable/Disable toggle
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = Shapes.button,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
@@ -1254,7 +1258,7 @@ private fun NotificationSettingsBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(Spacing.md),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1328,7 +1332,7 @@ private fun NotificationTimeRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { showTimePicker = true },
-        shape = RoundedCornerShape(12.dp),
+        shape = Shapes.button,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -1336,13 +1340,13 @@ private fun NotificationTimeRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(Spacing.md),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Spacing.horizontalArrangementMD,
                 modifier = Modifier.weight(1f)
             ) {
                 Text(text = emoji, fontSize = 32.sp)
@@ -1436,7 +1440,7 @@ private fun AccountAndSyncCard(
                     navController.navigate(Screen.Login.route)
                 }
             },
-        shape = RoundedCornerShape(16.dp),
+        shape = Shapes.card,
         colors = CardDefaults.cardColors(
             containerColor = if (isAuthenticated) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -1449,14 +1453,14 @@ private fun AccountAndSyncCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(Spacing.lg),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Spacing.horizontalArrangementSM
                 ) {
                     Text(
                         text = if (isAuthenticated) "☁️" else "🔐",

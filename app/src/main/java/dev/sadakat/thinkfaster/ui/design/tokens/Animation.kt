@@ -108,8 +108,46 @@ object Animation {
     }
 
     // ============================================================================
+    // SCALE VALUES
+    // ============================================================================
+
+    /**
+     * Scale values for press animations (iOS-style)
+     */
+    object Scale {
+        /** Scale down value for button press (0.95) */
+        const val PressDown: Float = 0.95f
+
+        /** Scale up value for button release (1.0) */
+        const val PressUp: Float = 1.0f
+    }
+
+    // ============================================================================
     // SPRING SPECIFICATIONS
     // ============================================================================
+
+    /**
+     * Predefined spring animation specs for common use cases
+     */
+    object Spring {
+        /** Default spring - balanced response */
+        val Default: SpringSpec<Float> = spring(
+            dampingRatio = 0.8f,
+            stiffness = Stiffness.High
+        )
+
+        /** Bouncy spring - playful animations */
+        val Bouncy: SpringSpec<Float> = spring(
+            dampingRatio = DampingRatio.Bouncy,
+            stiffness = Stiffness.Medium
+        )
+
+        /** Smooth spring - no overshoot */
+        val Smooth: SpringSpec<Float> = spring(
+            dampingRatio = DampingRatio.NoBounce,
+            stiffness = Stiffness.Low
+        )
+    }
 
     /**
      * Spring damping ratios for bounce effect

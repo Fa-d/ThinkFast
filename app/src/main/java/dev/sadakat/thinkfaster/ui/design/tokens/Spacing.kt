@@ -188,6 +188,9 @@ object Spacing {
     /** Vertical arrangement with large spacing */
     val verticalArrangementLG: Arrangement.Vertical = Arrangement.spacedBy(lg)
 
+    /** Vertical arrangement with extra large spacing */
+    val verticalArrangementXL: Arrangement.Vertical = Arrangement.spacedBy(xl)
+
     // ============================================================================
     // PADDING VALUES HELPER
     // ============================================================================

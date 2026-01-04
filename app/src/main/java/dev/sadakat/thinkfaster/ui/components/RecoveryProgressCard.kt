@@ -23,7 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sadakat.thinkfaster.domain.model.StreakRecovery
-import dev.sadakat.thinkfaster.ui.theme.ProgressColors
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
+import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
+import dev.sadakat.thinkfaster.ui.theme.AppColors
 import dev.sadakat.thinkfaster.util.HapticFeedback
 
 /**
@@ -70,7 +72,7 @@ fun RecoveryProgressCard(
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = Shapes.card,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
@@ -79,8 +81,8 @@ fun RecoveryProgressCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(Spacing.lg),
+                verticalArrangement = Spacing.verticalArrangementMD
             ) {
                 // Header with emoji, title, and dismiss button
                 Row(
@@ -89,7 +91,7 @@ fun RecoveryProgressCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Spacing.horizontalArrangementMD,
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
@@ -107,17 +109,17 @@ fun RecoveryProgressCard(
 
                         // Title
                         Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                            verticalArrangement = Spacing.verticalArrangementXS
                         ) {
                             Text(
                                 text = "Getting Back on Track",
-                                fontSize = 18.sp,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Day ${recovery.currentRecoveryDays} of $targetDays",
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                         }
@@ -143,13 +145,13 @@ fun RecoveryProgressCard(
                 // Recovery message
                 Text(
                     text = recovery.getRecoveryMessage(),
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
 
                 // Progress bar
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Spacing.verticalArrangementSM
                 ) {
                     Box(
                         modifier = Modifier
@@ -163,7 +165,7 @@ fun RecoveryProgressCard(
                                 .fillMaxWidth(animatedProgress)
                                 .fillMaxHeight()
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(ProgressColors.Approaching)
+                                .background(AppColors.Progress.Approaching)
                         )
                     }
 
@@ -174,14 +176,14 @@ fun RecoveryProgressCard(
                     ) {
                         Text(
                             text = "${(progress * 100).toInt()}% complete",
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
-                            color = ProgressColors.Approaching
+                            color = AppColors.Progress.Approaching
                         )
                         if (remaining > 0) {
                             Text(
                                 text = "$remaining ${if (remaining == 1) "day" else "days"} to go",
-                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                             )
                         }
@@ -192,8 +194,8 @@ fun RecoveryProgressCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        .padding(top = Spacing.xs),
+                    horizontalArrangement = Spacing.horizontalArrangementSM,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -202,7 +204,7 @@ fun RecoveryProgressCard(
                     )
                     Text(
                         text = "Setbacks are normal! Getting back on track builds resilience.",
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         lineHeight = 18.sp
                     )

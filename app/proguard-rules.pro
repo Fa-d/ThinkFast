@@ -47,3 +47,9 @@
 -keepclassmembers class * {
     @org.koin.core.annotation.* <methods>;
 }
+
+# SLF4J - Logging framework (Supabase dependency)
+-keep class org.slf4j.** { *; }
+-dontwarn org.slf4j.**
+-keep class org.slf4j.impl.* { *; }
+-dontwarn org.slf4j.impl.*

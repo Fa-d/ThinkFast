@@ -19,7 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sadakat.thinkfaster.domain.model.StreakFreezeStatus
-import dev.sadakat.thinkfaster.ui.theme.ProgressColors
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
+import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
+import dev.sadakat.thinkfaster.ui.theme.AppColors
 import dev.sadakat.thinkfaster.util.HapticFeedback
 
 /**
@@ -50,17 +52,17 @@ fun StreakFreezeCard(
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = Shapes.card,
             colors = CardDefaults.cardColors(
-                containerColor = ProgressColors.Info.copy(alpha = 0.1f)
+                containerColor = AppColors.Semantic.Info.Container
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(Spacing.lg),
+                verticalArrangement = Spacing.verticalArrangementMD
             ) {
                 // Header with emoji and freeze count
                 Row(
@@ -69,7 +71,7 @@ fun StreakFreezeCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Spacing.horizontalArrangementMD,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Emoji in circle
@@ -77,7 +79,7 @@ fun StreakFreezeCard(
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(
-                                    color = ProgressColors.Info.copy(alpha = 0.2f),
+                                    color = AppColors.Semantic.Info.Container,
                                     shape = CircleShape
                                 ),
                             contentAlignment = Alignment.Center
@@ -90,17 +92,17 @@ fun StreakFreezeCard(
 
                         // Title
                         Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                            verticalArrangement = Spacing.verticalArrangementXS
                         ) {
                             Text(
                                 text = "Streak Freeze",
-                                fontSize = 18.sp,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Protect your streak",
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                         }
@@ -111,19 +113,19 @@ fun StreakFreezeCard(
                         modifier = Modifier
                             .background(
                                 color = if (freezeStatus.freezesAvailable > 0)
-                                    ProgressColors.Info.copy(alpha = 0.2f)
+                                    AppColors.Semantic.Info.Container
                                 else
                                     MaterialTheme.colorScheme.surfaceVariant,
-                                shape = RoundedCornerShape(12.dp)
+                                shape = Shapes.button
                             )
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(horizontal = Spacing.md, vertical = Spacing.sm)
                     ) {
                         Text(
                             text = "${freezeStatus.freezesAvailable}/${freezeStatus.maxFreezes}",
-                            fontSize = 16.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = if (freezeStatus.freezesAvailable > 0)
-                                ProgressColors.Info
+                                AppColors.Semantic.Info.Default
                             else
                                 MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -139,7 +141,7 @@ fun StreakFreezeCard(
                         percentageUsed >= 80 -> "Running low on time? Use a freeze to protect your ${currentStreak}-day streak!"
                         else -> "Save your freeze for when you really need it."
                     },
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
 
@@ -151,18 +153,18 @@ fun StreakFreezeCard(
                     },
                     enabled = canActivate,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = Shapes.button,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ProgressColors.Info,
+                        containerColor = AppColors.Semantic.Info.Default,
                         contentColor = Color.White,
                         disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Spacing.horizontalArrangementSM,
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(vertical = Spacing.xs)
                     ) {
                         Text(
                             text = "❄️",
@@ -175,7 +177,7 @@ fun StreakFreezeCard(
                                 currentStreak == 0 -> "Build a Streak First"
                                 else -> "Use Streak Freeze"
                             },
-                            fontSize = 16.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -185,7 +187,7 @@ fun StreakFreezeCard(
                 if (freezeStatus.freezesAvailable > 0 && !freezeStatus.hasActiveFreeze) {
                     Text(
                         text = "💡 Freezes refill monthly. Use them wisely!",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 }

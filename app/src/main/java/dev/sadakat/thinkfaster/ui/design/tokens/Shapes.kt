@@ -32,31 +32,25 @@ object Shapes {
      * Small corner radius - 8dp.
      * Use for: buttons, input fields, small elements, chips
      */
-    val sm: DpCornerSize = DpCornerSize(8.dp)
+    val sm: Dp = 8.dp
 
     /**
      * Medium corner radius - 12dp.
      * Use for: cards, chips, toggle buttons, primary buttons
      */
-    val md: DpCornerSize = DpCornerSize(12.dp)
+    val md: Dp = 12.dp
 
     /**
      * Large corner radius - 16dp.
      * Use for: large cards, bottom sheets
      */
-    val lg: DpCornerSize = DpCornerSize(16.dp)
+    val lg: Dp = 16.dp
 
     /**
      * Extra large corner radius - 24dp.
      * Use for: dialogs, popups, modals
      */
-    val xl: DpCornerSize = DpCornerSize(24.dp)
-
-    /**
-     * Full corner radius - 9999dp (effectively a circle).
-     * Use for: pills, badges, circles, avatars
-     */
-    val full: DpCornerSize = DpCornerSize(9999.dp)
+    val xl: Dp = 24.dp
 
     // ============================================================================
     // COMPONENT SHAPES
@@ -178,10 +172,10 @@ object Shapes {
      *
      * @param cornerRadius The corner radius for top corners
      */
-    fun topRounded(cornerRadius: DpCornerSize = xl): CornerBasedShape =
+    fun topRounded(cornerRadius: Dp = xl): CornerBasedShape =
         RoundedCornerShape(
-            topStart = cornerRadius.value,
-            topEnd = cornerRadius.value,
+            topStart = cornerRadius,
+            topEnd = cornerRadius,
             bottomStart = 0.dp,
             bottomEnd = 0.dp
         )
@@ -191,12 +185,12 @@ object Shapes {
      *
      * @param cornerRadius The corner radius for bottom corners
      */
-    fun bottomRounded(cornerRadius: DpCornerSize = xl): CornerBasedShape =
+    fun bottomRounded(cornerRadius: Dp = xl): CornerBasedShape =
         RoundedCornerShape(
             topStart = 0.dp,
             topEnd = 0.dp,
-            bottomStart = cornerRadius.value,
-            bottomEnd = cornerRadius.value
+            bottomStart = cornerRadius,
+            bottomEnd = cornerRadius
         )
 
     /**
@@ -218,15 +212,6 @@ object Shapes {
         bottomEnd = bottomRight,
         bottomStart = bottomLeft
     )
-
-    // ============================================================================
-    // EXTENSION PROPERTIES FOR EASY ACCESS
-    // ============================================================================
-
-    /**
-     * Converts DpCornerSize to Dp for use in modifiers.
-     */
-    fun DpCornerSize.toDp(): Dp = value
 }
 
 // ============================================================================
