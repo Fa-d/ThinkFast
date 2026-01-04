@@ -18,12 +18,14 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -77,7 +79,13 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-    var hasAllPermissions by remember { mutableStateOf(PermissionHelper.hasAllRequiredPermissions(context)) }
+    var hasAllPermissions by remember {
+        mutableStateOf(
+            PermissionHelper.hasAllRequiredPermissions(
+                context
+            )
+        )
+    }
 
     // Bottom sheet state for goal management
     var showManageAppsSheet by remember { mutableStateOf(false) }
@@ -157,6 +165,7 @@ fun HomeScreen(
                 onDismiss = { viewModel.dismissQuickWin(QuickWinType.FIRST_SESSION) }
             )
         }
+
         QuickWinType.FIRST_UNDER_GOAL -> {
             FirstUnderGoalCelebration(
                 show = true,
@@ -164,6 +173,7 @@ fun HomeScreen(
                 onDismiss = { viewModel.dismissQuickWin(QuickWinType.FIRST_UNDER_GOAL) }
             )
         }
+
         QuickWinType.DAY_ONE_COMPLETE -> {
             DayOneCelebration(
                 show = true,
@@ -172,13 +182,16 @@ fun HomeScreen(
                 onDismiss = { viewModel.dismissQuickWin(QuickWinType.DAY_ONE_COMPLETE) }
             )
         }
+
         QuickWinType.DAY_TWO_COMPLETE -> {
             DayTwoCelebration(
                 show = true,
                 onDismiss = { viewModel.dismissQuickWin(QuickWinType.DAY_TWO_COMPLETE) }
             )
         }
-        null -> { /* No quick win to show */ }
+
+        null -> { /* No quick win to show */
+        }
     }
 
     Scaffold(
@@ -187,7 +200,7 @@ fun HomeScreen(
                 title = {
                     Text(
                         "ThinkFast",
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -223,135 +236,134 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
                 contentPadding = PaddingValues(
-                start = Spacing.md,
-                end = Spacing.md,
-                top = Spacing.sm,
-                bottom = contentPadding.calculateBottomPadding() + Spacing.sm
-            ),
-            verticalArrangement = Spacing.verticalArrangementMD
-        ) {
-            // Complete Setup Banner (for users who skipped onboarding)
-            item {
-                CompleteSetupBanner(navController = navController, context = context)
-            }
-
-            // Hero Card - Today's usage summary with quick actions
-            item {
-                TodayAtAGlanceCard(
-                    uiState = uiState,
-                    context = context,
-                    hasPermissions = hasAllPermissions,
-                    onSetGoalsClick = {
-                        navController.navigate(Screen.Settings.route)
-                    },
-                    onManageAppsClick = {
-                        navController.navigate(Screen.ManageApps.route)
-                    },
-                    onStartService = {
-                        HapticFeedback.success(context)
-                        startMonitoringService(context)
-                        viewModel.updateServiceState(true)
-                    },
-                    onStopService = {
-                        HapticFeedback.medium(context)
-                        stopMonitoringService(context)
-                        viewModel.updateServiceState(false)
-                    }
-                )
-            }
-
-            // Tracked Apps Section (Per-App Goals feature)
-            item {
-                TrackedAppsSection(
-                    trackedAppsGoals = uiState.trackedAppsGoals,
-                    expandedAppForGoalEdit = uiState.expandedAppForGoalEdit,
-                    isUpdatingGoal = uiState.isUpdatingGoal,
-                    onToggleExpanded = viewModel::toggleGoalEditor,
-                    onUpdateGoal = viewModel::updateAppGoal,
-                    onAddAppsClick = {
-                        navController.navigate(Screen.ManageApps.route)
-                    },
-                    onManageClick = { showManageAppsSheet = true }
-                )
-            }
-
-            // Quest Progress Card (First-Week Retention: Days 1-7)
-            if (uiState.showQuestCard) {
-                uiState.questStatus?.let { quest ->
-                    item {
-                        QuestProgressCard(
-                            quest = quest,
-                            onDismiss = { viewModel.dismissQuestCard() }
-                        )
-                    }
-                }
-            }
-
-            // Baseline Comparison Card (First-Week Retention: Day 3+)
-            if (uiState.showBaselineCard) {
-                uiState.userBaseline?.let { baseline ->
-                    item {
-                        BaselineComparisonCard(
-                            baseline = baseline,
-                            todayUsageMinutes = uiState.totalUsageMinutes
-                        )
-                    }
-                }
-            }
-
-            // Goal Achievement Badge (Phase 1.5)
-            if (uiState.showGoalAchievedBadge && !uiState.isOverLimit) {
+                    start = Spacing.md,
+                    end = Spacing.md,
+                    bottom = contentPadding.calculateBottomPadding() + Spacing.sm
+                ),
+                verticalArrangement = Spacing.verticalArrangementMD
+            ) {
+                // Complete Setup Banner (for users who skipped onboarding)
                 item {
-                    CompactCelebrationCard(
-                        show = true,
-                        emoji = "🎯",
-                        title = "On Track!",
-                        message = "You're meeting your daily goal. Keep it up!",
-                        backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        textColor = MaterialTheme.colorScheme.onTertiaryContainer
+                    CompleteSetupBanner(navController = navController, context = context)
+                }
+
+                // Hero Card - Today's usage summary with quick actions
+                item {
+                    TodayAtAGlanceCard(
+                        uiState = uiState,
+                        context = context,
+                        hasPermissions = hasAllPermissions,
+                        onSetGoalsClick = {
+                            navController.navigate(Screen.Settings.route)
+                        },
+                        onManageAppsClick = {
+                            navController.navigate(Screen.ManageApps.route)
+                        },
+                        onStartService = {
+                            HapticFeedback.success(context)
+                            startMonitoringService(context)
+                            viewModel.updateServiceState(true)
+                        },
+                        onStopService = {
+                            HapticFeedback.medium(context)
+                            stopMonitoringService(context)
+                            viewModel.updateServiceState(false)
+                        }
                     )
                 }
-            }
 
-            // Recovery Progress Card (Broken Streak Recovery feature)
-            uiState.activeRecovery?.let { recovery ->
-                if (!recovery.isRecoveryComplete) {
-                    item {
-                        RecoveryProgressCard(
-                            recovery = recovery,
-                            onDismiss = { viewModel.dismissRecoveryCard() }
-                        )
-                    }
+                // Tracked Apps Section (Per-App Goals feature)
+                item {
+                    TrackedAppsSection(
+                        trackedAppsGoals = uiState.trackedAppsGoals,
+                        onAppClick = { app ->
+                            selectedAppForGoalEdit = app
+                            showGoalEditorSheet = true
+                        },
+                        onAddAppsClick = {
+                            navController.navigate(Screen.ManageApps.route)
+                        },
+                        onManageClick = { showManageAppsSheet = true }
+                    )
                 }
-            }
 
-            // Streak Freeze Card (Broken Streak Recovery feature)
-            if (uiState.showFreezeButton) {
-                uiState.freezeStatus?.let { freezeStatus ->
-                    uiState.progressPercentage?.let { percentage ->
+                // Quest Progress Card (First-Week Retention: Days 1-7)
+                if (uiState.showQuestCard) {
+                    uiState.questStatus?.let { quest ->
                         item {
-                            StreakFreezeCard(
-                                freezeStatus = freezeStatus,
-                                currentStreak = uiState.currentStreak,
-                                percentageUsed = percentage,
-                                onActivateFreeze = { viewModel.activateStreakFreeze() }
+                            QuestProgressCard(
+                                quest = quest,
+                                onDismiss = { viewModel.dismissQuestCard() }
                             )
                         }
                     }
                 }
-            }
 
-            // Permission warning (if missing)
-            if (!hasAllPermissions) {
-                item {
-                    PermissionWarningCard(
-                        onGrantClick = {
-                            navController.navigate(Screen.PermissionRequest.route)
+                // Baseline Comparison Card (First-Week Retention: Day 3+)
+                if (uiState.showBaselineCard) {
+                    uiState.userBaseline?.let { baseline ->
+                        item {
+                            BaselineComparisonCard(
+                                baseline = baseline,
+                                todayUsageMinutes = uiState.totalUsageMinutes
+                            )
                         }
-                    )
+                    }
+                }
+
+                // Goal Achievement Badge (Phase 1.5)
+                if (uiState.showGoalAchievedBadge && !uiState.isOverLimit) {
+                    item {
+                        CompactCelebrationCard(
+                            show = true,
+                            emoji = "🎯",
+                            title = "On Track!",
+                            message = "You're meeting your daily goal. Keep it up!",
+                            backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
+                            textColor = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+
+                // Recovery Progress Card (Broken Streak Recovery feature)
+                uiState.activeRecovery?.let { recovery ->
+                    if (!recovery.isRecoveryComplete) {
+                        item {
+                            RecoveryProgressCard(
+                                recovery = recovery,
+                                onDismiss = { viewModel.dismissRecoveryCard() }
+                            )
+                        }
+                    }
+                }
+
+                // Streak Freeze Card (Broken Streak Recovery feature)
+                if (uiState.showFreezeButton) {
+                    uiState.freezeStatus?.let { freezeStatus ->
+                        uiState.progressPercentage?.let { percentage ->
+                            item {
+                                StreakFreezeCard(
+                                    freezeStatus = freezeStatus,
+                                    currentStreak = uiState.currentStreak,
+                                    percentageUsed = percentage,
+                                    onActivateFreeze = { viewModel.activateStreakFreeze() }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Permission warning (if missing)
+                if (!hasAllPermissions) {
+                    item {
+                        PermissionWarningCard(
+                            onGrantClick = {
+                                navController.navigate(Screen.PermissionRequest.route)
+                            }
+                        )
+                    }
                 }
             }
-        }
         }
     }
 
@@ -454,42 +466,28 @@ private fun TodayAtAGlanceCard(
 ) {
     val alpha = rememberFadeInAnimation(durationMillis = 600)
 
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer(alpha = alpha),
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        verticalArrangement = Spacing.verticalArrangementMD,
+        horizontalAlignment = Alignment.Start
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.lg),
-            verticalArrangement = Spacing.verticalArrangementMD,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Value proposition
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Spacing.verticalArrangementSM
-            ) {
-                Text(
-                    text = "Track & Reduce Distracting Apps",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Take control of your screen time",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
+            // Time-based greeting
+            val greeting = getGreeting()
+            Text(
+                text = greeting,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Start
+            )
+            Text(
+                text = "Let's stay mindful today",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Start
+            )
 
 
             // Loading state
@@ -555,108 +553,60 @@ private fun TodayAtAGlanceCard(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Spacing.verticalArrangementMD
                 ) {
-                    // Progress section with percentage on left and circular ring on right
+                    // Progress section - new design matching the image
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(Shapes.button)
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(Spacing.lg),
                         verticalArrangement = Spacing.verticalArrangementMD
                     ) {
-                        // Header: Icon + "Your Progress"
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Spacing.horizontalArrangementSM
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surface),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = "📊", fontSize = 20.sp)
-                            }
-                            Text(
-                                text = "Your Progress",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        // Main content row
+                        // Header row: Title on left, total time on right
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Left side: Percentage and info
-                            Column(
-                                verticalArrangement = Spacing.verticalArrangementSM
-                            ) {
-                                Text(
-                                    text = "${uiState.progressPercentage ?: 0}%",
-                                    style = MaterialTheme.typography.displayLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 56.sp
-                                )
+                            Text(
+                                text = "Today's Progress",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "${uiState.totalUsageMinutes}m",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
 
-                                // Info text below percentage (remaining minutes or streak)
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Spacing.horizontalArrangementXS
-                                ) {
-                                    if (uiState.remainingMinutes != null && uiState.remainingMinutes > 0 && !uiState.isOverLimit) {
-                                        Text(
-                                            text = "${uiState.remainingMinutes} min left",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Icon(
-                                            imageVector = Icons.Default.KeyboardArrowDown,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp),
-                                            tint = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    } else if (uiState.isOverLimit) {
-                                        Text(
-                                            text = "Over limit",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                    } else {
-                                        Text(
-                                            text = "Today",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Right side: Circular progress ring with flame icon
+                        // Main content row: Circular progress on left, metrics on right
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Left side: Circular progress ring
                             Box(
                                 contentAlignment = Alignment.Center,
-                                modifier = Modifier.size(120.dp)
+                                modifier = Modifier.size(140.dp)
                             ) {
                                 val progress = (uiState.progressPercentage ?: 0) / 100f
-                                val progressColor = AppColors.Progress.getColorForPercentage(uiState.progressPercentage ?: 0)
+                                val progressColor = AppColors.Progress.getColorForPercentage(
+                                    uiState.progressPercentage ?: 0
+                                )
 
                                 // Background circle
-                                Canvas(modifier = Modifier.size(120.dp)) {
+                                Canvas(modifier = Modifier.size(140.dp)) {
                                     drawArc(
                                         color = progressColor.copy(alpha = 0.2f),
                                         startAngle = -90f,
                                         sweepAngle = 360f,
                                         useCenter = false,
                                         style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                            width = 10.dp.toPx(),
+                                            width = 12.dp.toPx(),
                                             cap = androidx.compose.ui.graphics.StrokeCap.Round
                                         )
                                     )
@@ -668,173 +618,117 @@ private fun TodayAtAGlanceCard(
                                         sweepAngle = 360f * progress.coerceIn(0f, 1f),
                                         useCenter = false,
                                         style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                            width = 10.dp.toPx(),
+                                            width = 12.dp.toPx(),
                                             cap = androidx.compose.ui.graphics.StrokeCap.Round
                                         )
                                     )
                                 }
 
-                                // Flame icon badge at top-right
-                                if (uiState.currentStreak > 0) {
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .offset(x = 8.dp, y = (-8).dp)
-                                            .size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.errorContainer),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(text = "🔥", fontSize = 16.sp)
-                                    }
-                                }
-
-                                // Center content
+                                // Center content: Percentage
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Spacing.verticalArrangementXS
                                 ) {
                                     Text(
-                                        text = "${uiState.totalUsageMinutes}",
-                                        style = MaterialTheme.typography.headlineLarge,
+                                        text = "${uiState.progressPercentage ?: 0}%",
+                                        style = MaterialTheme.typography.displaySmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "minutes",
-                                        style = MaterialTheme.typography.bodySmall,
+                                        text = "of goal",
+                                        style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
-                        }
 
-                        // Streak info below if exists
-                        if (uiState.currentStreak > 0) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Spacing.horizontalArrangementXS,
-                                modifier = Modifier
-                                    .clip(Shapes.button)
-                                    .background(AppColors.Streak.getColorForStreak(uiState.currentStreak).copy(alpha = 0.15f))
-                                    .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
+                            // Right side: Three metrics (Total, Sessions, Streak)
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Text(text = "🔥", fontSize = 14.sp)
-                                Text(
-                                    text = "${uiState.currentStreak} day streak",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = AppColors.Streak.getColorForStreak(uiState.currentStreak)
-                                )
-                            }
-                        }
-                    }
-
-                    // Celebration message
-                    AnimatedVisibility(
-                        visible = uiState.celebrationMessage != null,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = Shapes.button,
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (uiState.isOverLimit) {
-                                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                                } else {
-                                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
-                                }
-                            )
-                        ) {
-                            Text(
-                                text = uiState.celebrationMessage ?: "",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (uiState.isOverLimit) {
-                                    MaterialTheme.colorScheme.onErrorContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onTertiaryContainer
-                                },
-                                modifier = Modifier.padding(Spacing.md),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = Spacing.md),
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
-
-                    // Quick Actions - Only Set Goals and View Apps
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Spacing.verticalArrangementSM
-                    ) {
-                        Text(
-                            text = "Quick Actions",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Spacing.horizontalArrangementSM
-                        ) {
-                            // Set Goals button
-                            OutlinedButton(
-                                onClick = {
-                                    HapticFeedback.light(context)
-                                    onSetGoalsClick()
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = Shapes.button
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Spacing.verticalArrangementXS,
-                                    modifier = Modifier.padding(vertical = Spacing.sm)
+                                // Total time metric
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Spacing.horizontalArrangementSM
                                 ) {
-                                    Text(text = "⚙️", fontSize = 24.sp)
-                                    Text(
-                                        text = "Set Goals",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold
+                                    Icon(
+                                        imageVector = Icons.Default.AccessTime,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(24.dp)
                                     )
+                                    Spacer(modifier = Modifier.width(Spacing.sm))
+                                    Column {
+                                        Text(
+                                            text = "Total",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "${uiState.totalUsageMinutes}m",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
                                 }
-                            }
 
-                            // View Apps button
-                            OutlinedButton(
-                                onClick = {
-                                    HapticFeedback.light(context)
-                                    onManageAppsClick()
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = Shapes.button
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Spacing.verticalArrangementXS,
-                                    modifier = Modifier.padding(vertical = Spacing.sm)
+                                // Sessions metric
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Spacing.horizontalArrangementSM
                                 ) {
-                                    Text(text = "📱", fontSize = 24.sp)
-                                    Text(
-                                        text = "View Apps",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold
+                                    Icon(
+                                        imageVector = Icons.Outlined.BarChart,
+                                        contentDescription = null,
+                                        tint = AppColors.Progress.OnTrack,
+                                        modifier = Modifier.size(24.dp)
                                     )
+                                    Spacer(modifier = Modifier.width(Spacing.sm))
+                                    Column {
+                                        Text(
+                                            text = "Sessions",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "${uiState.todaySessionsCount}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+
+                                // Streak metric
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Spacing.horizontalArrangementSM
+                                ) {
+                                    Text(
+                                        text = "🔥",
+                                        fontSize = 24.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(Spacing.sm))
+                                    Column {
+                                        Text(
+                                            text = "Streak",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "${uiState.currentStreak} days",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = Spacing.md),
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
 
                     // Usage Monitoring Status
                     Row(
@@ -874,7 +768,7 @@ private fun TodayAtAGlanceCard(
                             Column {
                                 Text(
                                     text = "Usage Monitoring",
-                                    style = MaterialTheme.typography.labelLarge,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -914,7 +808,6 @@ private fun TodayAtAGlanceCard(
                     }
                 }
             }
-        }
     }
 }
 
@@ -949,7 +842,7 @@ private fun PermissionWarningCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Permissions Required",
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -1162,12 +1055,12 @@ private fun CompleteSetupBanner(
                     modifier = Modifier.size(32.dp)
                 )
 
-                Spacer(modifier = Modifier.width(Spacing.md))
+//                Spacer(modifier = Modifier.width(Spacing.md))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Complete Setup Required",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -1205,12 +1098,9 @@ private fun CompleteSetupBanner(
 @Composable
 private fun TrackedAppsSection(
     trackedAppsGoals: List<PerAppGoalUiModel>,
-    expandedAppForGoalEdit: String?,
-    isUpdatingGoal: Boolean,
-    onToggleExpanded: (String) -> Unit,
-    onUpdateGoal: (String, Int) -> Unit,
+    onAppClick: (PerAppGoalUiModel) -> Unit,
     onAddAppsClick: () -> Unit,
-    onManageClick: () -> Unit,  // NEW: Opens bottom sheet
+    onManageClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -1243,7 +1133,7 @@ private fun TrackedAppsSection(
                     )
                 }
             } else {
-                TextButton(
+                OutlinedButton(
                     onClick = onManageClick,
                     shape = Shapes.button
                 ) {
@@ -1311,14 +1201,24 @@ private fun TrackedAppsSection(
             trackedAppsGoals.forEach { app ->
                 dev.sadakat.thinkfaster.ui.components.GoalCard(
                     app = app,
-                    isExpanded = expandedAppForGoalEdit == app.packageName,
-                    onToggleExpanded = { onToggleExpanded(app.packageName) },
-                    onSaveGoal = { dailyLimit -> onUpdateGoal(app.packageName, dailyLimit) }
+                    onClick = { onAppClick(app) }
                 )
 
-                Spacer(modifier = Modifier.height(Spacing.sm))
             }
         }
+    }
+}
+
+/**
+ * Get time-based greeting
+ */
+private fun getGreeting(): String {
+    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    return when (hour) {
+        in 0..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        in 17..20 -> "Good evening"
+        else -> "Good night"
     }
 }
 

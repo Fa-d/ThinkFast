@@ -82,9 +82,11 @@ class HomeViewModel(
                 // Calculate total usage across all tracked apps
                 var totalUsageMs = 0L
                 var combinedGoalMinutes = 0
+                var totalSessions = 0
 
                 trackedPackages.forEach { packageName ->
                     totalUsageMs += usageRepository.getTodayUsageForApp(packageName)
+                    totalSessions += usageRepository.getTodaySessionCount(packageName)
                     val goal = goalRepository.getGoalByApp(packageName)
                     if (goal != null) {
                         combinedGoalMinutes += goal.dailyLimitMinutes
@@ -113,35 +115,16 @@ class HomeViewModel(
 
                 val isOverLimit = finalGoalMinutes != null && usageMinutes > finalGoalMinutes
 
-                // Determine celebration message
-                val celebrationMessage = when {
-                    finalGoalMinutes == null -> null
-                    isOverLimit -> null // No celebration if over limit
-                    remainingMinutes != null && remainingMinutes > finalGoalMinutes / 2 -> {
-                        // More than 50% remaining
-                        "Great start! 🌟"
-                    }
-                    remainingMinutes != null && remainingMinutes > 0 -> {
-                        // Some remaining, but less than 50%
-                        "Stay strong! You've got this! 💪"
-                    }
-                    usageMinutes == finalGoalMinutes -> {
-                        // Exactly at goal
-                        "Perfect! Right on target! 🎯"
-                    }
-                    else -> "You're doing great! 🎉"
-                }
-
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isRefreshing = false,
                     totalUsageMinutes = usageMinutes,
+                    todaySessionsCount = totalSessions,
                     goalMinutes = finalGoalMinutes,
                     remainingMinutes = remainingMinutes,
                     progressPercentage = progressPercentage,
                     currentStreak = currentStreak,
                     isOverLimit = isOverLimit,
-                    celebrationMessage = celebrationMessage,
                     hasGoalsSet = finalGoalMinutes != null
                 )
 
@@ -586,23 +569,11 @@ class HomeViewModel(
     }
 
     /**
-     * Toggle goal editor for a specific app
-     */
-    fun toggleGoalEditor(packageName: String) {
-        val currentExpanded = _uiState.value.expandedAppForGoalEdit
-        _uiState.value = _uiState.value.copy(
-            expandedAppForGoalEdit = if (currentExpanded == packageName) null else packageName
-        )
-    }
-
-    /**
      * Update goal for a specific app
      */
     fun updateAppGoal(packageName: String, dailyLimitMinutes: Int) {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isUpdatingGoal = true)
-
                 // Get existing goal or create new one
                 val existingGoal = goalRepository.getGoalByApp(packageName)
                 val currentDate = dateFormatter.format(Date())
@@ -634,12 +605,6 @@ class HomeViewModel(
                 // Refresh hero card with updated aggregated percentage
                 loadTodaySummary(isRefresh = true)
 
-                // Collapse editor
-                _uiState.value = _uiState.value.copy(
-                    expandedAppForGoalEdit = null,
-                    isUpdatingGoal = false
-                )
-
                 // Track analytics
                 val daysSinceInstall = TimeUnit.MILLISECONDS.toDays(
                     System.currentTimeMillis() - usageRepository.getInstallDate()
@@ -653,7 +618,6 @@ class HomeViewModel(
 
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    isUpdatingGoal = false,
                     errorMessage = "Failed to update goal: ${e.message}"
                 )
             }
@@ -700,12 +664,12 @@ data class HomeUiState(
     val isLoading: Boolean = true,       // Initial load only
     val isRefreshing: Boolean = false,   // Periodic refresh (prevents flicker)
     val totalUsageMinutes: Int = 0,
+    val todaySessionsCount: Int = 0,
     val goalMinutes: Int? = null,
     val remainingMinutes: Int? = null,
     val progressPercentage: Int? = null,
     val currentStreak: Int = 0,
     val isOverLimit: Boolean = false,
-    val celebrationMessage: String? = null,
     val hasGoalsSet: Boolean = false,
     val isServiceRunning: Boolean = false,
     val errorMessage: String? = null,
@@ -727,8 +691,6 @@ data class HomeUiState(
     val showBaselineCard: Boolean = false,
     // Per-app goal management
     val trackedAppsGoals: List<PerAppGoalUiModel> = emptyList(),
-    val expandedAppForGoalEdit: String? = null,
-    val isUpdatingGoal: Boolean = false,
     // Add apps functionality
     val curatedApps: Map<dev.sadakat.thinkfaster.domain.model.AppCategory, List<dev.sadakat.thinkfaster.domain.model.TrackedApp>>? = null,
     val trackedApps: List<String>? = null,

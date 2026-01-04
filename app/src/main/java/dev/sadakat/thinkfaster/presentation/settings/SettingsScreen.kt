@@ -50,7 +50,12 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Settings & Goals") }, actions = {
+            TopAppBar(title = {
+                Text(
+                    "Settings",
+                    style = MaterialTheme.typography.headlineLarge
+                )
+            }, actions = {
                 IconButton(onClick = { viewModel.refresh() }) {
                     Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                 }
@@ -137,11 +142,13 @@ fun SettingsScreen(
                             verticalArrangement = Spacing.verticalArrangementSM
                         ) {
                             Text(
-                                text = "💡 Tip", fontSize = 16.sp, fontWeight = FontWeight.Bold
+                                text = "💡 Tip",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Add apps to track usage and set daily time limits",
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
                             )
@@ -242,7 +249,9 @@ private fun GoalCard(
                 ) {
                     Text(text = appIcon, fontSize = 32.sp)
                     Text(
-                        text = appName, fontSize = 20.sp, fontWeight = FontWeight.Bold
+                        text = appName,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
@@ -250,13 +259,13 @@ private fun GoalCard(
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
                             text = progress.goal.getStreakMessage(),
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = progress.goal.getLongestStreakMessage(),
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -291,11 +300,13 @@ private fun GoalCard(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Today:", fontSize = 16.sp, fontWeight = FontWeight.Medium
+                                text = "Today:",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Medium
                             )
                             Text(
                                 text = progress.formatTodayUsage(),
-                                fontSize = 16.sp,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -314,11 +325,12 @@ private fun GoalCard(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = progress.getStatusMessage(), fontSize = 14.sp
+                                text = progress.getStatusMessage(),
+                                style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
                                 text = progress.formatRemainingTime(),
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -334,7 +346,7 @@ private fun GoalCard(
             ) {
                 Text(
                     text = "Daily Limit: ${sliderValue.roundToInt()} minutes",
-                    fontSize = 16.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
                 )
 
@@ -352,12 +364,12 @@ private fun GoalCard(
                 ) {
                     Text(
                         text = "5 min",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = "180 min",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -379,7 +391,7 @@ private fun GoalCard(
                 } else {
                     Text(
                         text = if (progress?.goal != null) "Update Goal" else "Set Goal",
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -411,15 +423,16 @@ private fun TimerDurationCard(
             ) {
                 Text(text = "⏰", fontSize = 24.sp)
                 Text(
-                    text = "Timer Alert Duration", fontSize = 18.sp, fontWeight = FontWeight.Bold
+                    text = "Timer Alert Duration",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
             Text(
                 text = "Get an alert after using the app continuously for this duration",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                lineHeight = 20.sp
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -447,12 +460,12 @@ private fun TimerDurationCard(
             ) {
                 Text(
                     text = "1 min",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = "120 min",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -467,7 +480,9 @@ private fun TimerDurationCard(
                     shape = Shapes.button
                 ) {
                     Text(
-                        text = "Apply", fontSize = 16.sp, fontWeight = FontWeight.SemiBold
+                        text = "Apply",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
@@ -487,7 +502,7 @@ private fun SectionHeader(
         modifier = modifier.padding(
             start = Spacing.md, top = Spacing.lg, bottom = Spacing.sm
         ),
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -520,16 +535,15 @@ private fun AlwaysShowReminderCard(
                     Text(text = "🔔", fontSize = 24.sp)
                     Text(
                         text = "Always Show Reminder",
-                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Show reminder overlay every time you open Facebook or Instagram",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
@@ -565,7 +579,9 @@ private fun OverlayStyleCard(
             ) {
                 Text(text = "📐", fontSize = 24.sp)
                 Text(
-                    text = "Overlay Style", fontSize = 18.sp, fontWeight = FontWeight.Bold
+                    text = "Overlay Style",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
@@ -657,7 +673,7 @@ private fun LockedModeCard(
                     )
                     Text(
                         text = "Locked Mode",
-                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = if (enabled) {
                             MaterialTheme.colorScheme.error
@@ -672,7 +688,7 @@ private fun LockedModeCard(
                         "Maximum friction - 10 second delay with countdown. You requested this extra control."
                     } else {
                         "Enable maximum friction for extra self-control (10s delay)"
-                    }, fontSize = 14.sp, color = if (enabled) {
+                    }, style = MaterialTheme.typography.bodyMedium, color = if (enabled) {
                         MaterialTheme.colorScheme.onErrorContainer
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -724,7 +740,7 @@ private fun ThemeAppearanceCard(
                     Text(text = "🎨", fontSize = 24.sp)
                     Text(
                         text = "Theme & Appearance",
-                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
@@ -732,9 +748,8 @@ private fun ThemeAppearanceCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Customize app theme, colors, and appearance",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
-                    lineHeight = 20.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
                 )
             }
             Icon(
@@ -781,7 +796,7 @@ private fun InterventionAnalyticsCard(
                     Text(text = "📊", fontSize = 24.sp)
                     Text(
                         text = "Intervention Analytics",
-                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -789,9 +804,8 @@ private fun InterventionAnalyticsCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "View intervention effectiveness and content performance",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                    lineHeight = 20.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                 )
             }
             Icon(
@@ -851,7 +865,7 @@ private fun FrictionLevelCard(
                     Text(text = "⚙️", fontSize = 24.sp)
                     Text(
                         text = "Intervention Strength",
-                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -860,9 +874,8 @@ private fun FrictionLevelCard(
 
                 Text(
                     text = "Control how much friction appears when opening apps",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 18.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -874,12 +887,12 @@ private fun FrictionLevelCard(
                 ) {
                     Text(
                         text = "Current:",
-                        fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = currentDisplayName,
-                        fontSize = 15.sp,
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -958,11 +971,13 @@ private fun FrictionLevelBottomSheetContent(
         ) {
             Column {
                 Text(
-                    text = "Intervention Strength", fontSize = 20.sp, fontWeight = FontWeight.Bold
+                    text = "Intervention Strength",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Select the level of friction",
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -1032,8 +1047,7 @@ private fun FrictionLevelOption(
                 ) {
                     Text(
                         text = title,
-                        fontSize = 16.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        style = if (isSelected) MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.titleMedium,
                         color = if (isSelected) {
                             MaterialTheme.colorScheme.onPrimaryContainer
                         } else {
@@ -1045,7 +1059,7 @@ private fun FrictionLevelOption(
                     if (level == currentLevel && isSelected) {
                         Text(
                             text = "• Current",
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -1055,7 +1069,7 @@ private fun FrictionLevelOption(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = description, fontSize = 13.sp, color = if (isSelected) {
+                    text = description, style = MaterialTheme.typography.bodySmall, color = if (isSelected) {
                         MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -1111,7 +1125,9 @@ private fun NotificationSettingsCard(
                 ) {
                     Text(text = "🔔", fontSize = 24.sp)
                     Text(
-                        text = "Daily Reminders", fontSize = 18.sp, fontWeight = FontWeight.Bold
+                        text = "Daily Reminders",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
                 }/*   Spacer(modifier = Modifier.height(4.dp))
                    Text(
@@ -1169,11 +1185,13 @@ private fun NotificationSettingsBottomSheet(
         ) {
             Column {
                 Text(
-                    text = "🔔 Daily Reminders", fontSize = 24.sp, fontWeight = FontWeight.Bold
+                    text = "🔔 Daily Reminders",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Stay on track with daily notifications",
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -1197,12 +1215,12 @@ private fun NotificationSettingsBottomSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Enable Notifications",
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = "2-3 reminders per day max",
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -1215,7 +1233,9 @@ private fun NotificationSettingsBottomSheet(
         // Time pickers (only show if enabled)
         if (appSettings.motivationalNotificationsEnabled) {
             Text(
-                text = "Notification Times", fontSize = 18.sp, fontWeight = FontWeight.SemiBold
+                text = "Notification Times",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
             )
 
             NotificationTimeRow(
@@ -1279,11 +1299,13 @@ private fun NotificationTimeRow(
                 Text(text = emoji, fontSize = 32.sp)
                 Column {
                     Text(
-                        text = title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = description,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -1291,13 +1313,13 @@ private fun NotificationTimeRow(
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = currentTime,
-                    fontSize = 18.sp,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = "Tap to change",
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -1384,7 +1406,7 @@ private fun AccountAndSyncCard(
                     )
                     Text(
                         text = "Account & Sync",
-                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = if (isAuthenticated) {
                             MaterialTheme.colorScheme.onPrimaryContainer
@@ -1399,17 +1421,17 @@ private fun AccountAndSyncCard(
                         "Signed in • Tap to manage"
                     } else {
                         "Sign in to sync your data across devices"
-                    }, fontSize = 14.sp, color = if (isAuthenticated) {
+                    }, style = MaterialTheme.typography.bodyMedium, color = if (isAuthenticated) {
                         MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
-                    }, lineHeight = 20.sp
+                    }
                 )
                 // Show email below if authenticated
                 if (isAuthenticated && userEmail != null) {
                     Text(
                         text = userEmail,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -1496,7 +1518,9 @@ private fun TimerAndAlertsSection(
             ) {
                 Text(text = "📐", fontSize = 20.sp)
                 Text(
-                    text = "Overlay Style", fontSize = 16.sp, fontWeight = FontWeight.SemiBold
+                    text = "Overlay Style",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
             Row(
@@ -1553,7 +1577,9 @@ private fun TimerAndAlertsSection(
                 ) {
                     Text(text = "⏰", fontSize = 20.sp)
                     Text(
-                        text = "Timer Alert", fontSize = 16.sp, fontWeight = FontWeight.SemiBold
+                        text = "Timer Alert",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Surface(
@@ -1566,7 +1592,7 @@ private fun TimerAndAlertsSection(
                             modifier = Modifier.padding(
                                 horizontal = Spacing.md, vertical = Spacing.xs
                             ),
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -1587,7 +1613,11 @@ private fun TimerAndAlertsSection(
                             .height(40.dp),
                         shape = Shapes.button
                     ) {
-                        Text("Apply", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            "Apply",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
@@ -1647,13 +1677,13 @@ private fun SettingRow(
             Column {
                 Text(
                     text = title,
-                    fontSize = 16.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = titleColor ?: MaterialTheme.colorScheme.onBackground
                 )
                 if (description.isNotEmpty()) Text(
                     text = description,
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -1706,7 +1736,9 @@ private fun InterventionsSection(
                     ) {
                         Text(text = "🔔", fontSize = 24.sp)
                         Text(
-                            text = "Daily Reminders", fontSize = 18.sp, fontWeight = FontWeight.Bold
+                            text = "Daily Reminders",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
                         )
                     }/*    Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -1751,7 +1783,7 @@ private fun InterventionsSection(
                         Text(text = "⚙️", fontSize = 24.sp)
                         Text(
                             text = "Intervention Strength",
-                            fontSize = 18.sp,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -1772,12 +1804,12 @@ private fun InterventionsSection(
                     ) {
                         Text(
                             text = "Current:",
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = currentDisplayName,
-                            fontSize = 15.sp,
+                            style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -1814,7 +1846,7 @@ private fun InterventionsSection(
                         Text(text = "⏸️", fontSize = 24.sp)
                         Text(
                             text = "Snooze Reminders",
-                            fontSize = 18.sp,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = if (snoozeActive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
                         )
@@ -1832,7 +1864,7 @@ private fun InterventionsSection(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "$snoozeRemainingMinutes min remaining",
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.tertiary
                         )
@@ -1846,7 +1878,7 @@ private fun InterventionsSection(
                     Text(
                         text = if (snoozeActive) "Active" else "Off",
                         modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -1936,7 +1968,7 @@ private fun AccountAndDataSection(
                         Text(text = "📊", fontSize = 24.sp)
                         Text(
                             text = "Intervention Analytics",
-                            fontSize = 18.sp,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
@@ -1944,9 +1976,8 @@ private fun AccountAndDataSection(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "View intervention effectiveness and content performance",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                        lineHeight = 20.sp
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
                 }
                 Icon(
@@ -1988,7 +2019,7 @@ private fun AccountAndDataSection(
                         )
                         Text(
                             text = "Account & Sync",
-                            fontSize = 18.sp,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = if (isAuthenticated) {
                                 MaterialTheme.colorScheme.onPrimaryContainer
@@ -2004,16 +2035,16 @@ private fun AccountAndDataSection(
                             "Signed in • Tap to manage"
                         } else {
                             "Sign in to sync your data across devices"
-                        }, fontSize = 14.sp, color = if (isAuthenticated) {
+                        }, style = MaterialTheme.typography.bodyMedium, color = if (isAuthenticated) {
                             MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
-                        }, lineHeight = 20.sp
+                        }
                     )
                     if (isAuthenticated && userEmail != null) {
                         Text(
                             text = userEmail,
-                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -2069,7 +2100,7 @@ private fun AppearanceSection(
                     Text(text = "🎨", fontSize = 24.sp)
                     Text(
                         text = "Theme & Appearance",
-                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
@@ -2077,9 +2108,8 @@ private fun AppearanceSection(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Customize app theme, colors, and appearance",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
-                    lineHeight = 20.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
                 )
             }
             Icon(

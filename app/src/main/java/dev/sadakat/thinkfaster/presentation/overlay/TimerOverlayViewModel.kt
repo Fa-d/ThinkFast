@@ -203,6 +203,12 @@ class TimerOverlayViewModel(
                 decisionTimeMs = decisionTime
             )
 
+            // Track to Firebase Analytics
+            analyticsManager.trackInterventionProceeded(
+                interventionType = "timer",
+                contentType = currentState.interventionContent?.javaClass?.simpleName ?: "Unknown"
+            )
+
             // Log timer acknowledged event
             usageRepository.insertEvent(
                 UsageEvent(
@@ -246,6 +252,12 @@ class TimerOverlayViewModel(
                 decisionTimeMs = decisionTime
             )
 
+            // Track to Firebase Analytics (SUCCESS!)
+            analyticsManager.trackInterventionGoBack(
+                interventionType = "timer",
+                contentType = currentState.interventionContent?.javaClass?.simpleName ?: "Unknown"
+            )
+
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 showCelebration = true,
@@ -256,7 +268,7 @@ class TimerOverlayViewModel(
             usageRepository.insertEvent(
                 UsageEvent(
                     sessionId = currentState.sessionId,
-                    eventType = "EVENT_INTERVENTION_SUCCESS",
+                    eventType = Constants.EVENT_INTERVENTION_SUCCESS,
                     timestamp = System.currentTimeMillis(),
                     metadata = "User chose to go back after timer alert (SUCCESS!) | " +
                             "Content: ${currentState.interventionContent?.javaClass?.simpleName}"
@@ -351,6 +363,13 @@ class TimerOverlayViewModel(
                     timestamp = System.currentTimeMillis()
                 )
 
+                // Track to Firebase Analytics
+                analyticsManager.trackInterventionFeedback(
+                    feedback = feedback.name,
+                    interventionType = "timer",
+                    contentType = currentState.interventionContent?.javaClass?.simpleName ?: "Unknown"
+                )
+
                 // Dismiss overlay after feedback with smooth transition
                 _uiState.value = _uiState.value.copy(
                     shouldDismiss = true,
@@ -361,7 +380,7 @@ class TimerOverlayViewModel(
                 usageRepository.insertEvent(
                     UsageEvent(
                         sessionId = currentState.sessionId,
-                        eventType = "EVENT_FEEDBACK_PROVIDED",
+                        eventType = Constants.EVENT_FEEDBACK_PROVIDED,
                         timestamp = System.currentTimeMillis(),
                         metadata = "Feedback: ${feedback.name} | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
                     )
@@ -434,7 +453,7 @@ class TimerOverlayViewModel(
                 usageRepository.insertEvent(
                     UsageEvent(
                         sessionId = currentState.sessionId,
-                        eventType = "EVENT_INTERVENTION_SNOOZED",
+                        eventType = Constants.EVENT_INTERVENTION_SNOOZED,
                         timestamp = System.currentTimeMillis(),
                         metadata = "Snoozed for $snoozeDurationMinutes minutes | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
                     )

@@ -123,6 +123,12 @@ class ReminderOverlayViewModel(
                 decisionTimeMs = decisionTime
             )
 
+            // Track to Firebase Analytics
+            analyticsManager.trackInterventionProceeded(
+                interventionType = "reminder",
+                contentType = currentState.interventionContent?.javaClass?.simpleName ?: "Unknown"
+            )
+
             // Log proceed clicked event
             usageRepository.insertEvent(
                 UsageEvent(
@@ -165,11 +171,17 @@ class ReminderOverlayViewModel(
                 decisionTimeMs = decisionTime
             )
 
+            // Track to Firebase Analytics (SUCCESS!)
+            analyticsManager.trackInterventionGoBack(
+                interventionType = "reminder",
+                contentType = currentState.interventionContent?.javaClass?.simpleName ?: "Unknown"
+            )
+
             // Log go back event (successful intervention!)
             usageRepository.insertEvent(
                 UsageEvent(
                     sessionId = currentState.sessionId,
-                    eventType = "EVENT_GO_BACK_CLICKED",
+                    eventType = Constants.EVENT_GO_BACK_CLICKED,
                     timestamp = System.currentTimeMillis(),
                     metadata = "User chose to go back | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
                 )
@@ -254,6 +266,13 @@ class ReminderOverlayViewModel(
                     timestamp = System.currentTimeMillis()
                 )
 
+                // Track to Firebase Analytics
+                analyticsManager.trackInterventionFeedback(
+                    feedback = feedback.name,
+                    interventionType = "reminder",
+                    contentType = currentState.interventionContent?.javaClass?.simpleName ?: "Unknown"
+                )
+
                 // Dismiss overlay after feedback with smooth transition
                 _uiState.value = _uiState.value.copy(
                     shouldDismiss = true,
@@ -264,7 +283,7 @@ class ReminderOverlayViewModel(
                 usageRepository.insertEvent(
                     UsageEvent(
                         sessionId = currentState.sessionId,
-                        eventType = "EVENT_FEEDBACK_PROVIDED",
+                        eventType = Constants.EVENT_FEEDBACK_PROVIDED,
                         timestamp = System.currentTimeMillis(),
                         metadata = "Feedback: ${feedback.name} | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
                     )
@@ -343,7 +362,7 @@ class ReminderOverlayViewModel(
                 usageRepository.insertEvent(
                     UsageEvent(
                         sessionId = currentState.sessionId,
-                        eventType = "EVENT_INTERVENTION_SNOOZED",
+                        eventType = Constants.EVENT_INTERVENTION_SNOOZED,
                         timestamp = System.currentTimeMillis(),
                         metadata = "Snoozed for $snoozeDurationMinutes minutes | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
                     )

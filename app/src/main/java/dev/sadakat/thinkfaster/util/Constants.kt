@@ -66,9 +66,13 @@ object Constants {
     const val EVENT_ALERT_SHOWN = "alert_shown"
     const val EVENT_REMINDER_SHOWN = "reminder_shown"
     const val EVENT_PROCEED_CLICKED = "proceed_clicked"
+    const val EVENT_GO_BACK_CLICKED = "go_back_clicked"
     const val EVENT_TEN_MIN_ALERT = "ten_minute_alert"
     const val EVENT_TIMER_ALERT_SHOWN = "timer_alert_shown"
     const val EVENT_TIMER_ACKNOWLEDGED = "timer_acknowledged"
+    const val EVENT_INTERVENTION_SUCCESS = "intervention_success"
+    const val EVENT_INTERVENTION_SNOOZED = "intervention_snoozed"
+    const val EVENT_FEEDBACK_PROVIDED = "feedback_provided"
 
     // Interruption Types
     const val INTERRUPTION_TEN_MINUTE_ALERT = "10_minute_alert"

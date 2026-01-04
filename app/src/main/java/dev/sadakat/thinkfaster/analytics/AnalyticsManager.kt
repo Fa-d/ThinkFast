@@ -573,6 +573,76 @@ class AnalyticsManager(
         }
     }
 
+    /**
+     * Track when user clicks "Proceed" button (continues to app despite intervention)
+     */
+    fun trackInterventionProceeded(interventionType: String, contentType: String) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackInterventionProceeded: Analytics DISABLED - skipping")
+            return
+        }
+
+        try {
+            Log.d(TAG, "trackInterventionProceeded: $interventionType - $contentType")
+            firebaseReporter.logEvent(
+                "intervention_proceeded",
+                mapOf(
+                    "intervention_type" to interventionType,
+                    "content_type" to contentType
+                )
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackInterventionProceeded: Failed", e)
+        }
+    }
+
+    /**
+     * Track when user clicks "Go Back" button (intervention success!)
+     */
+    fun trackInterventionGoBack(interventionType: String, contentType: String) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackInterventionGoBack: Analytics DISABLED - skipping")
+            return
+        }
+
+        try {
+            Log.d(TAG, "trackInterventionGoBack: $interventionType - $contentType (SUCCESS!)")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.INTERVENTION_SUCCEEDED,
+                mapOf(
+                    "intervention_type" to interventionType,
+                    "content_type" to contentType
+                )
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackInterventionGoBack: Failed", e)
+        }
+    }
+
+    /**
+     * Track when user provides feedback (thumbs up/down)
+     */
+    fun trackInterventionFeedback(feedback: String, interventionType: String, contentType: String) {
+        if (!privacySafeAnalytics.isAnalyticsEnabled()) {
+            Log.w(TAG, "trackInterventionFeedback: Analytics DISABLED - skipping")
+            return
+        }
+
+        try {
+            Log.d(TAG, "trackInterventionFeedback: $feedback for $interventionType - $contentType")
+            firebaseReporter.logEvent(
+                AnalyticsEvents.FEEDBACK_PROVIDED,
+                mapOf(
+                    "feedback" to feedback,
+                    "intervention_type" to interventionType,
+                    "content_type" to contentType
+                )
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "trackInterventionFeedback: Failed", e)
+        }
+    }
+
     // ========== Settings Analytics ==========
 
     fun trackSettingChanged(settingName: String, newValue: String) {
