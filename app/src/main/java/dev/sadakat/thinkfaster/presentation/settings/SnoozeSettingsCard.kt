@@ -168,7 +168,7 @@ fun SnoozeSettingsCard(
  * Bottom sheet content for snooze settings
  */
 @Composable
-private fun SnoozeBottomSheetContent(
+internal fun SnoozeBottomSheetContent(
     snoozeActive: Boolean,
     remainingMinutes: Int,
     onToggleSnooze: (Boolean, Int) -> Unit,

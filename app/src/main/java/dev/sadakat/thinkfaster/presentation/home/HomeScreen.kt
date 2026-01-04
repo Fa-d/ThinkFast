@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,6 +50,9 @@ import dev.sadakat.thinkfaster.ui.components.StreakBrokenRecoveryDialog
 import dev.sadakat.thinkfaster.ui.components.StreakFreezeCard
 import dev.sadakat.thinkfaster.ui.components.StreakMilestoneCelebration
 import dev.sadakat.thinkfaster.ui.components.rememberFadeInAnimation
+import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
+import dev.sadakat.thinkfaster.ui.theme.AppColors
 import dev.sadakat.thinkfaster.ui.theme.ProgressColors
 import dev.sadakat.thinkfaster.util.HapticFeedback
 import dev.sadakat.thinkfaster.util.PermissionHelper
@@ -161,14 +165,11 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("ThinkFast", style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            "Mindful Usage Tracker",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        "ThinkFast",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
                 },
                 actions = {
                     IconButton(onClick = {
@@ -189,19 +190,19 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues),
             contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 12.dp,
-                bottom = contentPadding.calculateBottomPadding() + 12.dp
+                start = Spacing.md,
+                end = Spacing.md,
+                top = Spacing.sm,
+                bottom = contentPadding.calculateBottomPadding() + Spacing.sm
             ),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Spacing.verticalArrangementMD
         ) {
             // Complete Setup Banner (for users who skipped onboarding)
             item {
                 CompleteSetupBanner(navController = navController, context = context)
             }
 
-            // Today at a Glance Card
+            // Hero Card - Today's usage summary with quick actions
             item {
                 TodayAtAGlanceCard(
                     uiState = uiState,
@@ -209,19 +210,9 @@ fun HomeScreen(
                     onSetGoalsClick = {
                         navController.navigate(Screen.Settings.route)
                     },
-                    onViewStatsClick = {
-                        navController.navigate(Screen.Statistics.route)
-                    },
-                    onAdjustGoalsClick = {
+                    onManageAppsClick = {
                         navController.navigate(Screen.ManageApps.route)
                     }
-                )
-            }
-
-            // Manage Apps & Goals Card
-            item {
-                ManageAppsAndGoalsCard(
-                    onClick = { navController.navigate(Screen.ManageApps.route) }
                 )
             }
 
@@ -324,15 +315,15 @@ fun HomeScreen(
 }
 
 /**
- * Today at a Glance card - Main summary card
+ * Today at a Glance card - Hero section with clear value proposition
+ * Redesigned for clarity and simplicity
  */
 @Composable
 private fun TodayAtAGlanceCard(
     uiState: HomeUiState,
     context: Context,
     onSetGoalsClick: () -> Unit,
-    onViewStatsClick: () -> Unit,
-    onAdjustGoalsClick: () -> Unit
+    onManageAppsClick: () -> Unit
 ) {
     val alpha = rememberFadeInAnimation(durationMillis = 600)
 
@@ -340,61 +331,40 @@ private fun TodayAtAGlanceCard(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer(alpha = alpha),
-        shape = RoundedCornerShape(20.dp),
+        shape = Shapes.card,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Spacing.lg),
+            verticalArrangement = Spacing.verticalArrangementMD,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header with streak
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Value proposition
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Spacing.verticalArrangementSM
             ) {
                 Text(
-                    text = "Today at a Glance",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    text = "Track & Reduce Distracting Apps",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
                 )
-
-                // Streak counter
-                if (uiState.currentStreak > 0) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "🔥",
-                            fontSize = 18.sp
-                        )
-                        Text(
-                            text = "${uiState.currentStreak}",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = if (uiState.currentStreak == 1) "day" else "days",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
+                Text(
+                    text = "Take control of your screen time",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
             }
+
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
             // Loading state
             if (uiState.isLoading) {

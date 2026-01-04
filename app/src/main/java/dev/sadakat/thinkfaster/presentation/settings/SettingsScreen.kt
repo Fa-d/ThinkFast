@@ -50,16 +50,12 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Settings & Goals") },
-                actions = {
-                    IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                    }
+            TopAppBar(title = { Text("Settings & Goals") }, actions = {
+                IconButton(onClick = { viewModel.refresh() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                 }
-            )
-        }
-    ) { paddingValues ->
+            })
+        }) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -70,7 +66,7 @@ fun SettingsScreen(
                 top = Spacing.md,
                 bottom = contentPadding.calculateBottomPadding() + Spacing.md
             ),
-            verticalArrangement = Spacing.verticalArrangementLG
+            verticalArrangement = Spacing.verticalArrangementSM
         ) {
 
 
@@ -141,9 +137,7 @@ fun SettingsScreen(
                             verticalArrangement = Spacing.verticalArrangementSM
                         ) {
                             Text(
-                                text = "💡 Tip",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
+                                text = "💡 Tip", fontSize = 16.sp, fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Add apps to track usage and set daily time limits",
@@ -156,405 +150,56 @@ fun SettingsScreen(
                 }
             }
 
-            // Timer alert duration setting
+            // ========== ACCOUNT SECTION ==========
             item {
-                TimerDurationCard(
-                    currentDuration = uiState.appSettings.timerAlertMinutes,
-                    onDurationChange = { viewModel.setTimerAlertDuration(it) }
+                SectionHeader(title = "Account & Data")
+            }
+            item {
+                AccountAndDataSection(
+                    navController = navController
                 )
             }
 
-            // Always show reminder toggle
+            // ========== SECTION 1: TIMER & ALERTS ==========
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = Shapes.card,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(Spacing.lg),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Spacing.horizontalArrangementSM
-                            ) {
-                                Text(text = "🔔", fontSize = 24.sp)
-                                Text(
-                                    text = "Always Show Reminder",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Show reminder overlay every time you open Facebook or Instagram",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                lineHeight = 20.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Switch(
-                            checked = uiState.appSettings.alwaysShowReminder,
-                            onCheckedChange = { viewModel.setAlwaysShowReminder(it) }
-                        )
-                    }
-                }
+                SectionHeader(title = "Timer & Alerts")
+            }
+            item {
+                TimerAndAlertsSection(
+                    timerDuration = uiState.appSettings.timerAlertMinutes,
+                    onTimerDurationChange = { viewModel.setTimerAlertDuration(it) },
+                    alwaysShowReminder = uiState.appSettings.alwaysShowReminder,
+                    onAlwaysShowReminderChange = { viewModel.setAlwaysShowReminder(it) },
+                    overlayStyle = uiState.appSettings.overlayStyle,
+                    onOverlayStyleChange = { viewModel.setOverlayStyle(it) },
+                    lockedMode = uiState.appSettings.lockedMode,
+                    onLockedModeChange = { viewModel.setLockedMode(it) })
             }
 
-            // Overlay Style toggle
+            // ========== SECTION 2: INTERVENTIONS ==========
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = Shapes.card,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(Spacing.lg)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Spacing.horizontalArrangementSM
-                                ) {
-                                    Text(text = "📐", fontSize = 24.sp)
-                                    Text(
-                                        text = "Overlay Style",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) {
-                                        "Compact popup in center"
-                                    } else {
-                                        "Full-screen coverage"
-                                    },
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Segmented control style toggle
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Spacing.horizontalArrangementSM
-                        ) {
-                            // Full-screen option
-                            OutlinedButton(
-                                onClick = { viewModel.setOverlayStyle(dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) },
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else Color.Transparent,
-                                    contentColor = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN)
-                                        MaterialTheme.colorScheme.onPrimaryContainer
-                                    else MaterialTheme.colorScheme.onSurface
-                                ),
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN)
-                                        MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.outline
-                                )
-                            ) {
-                                Text("Full-screen", fontWeight = FontWeight.Medium)
-                            }
-
-                            // Compact option
-                            OutlinedButton(
-                                onClick = { viewModel.setOverlayStyle(dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) },
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else Color.Transparent,
-                                    contentColor = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT)
-                                        MaterialTheme.colorScheme.onPrimaryContainer
-                                    else MaterialTheme.colorScheme.onSurface
-                                ),
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT)
-                                        MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.outline
-                                )
-                            ) {
-                                Text("Compact", fontWeight = FontWeight.Medium)
-                            }
-                        }
-                    }
-                }
+                SectionHeader(title = "Interventions")
             }
-
-            // Locked Mode toggle (Phase F)
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = Shapes.card,
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (uiState.appSettings.lockedMode) {
-                            MaterialTheme.colorScheme.errorContainer
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        }
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    border = if (uiState.appSettings.lockedMode) {
-                        BorderStroke(
-                            2.dp,
-                            MaterialTheme.colorScheme.error
-                        )
-                    } else null
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(Spacing.lg),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Spacing.horizontalArrangementSM
-                            ) {
-                                Text(
-                                    text = if (uiState.appSettings.lockedMode) "🔒" else "🔓",
-                                    fontSize = 24.sp
-                                )
-                                Text(
-                                    text = "Locked Mode",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (uiState.appSettings.lockedMode) {
-                                        MaterialTheme.colorScheme.error
-                                    } else {
-                                        MaterialTheme.colorScheme.onBackground
-                                    }
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = if (uiState.appSettings.lockedMode) {
-                                    "Maximum friction - 10 second delay with countdown. You requested this extra control."
-                                } else {
-                                    "Enable maximum friction for extra self-control (10s delay)"
-                                },
-                                fontSize = 14.sp,
-                                color = if (uiState.appSettings.lockedMode) {
-                                    MaterialTheme.colorScheme.onErrorContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                lineHeight = 20.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Switch(
-                            checked = uiState.appSettings.lockedMode,
-                            onCheckedChange = { viewModel.setLockedMode(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.error,
-                                checkedTrackColor = MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
-                                uncheckedThumbColor = MaterialTheme.colorScheme.surfaceVariant,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            )
-                        )
-                    }
-                }
-            }
-
-            // Push Notification Strategy: Clickable card that opens bottom sheet
-            item {
-                NotificationSettingsCard(
+                InterventionsSection(
                     appSettings = uiState.appSettings,
-                    viewModel = viewModel
-                )
-            }
-
-            // Friction Level selector
-            item {
-                FrictionLevelCard(
-                    currentLevel = uiState.currentFrictionLevel,
-                    selectedOverride = uiState.frictionLevelOverride,
-                    onLevelSelected = { viewModel.setFrictionLevel(it) }
-                )
-            }
-
-            // Snooze Settings
-            item {
-                SnoozeSettingsCard(
+                    viewModel = viewModel,
+                    currentFrictionLevel = uiState.currentFrictionLevel,
+                    frictionLevelOverride = uiState.frictionLevelOverride,
+                    onFrictionLevelSelected = { viewModel.setFrictionLevel(it) },
                     snoozeActive = uiState.snoozeActive,
-                    remainingMinutes = uiState.snoozeRemainingMinutes,
-                    viewModel = viewModel
+                    snoozeRemainingMinutes = uiState.snoozeRemainingMinutes
                 )
             }
 
-            // Theme and Appearance card
+            // ========== SECTION 3: APPEARANCE ==========
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { navController.navigate("theme_appearance") },
-                    shape = Shapes.card,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(Spacing.lg),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Spacing.horizontalArrangementSM
-                            ) {
-                                Text(text = "🎨", fontSize = 24.sp)
-                                Text(
-                                    text = "Theme & Appearance",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Customize app theme, colors, and appearance",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
-                                lineHeight = 20.sp
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Customize theme",
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .rotate(270f)
-                        )
-                    }
-                }
+                SectionHeader(title = "Appearance")
             }
-
-            // Intervention Analytics card
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { navController.navigate("analytics") },
-                    shape = Shapes.card,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(Spacing.lg),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Spacing.horizontalArrangementSM
-                            ) {
-                                Text(text = "📊", fontSize = 24.sp)
-                                Text(
-                                    text = "Intervention Analytics",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "View intervention effectiveness and content performance",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                                lineHeight = 20.sp
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "View analytics",
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .rotate(270f)
-                        )
-                    }
-                }
-            }
-
-            // Account & Sync card
-            item {
-                AccountAndSyncCard(navController = navController)
-            }
-
-            // Info section
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = Shapes.button,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(Spacing.md),
-                        verticalArrangement = Spacing.verticalArrangementSM
-                    ) {
-                        Text(
-                            text = "ℹ️ How it works",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "• Set a daily limit for each app",
-                            fontSize = 14.sp
-                        )
-                        Text(
-                            text = "• Build streaks by staying under your limit",
-                            fontSize = 14.sp
-                        )
-                        Text(
-                            text = "• Streaks update daily at midnight",
-                            fontSize = 14.sp
-                        )
-                        Text(
-                            text = "• Track your progress in real-time",
-                            fontSize = 14.sp
-                        )
-                    }
-                }
+                AppearanceSection(
+                    navController = navController
+                )
             }
         }
     }
@@ -577,12 +222,9 @@ private fun GoalCard(
     val currentLimit = progress?.goal?.dailyLimitMinutes ?: 30
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(
+        modifier = Modifier.fillMaxWidth(), shape = Shapes.card, colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(Spacing.lg),
@@ -600,9 +242,7 @@ private fun GoalCard(
                 ) {
                     Text(text = appIcon, fontSize = 32.sp)
                     Text(
-                        text = appName,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        text = appName, fontSize = 20.sp, fontWeight = FontWeight.Bold
                     )
                 }
 
@@ -630,17 +270,15 @@ private fun GoalCard(
                     shape = Shapes.button,
                     colors = CardDefaults.cardColors(
                         containerColor = when (progress.getProgressColor()) {
-                            dev.sadakat.thinkfaster.domain.model.ProgressColor.GREEN ->
-                                MaterialTheme.colorScheme.primaryContainer
+                            dev.sadakat.thinkfaster.domain.model.ProgressColor.GREEN -> MaterialTheme.colorScheme.primaryContainer
 
-                            dev.sadakat.thinkfaster.domain.model.ProgressColor.YELLOW ->
-                                MaterialTheme.colorScheme.tertiaryContainer
+                            dev.sadakat.thinkfaster.domain.model.ProgressColor.YELLOW -> MaterialTheme.colorScheme.tertiaryContainer
 
-                            dev.sadakat.thinkfaster.domain.model.ProgressColor.ORANGE ->
-                                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                            dev.sadakat.thinkfaster.domain.model.ProgressColor.ORANGE -> MaterialTheme.colorScheme.errorContainer.copy(
+                                alpha = 0.6f
+                            )
 
-                            dev.sadakat.thinkfaster.domain.model.ProgressColor.RED ->
-                                MaterialTheme.colorScheme.errorContainer
+                            dev.sadakat.thinkfaster.domain.model.ProgressColor.RED -> MaterialTheme.colorScheme.errorContainer
                         }
                     )
                 ) {
@@ -653,9 +291,7 @@ private fun GoalCard(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Today:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
+                                text = "Today:", fontSize = 16.sp, fontWeight = FontWeight.Medium
                             )
                             Text(
                                 text = progress.formatTodayUsage(),
@@ -678,8 +314,7 @@ private fun GoalCard(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = progress.getStatusMessage(),
-                                fontSize = 14.sp
+                                text = progress.getStatusMessage(), fontSize = 14.sp
                             )
                             Text(
                                 text = progress.formatRemainingTime(),
@@ -739,8 +374,7 @@ private fun GoalCard(
             ) {
                 if (isSaving) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                        modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
                     Text(
@@ -756,19 +390,15 @@ private fun GoalCard(
 
 @Composable
 private fun TimerDurationCard(
-    currentDuration: Int,
-    onDurationChange: (Int) -> Unit
+    currentDuration: Int, onDurationChange: (Int) -> Unit
 ) {
     var sliderValue by remember { mutableStateOf(currentDuration.toFloat()) }
     val hasChanged = sliderValue.roundToInt() != currentDuration
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(
+        modifier = Modifier.fillMaxWidth(), shape = Shapes.card, colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(Spacing.lg),
@@ -781,9 +411,7 @@ private fun TimerDurationCard(
             ) {
                 Text(text = "⏰", fontSize = 24.sp)
                 Text(
-                    text = "Timer Alert Duration",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    text = "Timer Alert Duration", fontSize = 18.sp, fontWeight = FontWeight.Bold
                 )
             }
 
@@ -815,8 +443,7 @@ private fun TimerDurationCard(
 
             // Range labels
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = "1 min",
@@ -840,12 +467,341 @@ private fun TimerDurationCard(
                     shape = Shapes.button
                 ) {
                     Text(
-                        text = "Apply",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        text = "Apply", fontSize = 16.sp, fontWeight = FontWeight.SemiBold
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Section Header - Consistent header for settings sections
+ */
+@Composable
+private fun SectionHeader(
+    title: String, modifier: Modifier = Modifier
+) {
+    Text(
+        text = title,
+        modifier = modifier.padding(
+            start = Spacing.md, top = Spacing.lg, bottom = Spacing.sm
+        ),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+/**
+ * Always Show Reminder Card - Toggle for reminder overlay
+ */
+@Composable
+private fun AlwaysShowReminderCard(
+    enabled: Boolean, onToggle: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(), shape = Shapes.card, colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.lg),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Spacing.horizontalArrangementSM
+                ) {
+                    Text(text = "🔔", fontSize = 24.sp)
+                    Text(
+                        text = "Always Show Reminder",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Show reminder overlay every time you open Facebook or Instagram",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Switch(
+                checked = enabled, onCheckedChange = onToggle
+            )
+        }
+    }
+}
+
+/**
+ * Overlay Style Card - Segmented control for overlay style selection
+ */
+@Composable
+private fun OverlayStyleCard(
+    currentStyle: dev.sadakat.thinkfaster.domain.model.OverlayStyle,
+    onStyleChange: (dev.sadakat.thinkfaster.domain.model.OverlayStyle) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = Shapes.card,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.lg)
+        ) {
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Spacing.horizontalArrangementSM
+            ) {
+                Text(text = "📐", fontSize = 24.sp)
+                Text(
+                    text = "Overlay Style", fontSize = 18.sp, fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Segmented control style toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Spacing.horizontalArrangementSM
+            ) {
+                // Full-screen option
+                OutlinedButton(
+                    onClick = { onStyleChange(dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent,
+                        contentColor = if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurface
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline
+                    )
+                ) {
+                    Text("Full-screen", fontWeight = FontWeight.Medium)
+                }
+
+                // Compact option
+                OutlinedButton(
+                    onClick = { onStyleChange(dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent,
+                        contentColor = if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurface
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline
+                    )
+                ) {
+                    Text("Compact", fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Locked Mode Card - Toggle for maximum friction mode
+ */
+@Composable
+private fun LockedModeCard(
+    enabled: Boolean, onToggle: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(), shape = Shapes.card, colors = CardDefaults.cardColors(
+            containerColor = if (enabled) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), border = if (enabled) {
+            BorderStroke(
+                2.dp, MaterialTheme.colorScheme.error
+            )
+        } else null
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.lg),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Spacing.horizontalArrangementSM
+                ) {
+                    Text(
+                        text = if (enabled) "🔒" else "🔓", fontSize = 24.sp
+                    )
+                    Text(
+                        text = "Locked Mode",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (enabled) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onBackground
+                        }
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (enabled) {
+                        "Maximum friction - 10 second delay with countdown. You requested this extra control."
+                    } else {
+                        "Enable maximum friction for extra self-control (10s delay)"
+                    }, fontSize = 14.sp, color = if (enabled) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }, lineHeight = 20.sp
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Switch(
+                checked = enabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.error,
+                    checkedTrackColor = MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
+                    uncheckedThumbColor = MaterialTheme.colorScheme.surfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+    }
+}
+
+/**
+ * Theme & Appearance Card - Navigation link to theme settings
+ */
+@Composable
+private fun ThemeAppearanceCard(
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = Shapes.card,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.lg),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Spacing.horizontalArrangementSM
+                ) {
+                    Text(text = "🎨", fontSize = 24.sp)
+                    Text(
+                        text = "Theme & Appearance",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Customize app theme, colors, and appearance",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+                    lineHeight = 20.sp
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "Customize theme",
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier
+                    .size(32.dp)
+                    .rotate(270f)
+            )
+        }
+    }
+}
+
+/**
+ * Intervention Analytics Card - Navigation link to analytics
+ */
+@Composable
+private fun InterventionAnalyticsCard(
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = Shapes.card,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.lg),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Spacing.horizontalArrangementSM
+                ) {
+                    Text(text = "📊", fontSize = 24.sp)
+                    Text(
+                        text = "Intervention Analytics",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "View intervention effectiveness and content performance",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                    lineHeight = 20.sp
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "View analytics",
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier
+                    .size(32.dp)
+                    .rotate(270f)
+            )
         }
     }
 }
@@ -961,16 +917,14 @@ private fun FrictionLevelCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     ) {}
                 }
-            }
-        ) {
+            }) {
             FrictionLevelBottomSheetContent(
                 currentLevel = currentLevel,
                 selectedOverride = selectedOverride,
                 onLevelSelected = {
                     onLevelSelected(it)
                     showBottomSheet = false
-                }
-            )
+                })
         }
     }
 }
@@ -1004,9 +958,7 @@ private fun FrictionLevelBottomSheetContent(
         ) {
             Column {
                 Text(
-                    text = "Intervention Strength",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+                    text = "Intervention Strength", fontSize = 20.sp, fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Select the level of friction",
@@ -1028,8 +980,7 @@ private fun FrictionLevelBottomSheetContent(
             level = null,
             currentLevel = currentLevel,
             isSelected = selectedOverride == null,
-            onSelect = { onLevelSelected(null) }
-        )
+            onSelect = { onLevelSelected(null) })
 
         // Manual options for each friction level
         dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.values().forEach { level ->
@@ -1039,8 +990,7 @@ private fun FrictionLevelBottomSheetContent(
                 level = level,
                 currentLevel = currentLevel,
                 isSelected = selectedOverride == level,
-                onSelect = { onLevelSelected(level) }
-            )
+                onSelect = { onLevelSelected(level) })
         }
     }
 }
@@ -1058,19 +1008,15 @@ private fun FrictionLevelOption(
     onSelect: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = Shapes.button,
-        colors = CardDefaults.cardColors(
+        modifier = Modifier.fillMaxWidth(), shape = Shapes.button, colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
             }
-        ),
-        border = if (isSelected) {
+        ), border = if (isSelected) {
             BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        } else null,
-        onClick = onSelect
+        } else null, onClick = onSelect
     ) {
         Row(
             modifier = Modifier
@@ -1109,14 +1055,11 @@ private fun FrictionLevelOption(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = description,
-                    fontSize = 13.sp,
-                    color = if (isSelected) {
+                    text = description, fontSize = 13.sp, color = if (isSelected) {
                         MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    },
-                    lineHeight = 18.sp
+                    }, lineHeight = 18.sp
                 )
             }
 
@@ -1124,9 +1067,7 @@ private fun FrictionLevelOption(
 
             // Radio button indicator
             RadioButton(
-                selected = isSelected,
-                onClick = onSelect,
-                colors = RadioButtonDefaults.colors(
+                selected = isSelected, onClick = onSelect, colors = RadioButtonDefaults.colors(
                     selectedColor = MaterialTheme.colorScheme.primary,
                     unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1142,8 +1083,7 @@ private fun FrictionLevelOption(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NotificationSettingsCard(
-    appSettings: AppSettings,
-    viewModel: GoalViewModel
+    appSettings: AppSettings, viewModel: GoalViewModel
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
 
@@ -1171,22 +1111,19 @@ private fun NotificationSettingsCard(
                 ) {
                     Text(text = "🔔", fontSize = 24.sp)
                     Text(
-                        text = "Daily Reminders",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "Daily Reminders", fontSize = 18.sp, fontWeight = FontWeight.Bold
                     )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (appSettings.motivationalNotificationsEnabled) {
-                        "Enabled • ${appSettings.getMorningTimeFormatted()} & ${appSettings.getEveningTimeFormatted()}"
-                    } else {
-                        "Tap to configure notification times"
-                    },
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
-                )
+                }/*   Spacer(modifier = Modifier.height(4.dp))
+                   Text(
+                       text = if (appSettings.motivationalNotificationsEnabled) {
+                           "Enabled • ${appSettings.getMorningTimeFormatted()} & ${appSettings.getEveningTimeFormatted()}"
+                       } else {
+                           "Tap to configure notification times"
+                       },
+                       fontSize = 14.sp,
+                       color = MaterialTheme.colorScheme.onSurfaceVariant,
+                       lineHeight = 20.sp
+                   )*/
             }
             Spacer(modifier = Modifier.width(16.dp))
             Icon(
@@ -1206,8 +1143,7 @@ private fun NotificationSettingsCard(
             NotificationSettingsBottomSheet(
                 appSettings = appSettings,
                 viewModel = viewModel,
-                onDismiss = { showBottomSheet = false }
-            )
+                onDismiss = { showBottomSheet = false })
         }
     }
 }
@@ -1217,9 +1153,7 @@ private fun NotificationSettingsCard(
  */
 @Composable
 private fun NotificationSettingsBottomSheet(
-    appSettings: AppSettings,
-    viewModel: GoalViewModel,
-    onDismiss: () -> Unit
+    appSettings: AppSettings, viewModel: GoalViewModel, onDismiss: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -1235,9 +1169,7 @@ private fun NotificationSettingsBottomSheet(
         ) {
             Column {
                 Text(
-                    text = "🔔 Daily Reminders",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                    text = "🔔 Daily Reminders", fontSize = 24.sp, fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Stay on track with daily notifications",
@@ -1276,17 +1208,14 @@ private fun NotificationSettingsBottomSheet(
                 }
                 Switch(
                     checked = appSettings.motivationalNotificationsEnabled,
-                    onCheckedChange = { viewModel.setMotivationalNotificationsEnabled(it) }
-                )
+                    onCheckedChange = { viewModel.setMotivationalNotificationsEnabled(it) })
             }
         }
 
         // Time pickers (only show if enabled)
         if (appSettings.motivationalNotificationsEnabled) {
             Text(
-                text = "Notification Times",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold
+                text = "Notification Times", fontSize = 18.sp, fontWeight = FontWeight.SemiBold
             )
 
             NotificationTimeRow(
@@ -1296,8 +1225,7 @@ private fun NotificationSettingsBottomSheet(
                 currentTime = appSettings.getMorningTimeFormatted(),
                 onTimeSelected = { hour, minute ->
                     viewModel.setMorningNotificationTime(hour, minute)
-                }
-            )
+                })
 
             NotificationTimeRow(
                 title = "Evening Review",
@@ -1306,8 +1234,7 @@ private fun NotificationSettingsBottomSheet(
                 currentTime = appSettings.getEveningTimeFormatted(),
                 onTimeSelected = { hour, minute ->
                     viewModel.setEveningNotificationTime(hour, minute)
-                }
-            )
+                })
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -1352,9 +1279,7 @@ private fun NotificationTimeRow(
                 Text(text = emoji, fontSize = 32.sp)
                 Column {
                     Text(
-                        text = title,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        text = title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = description,
@@ -1384,13 +1309,9 @@ private fun NotificationTimeRow(
         DisposableEffect(Unit) {
             val (hour, minute) = parseTime(currentTime)
             val dialog = TimePickerDialog(
-                context,
-                { _, selectedHour, selectedMinute ->
+                context, { _, selectedHour, selectedMinute ->
                     onTimeSelected(selectedHour, selectedMinute)
-                },
-                hour,
-                minute,
-                false // 12-hour format
+                }, hour, minute, false // 12-hour format
             )
             dialog.setOnDismissListener { showTimePicker = false }
             dialog.show()
@@ -1424,8 +1345,7 @@ private fun parseTime(timeString: String): Pair<Int, Int> {
  */
 @Composable
 private fun AccountAndSyncCard(
-    navController: NavHostController,
-    syncPreferences: SyncPreferences = koinInject()
+    navController: NavHostController, syncPreferences: SyncPreferences = koinInject()
 ) {
     val isAuthenticated = syncPreferences.isAuthenticated()
     val userEmail = syncPreferences.getUserEmail()
@@ -1439,16 +1359,13 @@ private fun AccountAndSyncCard(
                 } else {
                     navController.navigate(Screen.Login.route)
                 }
-            },
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(
+            }, shape = Shapes.card, colors = CardDefaults.cardColors(
             containerColor = if (isAuthenticated) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surface
             }
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -1463,8 +1380,7 @@ private fun AccountAndSyncCard(
                     horizontalArrangement = Spacing.horizontalArrangementSM
                 ) {
                     Text(
-                        text = if (isAuthenticated) "☁️" else "🔐",
-                        fontSize = 24.sp
+                        text = if (isAuthenticated) "☁️" else "🔐", fontSize = 24.sp
                     )
                     Text(
                         text = "Account & Sync",
@@ -1483,14 +1399,11 @@ private fun AccountAndSyncCard(
                         "Signed in • Tap to manage"
                     } else {
                         "Sign in to sync your data across devices"
-                    },
-                    fontSize = 14.sp,
-                    color = if (isAuthenticated) {
+                    }, fontSize = 14.sp, color = if (isAuthenticated) {
                         MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    lineHeight = 20.sp
+                    }, lineHeight = 20.sp
                 )
                 // Show email below if authenticated
                 if (isAuthenticated && userEmail != null) {
@@ -1519,3 +1432,664 @@ private fun AccountAndSyncCard(
     }
 }
 
+/**
+ * Custom slider with circular thumb for better visual appearance
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RoundedThumbSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    modifier: Modifier = Modifier
+) {
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        steps = steps,
+        modifier = modifier,
+        thumb = {
+            // Custom circular thumb using Surface
+            Surface(
+                shape = Shapes.badge, // Fully rounded (circular)
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+                shadowElevation = 4.dp,
+                tonalElevation = 4.dp
+            ) {}
+        })
+}
+
+/**
+ * Timer & Alerts Section - Grouped card for timer and alert settings
+ */
+@Composable
+private fun TimerAndAlertsSection(
+    timerDuration: Int,
+    onTimerDurationChange: (Int) -> Unit,
+    alwaysShowReminder: Boolean,
+    onAlwaysShowReminderChange: (Boolean) -> Unit,
+    overlayStyle: dev.sadakat.thinkfaster.domain.model.OverlayStyle,
+    onOverlayStyleChange: (dev.sadakat.thinkfaster.domain.model.OverlayStyle) -> Unit,
+    lockedMode: Boolean,
+    onLockedModeChange: (Boolean) -> Unit
+) {
+    var sliderValue by remember { mutableStateOf(timerDuration.toFloat()) }
+    val hasChanged = sliderValue.roundToInt() != timerDuration
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = Shapes.card,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalArrangement = Spacing.verticalArrangementMD
+        ) {
+            // Overlay Style
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Spacing.horizontalArrangementSM
+            ) {
+                Text(text = "📐", fontSize = 20.sp)
+                Text(
+                    text = "Overlay Style", fontSize = 16.sp, fontWeight = FontWeight.SemiBold
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Spacing.horizontalArrangementSM
+            ) {
+                OutlinedButton(
+                    onClick = { onOverlayStyleChange(dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent,
+                        contentColor = if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurface
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline
+                    )
+                ) {
+                    Text("Full-screen", fontWeight = FontWeight.Medium)
+                }
+                OutlinedButton(
+                    onClick = { onOverlayStyleChange(dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent,
+                        contentColor = if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurface
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline
+                    )
+                ) {
+                    Text("Compact", fontWeight = FontWeight.Medium)
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            // Timer Alert Duration
+            Column(verticalArrangement = Spacing.verticalArrangementSM) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Spacing.horizontalArrangementSM
+                ) {
+                    Text(text = "⏰", fontSize = 20.sp)
+                    Text(
+                        text = "Timer Alert", fontSize = 16.sp, fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Surface(
+                        shape = Shapes.button,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text(
+                            text = "${sliderValue.roundToInt()} min",
+                            modifier = Modifier.padding(
+                                horizontal = Spacing.md, vertical = Spacing.xs
+                            ),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+                RoundedThumbSlider(
+                    value = sliderValue,
+                    onValueChange = { sliderValue = it },
+                    valueRange = 1f..120f,
+                    steps = 118,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (hasChanged) {
+                    Button(
+                        onClick = { onTimerDurationChange(sliderValue.roundToInt()) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        shape = Shapes.button
+                    ) {
+                        Text("Apply", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            // Always Show Reminder
+            SettingRow(
+                icon = "🔔",
+                title = "Reminder on App start",
+                description = "",
+                toggle = true,
+                checked = alwaysShowReminder,
+                onCheckedChange = onAlwaysShowReminderChange
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            // Locked Mode
+            SettingRow(
+                icon = if (lockedMode) "🔒" else "🔓",
+                title = "Locked Mode",
+                description = "Maximum friction with 10s delay",
+                toggle = true,
+                checked = lockedMode,
+                onCheckedChange = onLockedModeChange,
+                titleColor = if (lockedMode) MaterialTheme.colorScheme.error else null
+            )
+        }
+    }
+}
+
+/**
+ * Reusable setting row with toggle switch
+ */
+@Composable
+private fun SettingRow(
+    icon: String,
+    title: String,
+    description: String,
+    toggle: Boolean = false,
+    checked: Boolean = false,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
+    titleColor: Color? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Spacing.horizontalArrangementSM,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(text = icon, fontSize = 20.sp)
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = titleColor ?: MaterialTheme.colorScheme.onBackground
+                )
+                if (description.isNotEmpty()) Text(
+                    text = description,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        if (toggle && onCheckedChange != null) {
+            Switch(
+                checked = checked, onCheckedChange = onCheckedChange
+            )
+        }
+    }
+}
+
+/**
+ * Interventions Section - Grouped card for intervention settings
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InterventionsSection(
+    appSettings: AppSettings,
+    viewModel: GoalViewModel,
+    currentFrictionLevel: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel,
+    frictionLevelOverride: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?,
+    onFrictionLevelSelected: (dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?) -> Unit,
+    snoozeActive: Boolean,
+    snoozeRemainingMinutes: Int
+) {
+    var showFrictionBottomSheet by remember { mutableStateOf(false) }
+    var showNotificationBottomSheet by remember { mutableStateOf(false) }
+    var showSnoozeBottomSheet by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = Shapes.card,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
+            // Daily Reminders
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showNotificationBottomSheet = true },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Spacing.horizontalArrangementSM
+                    ) {
+                        Text(text = "🔔", fontSize = 24.sp)
+                        Text(
+                            text = "Daily Reminders", fontSize = 18.sp, fontWeight = FontWeight.Bold
+                        )
+                    }/*    Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (appSettings.motivationalNotificationsEnabled) {
+                                "Enabled • ${appSettings.getMorningTimeFormatted()} & ${appSettings.getEveningTimeFormatted()}"
+                            } else {
+                                "Tap to configure notification times"
+                            },
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 20.sp
+                        )*/
+                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Open settings",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .rotate(270f)
+                )
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = Spacing.lg),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+
+            // Intervention Strength
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showFrictionBottomSheet = true },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Spacing.horizontalArrangementSM
+                    ) {
+                        Text(text = "⚙️", fontSize = 24.sp)
+                        Text(
+                            text = "Intervention Strength",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))/*      Text(
+                              text = "Control how much friction appears when opening apps",
+                              fontSize = 13.sp,
+                              color = MaterialTheme.colorScheme.onSurfaceVariant,
+                              lineHeight = 18.sp
+                          )
+                          Spacer(modifier = Modifier.height(12.dp))*/
+                    val currentDisplayName = when {
+                        frictionLevelOverride == null -> "Auto (Recommended)"
+                        else -> frictionLevelOverride.displayName
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Spacing.horizontalArrangementSM
+                    ) {
+                        Text(
+                            text = "Current:",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = currentDisplayName,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Show options",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .rotate(270f)
+                )
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = Spacing.lg),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+
+            // Snooze Settings
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showSnoozeBottomSheet = true },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Spacing.horizontalArrangementSM
+                    ) {
+                        Text(text = "⏸️", fontSize = 24.sp)
+                        Text(
+                            text = "Snooze Reminders",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (snoozeActive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }/*   Spacer(modifier = Modifier.height(8.dp))
+                       Text(
+                           text = "Temporarily pause interventions",
+                           fontSize = 13.sp,
+                           color = if (snoozeActive) MaterialTheme.colorScheme.onTertiaryContainer.copy(
+                               alpha = 0.8f
+                           )
+                           else MaterialTheme.colorScheme.onSurfaceVariant,
+                           lineHeight = 18.sp
+                       )*/
+                    if (snoozeActive && snoozeRemainingMinutes > 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "$snoozeRemainingMinutes min remaining",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                }
+                Surface(
+                    shape = Shapes.button,
+                    color = if (snoozeActive) MaterialTheme.colorScheme.tertiary
+                    else MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Text(
+                        text = if (snoozeActive) "Active" else "Off",
+                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+
+    // Bottom sheets
+    if (showNotificationBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showNotificationBottomSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            NotificationSettingsBottomSheet(
+                appSettings = appSettings,
+                viewModel = viewModel,
+                onDismiss = { showNotificationBottomSheet = false })
+        }
+    }
+
+    if (showFrictionBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showFrictionBottomSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            FrictionLevelBottomSheetContent(
+                currentLevel = currentFrictionLevel,
+                selectedOverride = frictionLevelOverride,
+                onLevelSelected = {
+                    onFrictionLevelSelected(it)
+                    showFrictionBottomSheet = false
+                })
+        }
+    }
+
+    if (showSnoozeBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSnoozeBottomSheet = false },
+            sheetState = rememberModalBottomSheetState()
+        ) {
+            SnoozeBottomSheetContent(
+                snoozeActive = snoozeActive,
+                remainingMinutes = snoozeRemainingMinutes,
+                onToggleSnooze = { enabled, duration ->
+                    viewModel.toggleSnooze(enabled, duration)
+                },
+                onSetDuration = { duration ->
+                    viewModel.setSnoozeDuration(duration)
+                    showSnoozeBottomSheet = false
+                })
+        }
+    }
+}
+
+/**
+ * Account & Data Section - Grouped card for account and data settings
+ */
+@Composable
+private fun AccountAndDataSection(
+    navController: NavHostController, syncPreferences: SyncPreferences = koinInject()
+) {
+    val isAuthenticated = syncPreferences.isAuthenticated()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(), shape = Shapes.card, colors = CardDefaults.cardColors(
+            containerColor = if (isAuthenticated) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
+            // Intervention Analytics
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navController.navigate("analytics") },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Spacing.horizontalArrangementSM
+                    ) {
+                        Text(text = "📊", fontSize = 24.sp)
+                        Text(
+                            text = "Intervention Analytics",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "View intervention effectiveness and content performance",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                        lineHeight = 20.sp
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "View analytics",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .rotate(270f)
+                )
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = Spacing.lg),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+
+            // Account & Sync
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        if (isAuthenticated) {
+                            navController.navigate(Screen.AccountManagement.route)
+                        } else {
+                            navController.navigate(Screen.Login.route)
+                        }
+                    },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Spacing.horizontalArrangementSM
+                    ) {
+                        Text(
+                            text = if (isAuthenticated) "☁️" else "🔐", fontSize = 24.sp
+                        )
+                        Text(
+                            text = "Account & Sync",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isAuthenticated) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val userEmail = syncPreferences.getUserEmail()
+                    Text(
+                        text = if (isAuthenticated) {
+                            "Signed in • Tap to manage"
+                        } else {
+                            "Sign in to sync your data across devices"
+                        }, fontSize = 14.sp, color = if (isAuthenticated) {
+                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }, lineHeight = 20.sp
+                    )
+                    if (isAuthenticated && userEmail != null) {
+                        Text(
+                            text = userEmail,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isAuthenticated) "Manage account" else "Sign in",
+                    tint = if (isAuthenticated) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier
+                        .size(32.dp)
+                        .rotate(270f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Appearance Section - Theme & Appearance settings
+ */
+@Composable
+private fun AppearanceSection(
+    navController: NavHostController
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { navController.navigate("theme_appearance") },
+        shape = Shapes.card,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.lg),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Spacing.horizontalArrangementSM
+                ) {
+                    Text(text = "🎨", fontSize = 24.sp)
+                    Text(
+                        text = "Theme & Appearance",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Customize app theme, colors, and appearance",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+                    lineHeight = 20.sp
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "Customize theme",
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier
+                    .size(32.dp)
+                    .rotate(270f)
+            )
+        }
+    }
+}

@@ -3,6 +3,7 @@ package dev.sadakat.thinkfaster.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -14,7 +15,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 
 /**
  * Light color scheme with blue primary (based on iOS reference)
@@ -188,7 +191,16 @@ fun ThinkFasterTheme(
     }
 
     MaterialTheme(
-        colorScheme = colorScheme, typography = Typography, content = content
+        colorScheme = colorScheme,
+        typography = Typography,
+        shapes = androidx.compose.material3.Shapes(
+            extraSmall = RoundedCornerShape(4.dp),
+            small = RoundedCornerShape(8.dp),
+            medium = RoundedCornerShape(12.dp),
+            large = RoundedCornerShape(16.dp),
+            extraLarge = RoundedCornerShape(24.dp)
+        ),
+        content = content
     )
 }
 
