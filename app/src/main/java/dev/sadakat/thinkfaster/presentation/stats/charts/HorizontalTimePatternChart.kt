@@ -1,67 +1,53 @@
 package dev.sadakat.thinkfaster.presentation.stats.charts
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.github.mikephil.charting.charts.HorizontalBarChart
-import com.github.mikephil.charting.components.Legend
-import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.BarData
-import com.github.mikephil.charting.data.BarDataSet
-import com.github.mikephil.charting.data.BarEntry
-import com.github.mikephil.charting.formatter.ValueFormatter
 import dev.sadakat.thinkfaster.domain.model.UsageSession
 
 /**
- * Composable that displays a horizontal bar chart showing usage patterns by time period
- * Shows which times of day have the highest usage
- * Phase 1.3: Added empty state handling
- * Phase 4.1: Added responsive chart heights
+ * Simplified composable that displays top 3 peak usage times with emojis
+ * Shows which times of day have the highest usage in a clean, visual format
  */
 @Composable
 fun HorizontalTimePatternChart(
     sessions: List<UsageSession>,
     modifier: Modifier = Modifier
 ) {
-    // Phase 4.1: Responsive chart height based on screen size
-    val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp
-    val chartHeight = when {
-        screenHeight < 600.dp -> 200.dp  // Small screens: reduce by 20%
-        screenHeight > 800.dp -> 275.dp  // Large screens: increase by 10%
-        else -> 250.dp  // Medium screens: default
-    }
-
-    // Get theme-aware colors
-    val textColor = MaterialTheme.colorScheme.onSurface.hashCode()
-    val gridColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f).hashCode()
-
-    val chartData = remember(sessions) {
+    val peakTimes = remember(sessions) {
         prepareTimePatternData(sessions)
     }
 
     // Check if chart has data to display
-    val hasData = chartData.isNotEmpty() && chartData.any { it.totalMinutes > 0f }
+    val hasData = peakTimes.isNotEmpty() && peakTimes.any { it.totalMinutes > 0f }
 
     if (!hasData) {
         // Empty state
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(chartHeight),
+                .height(180.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -76,26 +62,27 @@ fun HorizontalTimePatternChart(
                     text = "No time patterns to display yet",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    textAlign = TextAlign.Center
                 )
             }
         }
     } else {
-        // Chart with data
-        AndroidView(
+        // Top 3 peaks with emojis
+        Column(
             modifier = modifier
                 .fillMaxWidth()
-                .height(chartHeight),
-            factory = { context ->
-                HorizontalBarChart(context).apply {
-                    setupHorizontalBarChart(this, textColor, gridColor)
-                }
-            },
-            update = { chart ->
-                updateHorizontalBarChartData(chart, chartData, textColor)
+                .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            peakTimes.take(3).forEachIndexed { index, peakData ->
+                PeakTimeCard(
+                    rank = index + 1,
+                    period = peakData.period,
+                    totalMinutes = peakData.totalMinutes,
+                    maxMinutes = peakTimes.firstOrNull()?.totalMinutes ?: 1f
+                )
             }
-        )
+        }
     }
 }
 
@@ -107,6 +94,126 @@ private data class TimePeriodData(
     val appUsage: Map<String, Float>,
     val totalMinutes: Float
 )
+
+/**
+ * Card component for displaying a single peak time
+ */
+@Composable
+private fun PeakTimeCard(
+    rank: Int,
+    period: TimePeriod,
+    totalMinutes: Float,
+    maxMinutes: Float
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = when (rank) {
+                1 -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                2 -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f)
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Rank badge with emoji
+            Box(
+                modifier = Modifier
+                    .width(48.dp)
+                    .height(48.dp)
+                    .background(
+                        color = when (rank) {
+                            1 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            2 -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                            else -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = getTimePeriodEmoji(period),
+                        fontSize = 20.sp
+                    )
+                    Text(
+                        text = "#$rank",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Period label and usage info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = period.label,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = formatMinutes(totalMinutes),
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Progress indicator
+            Box(
+                modifier = Modifier.width(80.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                LinearProgressIndicator(
+                    progress = { totalMinutes / maxMinutes },
+                    modifier = Modifier.height(8.dp),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Get emoji for time period
+ */
+private fun getTimePeriodEmoji(period: TimePeriod): String {
+    return when (period) {
+        TimePeriod.NIGHT -> "🌙"
+        TimePeriod.MORNING -> "🌅"
+        TimePeriod.AFTERNOON -> "☀️"
+        TimePeriod.EVENING -> "🌆"
+    }
+}
+
+/**
+ * Format minutes for display
+ */
+private fun formatMinutes(minutes: Float): String {
+    return when {
+        minutes >= 60 -> {
+            val hours = (minutes / 60).toInt()
+            val mins = (minutes % 60).toInt()
+            if (mins > 0) "${hours}h ${mins}m" else "${hours}h"
+        }
+        else -> "${minutes.toInt()}m"
+    }
+}
 
 /**
  * Prepare time pattern data aggregated by time period
@@ -121,149 +228,4 @@ private fun prepareTimePatternData(sessions: List<UsageSession>): List<TimePerio
             totalMinutes = appUsage.values.sum()
         )
     }.sortedByDescending { it.totalMinutes } // Sort by total usage (highest first)
-}
-
-/**
- * Value formatter for time period labels
- */
-private class TimePeriodValueFormatter(
-    private val periods: List<TimePeriod>
-) : ValueFormatter() {
-    override fun getFormattedValue(value: Float): String {
-        val index = value.toInt()
-        return if (index in periods.indices) {
-            periods[index].label
-        } else ""
-    }
-}
-
-/**
- * Setup the horizontal bar chart appearance and behavior
- */
-private fun setupHorizontalBarChart(chart: HorizontalBarChart, textColor: Int, gridColor: Int) {
-    chart.apply {
-        // Basic settings
-        description.isEnabled = false
-        setTouchEnabled(true)
-        isDragEnabled = false
-        setScaleEnabled(false)
-        setPinchZoom(false)
-        setDrawGridBackground(false)
-        setDrawBarShadow(false)
-        isHighlightFullBarEnabled = true
-
-        // Bar settings
-        setDrawValueAboveBar(true)
-        setFitBars(true)
-
-        // X Axis (values - horizontal)
-        xAxis.apply {
-            position = XAxis.XAxisPosition.BOTTOM
-            setDrawGridLines(true)
-            setDrawAxisLine(true)
-            axisMinimum = 0f
-            textSize = 10f
-            this.textColor = textColor
-            this.gridColor = gridColor
-            valueFormatter = MinutesValueFormatter()
-        }
-
-        // Y Axis (categories - vertical)
-        axisLeft.apply {
-            setDrawGridLines(false)
-            setDrawAxisLine(true)
-            textSize = 10f
-            granularity = 1f
-            this.textColor = textColor
-        }
-
-        // Right Y Axis - disable
-        axisRight.isEnabled = false
-
-        // Legend
-        legend.apply {
-            isEnabled = true
-            verticalAlignment = Legend.LegendVerticalAlignment.TOP
-            horizontalAlignment = Legend.LegendHorizontalAlignment.CENTER
-            orientation = Legend.LegendOrientation.HORIZONTAL
-            setDrawInside(false)
-            form = Legend.LegendForm.SQUARE
-            formSize = 10f
-            textSize = 12f
-            this.textColor = textColor
-            xEntrySpace = 15f
-        }
-    }
-}
-
-/**
- * Update the horizontal bar chart with new data
- */
-private fun updateHorizontalBarChartData(
-    chart: HorizontalBarChart,
-    data: List<TimePeriodData>,
-    textColor: Int
-) {
-    if (data.isEmpty() || data.all { it.totalMinutes == 0f }) {
-        chart.clear()
-        chart.invalidate()
-        return
-    }
-
-    // Get all unique apps across all time periods (sorted for consistency)
-    val allApps = data.flatMap { it.appUsage.keys }.distinct().sorted()
-
-    if (allApps.isEmpty()) {
-        chart.clear()
-        chart.invalidate()
-        return
-    }
-
-    // Create bar entries with stacked values for each app
-    // Use index as x-value since we'll use a custom formatter for labels
-    val barEntries = data.mapIndexed { index, periodData ->
-        // Build stacked values array in consistent app order
-        val stackedValues = allApps.map { app ->
-            periodData.appUsage[app] ?: 0f
-        }.toFloatArray()
-
-        BarEntry(index.toFloat(), stackedValues)
-    }
-
-    // Create dataset
-    val dataSet = BarDataSet(barEntries, "").apply {
-        // Set colors for stacked bars (one color per app)
-        colors = allApps.mapIndexed { index, _ ->
-            ChartColors.getColorForApp(index)
-        }
-
-        // Labels for legend (extract simple app names from package names)
-        stackLabels = allApps.map { packageName ->
-            packageName.split(".").lastOrNull()?.replaceFirstChar { it.uppercase() } ?: packageName
-        }.toTypedArray()
-
-        // Visual settings
-        setDrawValues(true)
-        valueTextSize = 10f
-        valueTextColor = textColor
-        valueFormatter = MinutesValueFormatter()
-
-        // Highlight settings
-        highLightAlpha = 100
-    }
-
-    // Create bar data
-    val barData = BarData(dataSet).apply {
-        barWidth = 0.8f
-    }
-
-    chart.data = barData
-
-    // Set Y-axis labels to time period names
-    chart.axisLeft.valueFormatter = TimePeriodValueFormatter(data.map { it.period })
-    chart.axisLeft.setLabelCount(data.size, true)
-
-    // Refresh chart
-    chart.notifyDataSetChanged()
-    chart.invalidate()
 }

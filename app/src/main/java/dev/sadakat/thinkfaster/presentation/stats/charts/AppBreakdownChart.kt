@@ -1,5 +1,7 @@
 package dev.sadakat.thinkfaster.presentation.stats.charts
 
+import android.content.Context
+import android.graphics.drawable.Drawable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -42,6 +45,8 @@ fun AppBreakdownChart(
     appUsageMap: Map<String, Int>,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     // Filter and prepare data
     val totalMinutes = appUsageMap.values.sum()
 
@@ -84,6 +89,7 @@ fun AppBreakdownChart(
 
             // Donut chart
             DonutChartView(
+                context = context,
                 appUsageMap = appUsageMap,
                 totalMinutes = totalMinutes,
                 modifier = Modifier
@@ -95,6 +101,7 @@ fun AppBreakdownChart(
 
             // Legend with breakdown
             AppBreakdownLegend(
+                context = context,
                 appUsageMap = appUsageMap,
                 totalMinutes = totalMinutes
             )
@@ -107,17 +114,14 @@ fun AppBreakdownChart(
  */
 @Composable
 private fun DonutChartView(
+    context: Context,
     appUsageMap: Map<String, Int>,
     totalMinutes: Int,
     modifier: Modifier = Modifier
 ) {
     val entries = remember(appUsageMap) {
         appUsageMap.map { (app, minutes) ->
-            val label = when {
-                app.contains("facebook", ignoreCase = true) -> "Facebook"
-                app.contains("instagram", ignoreCase = true) -> "Instagram"
-                else -> app.substringAfterLast(".")
-            }
+            val label = getApplicationName(context, app)
             PieEntry(minutes.toFloat(), label)
         }
     }
@@ -128,6 +132,9 @@ private fun DonutChartView(
             Color(0xFFE4405F).toArgb()  // Instagram pink/red
         )
     }
+
+    // Get theme-aware text color
+    val textColor = MaterialTheme.colorScheme.onSurface
 
     AndroidView(
         modifier = modifier,
@@ -149,7 +156,7 @@ private fun DonutChartView(
                 setDrawCenterText(true)
                 centerText = "${totalMinutes}m\nTotal"
                 setCenterTextSize(18f)
-                setCenterTextColor(android.graphics.Color.BLACK)
+                setCenterTextColor(textColor.toArgb())
             }
         },
         update = { chart ->
@@ -180,6 +187,7 @@ private fun DonutChartView(
  */
 @Composable
 private fun AppBreakdownLegend(
+    context: Context,
     appUsageMap: Map<String, Int>,
     totalMinutes: Int,
     modifier: Modifier = Modifier
@@ -189,11 +197,7 @@ private fun AppBreakdownLegend(
         verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         appUsageMap.entries.sortedByDescending { it.value }.forEach { (app, minutes) ->
-            val appName = when {
-                app.contains("facebook", ignoreCase = true) -> "Facebook"
-                app.contains("instagram", ignoreCase = true) -> "Instagram"
-                else -> app.substringAfterLast(".")
-            }
+            val appName = getApplicationName(context, app)
 
             val percentage = if (totalMinutes > 0) {
                 (minutes.toFloat() / totalMinutes * 100).toInt()
@@ -329,5 +333,20 @@ private fun AppBreakdownEmptyState(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+/**
+ * Get application name from package name using PackageManager
+ * Returns the actual app name as shown in the launcher
+ */
+private fun getApplicationName(context: Context, packageName: String): String {
+    return try {
+        val pm = context.packageManager
+        val appInfo = pm.getApplicationInfo(packageName, 0)
+        pm.getApplicationLabel(appInfo).toString()
+    } catch (e: Exception) {
+        // Fallback to package name if app not found
+        packageName
     }
 }

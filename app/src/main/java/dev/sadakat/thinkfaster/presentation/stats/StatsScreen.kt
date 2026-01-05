@@ -51,11 +51,12 @@ import dev.sadakat.thinkfaster.domain.model.MonthlyStatistics
 import dev.sadakat.thinkfaster.domain.model.StatsPeriod
 import dev.sadakat.thinkfaster.domain.model.UsageTrend
 import dev.sadakat.thinkfaster.domain.model.WeeklyStatistics
-import dev.sadakat.thinkfaster.presentation.stats.charts.StackedBarUsageChart
 import dev.sadakat.thinkfaster.presentation.stats.charts.HorizontalTimePatternChart
 import dev.sadakat.thinkfaster.presentation.stats.charts.GoalProgressChart
+import dev.sadakat.thinkfaster.presentation.stats.charts.GoalProgressTimeline
 import dev.sadakat.thinkfaster.presentation.stats.components.GoalComplianceCalendar
 import dev.sadakat.thinkfaster.presentation.stats.components.ErrorStateCard
+import dev.sadakat.thinkfaster.presentation.stats.components.SmartInsightsCard
 import dev.sadakat.thinkfaster.presentation.stats.components.EmptyStatsCard
 import dev.sadakat.thinkfaster.presentation.stats.components.InsightCardSkeleton
 import dev.sadakat.thinkfaster.presentation.stats.components.OverviewStatsCard
@@ -88,7 +89,13 @@ fun StatsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Statistics") },
+                title = {
+                    Text(
+                        "Statistics",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 actions = {
                     // Phase 2.1: Refresh button with loading indicator
                     IconButton(
@@ -166,214 +173,212 @@ fun StatsScreen(
                     }
                 }
 
-                // New: Overview Stats Card with circular progress (matches Home design)
-                if (hasAnyData) {
-                    uiState.overviewStats?.let { stats ->
-                        item {
-                            val alpha = rememberFadeInAnimation(durationMillis = 600)
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 16.dp)
-                                    .graphicsLayer(alpha = alpha)
-                            ) {
-                                OverviewStatsCard(stats = stats)
-                            }
-                        }
+                // Goal Progress Timeline - Recent progress visualization
+                if (uiState.selectedPeriod == StatsPeriod.WEEKLY) item {
+                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        GoalProgressTimeline(
+                            sessions = uiState.weeklySessions,
+                            dailyGoalMinutes = uiState.goalProgress
+                                .firstOrNull()?.goal?.dailyLimitMinutes
+                        )
                     }
+                }
 
-                    // Streak & Consistency Card
-                    uiState.streakConsistency?.let { streakData ->
-                        item {
-                            val alpha = rememberFadeInAnimation(durationMillis = 600)
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 16.dp)
-                                    .graphicsLayer(alpha = alpha)
-                            ) {
-                                StreakConsistencyCard(streakConsistency = streakData)
-                            }
-                        }
-                    }
-
-                    // App Breakdown Donut Chart
-                    if (uiState.appBreakdown.isNotEmpty()) {
-                        item {
-                            val alpha = rememberFadeInAnimation(durationMillis = 600)
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 16.dp)
-                                    .graphicsLayer(alpha = alpha)
-                            ) {
-                                AppBreakdownChart(appUsageMap = uiState.appBreakdown)
-                            }
+                // App Breakdown Donut Chart
+                if (uiState.appBreakdown.isNotEmpty()) {
+                    item {
+                        val alpha = rememberFadeInAnimation(durationMillis = 600)
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .graphicsLayer(alpha = alpha)
+                        ) {
+                            AppBreakdownChart(appUsageMap = uiState.appBreakdown)
                         }
                     }
                 }
 
                 when (uiState.selectedPeriod) {
-                        StatsPeriod.DAILY -> {
-                            uiState.dailyStats?.let { stats ->
-                                item {
-                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                        DailyStatsContent(stats, uiState.dailyTrend)
-                                    }
+                    StatsPeriod.DAILY -> {
+                        uiState.dailyStats?.let { stats ->
+                           /* item {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    DailyStatsContent(stats, uiState.dailyTrend)
                                 }
+                            }*/
 
-                                // Stacked Bar Chart - Primary usage visualization
-                                item {
-                                    ChartCard(
-                                        title = "Usage Breakdown",
-                                        description = "Your hourly usage today for Facebook and Instagram"
-                                    ) {
-                                        StackedBarUsageChart(
-                                            sessions = uiState.dailySessions,
-                                            period = ChartPeriod.DAILY
-                                        )
-                                    }
-                                }
-
-                                // Time Pattern Chart - Behavioral insights
-                                item {
-                                    ChartCard(
-                                        title = "Peak Usage Times",
-                                        description = "Which parts of the day you use apps most"
-                                    ) {
-                                        HorizontalTimePatternChart(
-                                            sessions = uiState.dailySessions
-                                        )
-                                    }
-                                }
-
-                                // Goal Progress Chart - Motivational tracking
-                                item {
-                                    ChartCard(
-                                        title = "Goal Progress",
-                                        description = "Tracking your daily usage goal"
-                                    ) {
-                                        GoalProgressChart(
-                                            sessions = uiState.dailySessions,
-                                            period = ChartPeriod.DAILY,
-                                            dailyGoalMinutes = uiState.goalProgress
-                                                .firstOrNull()?.goal?.dailyLimitMinutes
-                                        )
-                                    }
+                            /* // Time Pattern Chart - Behavioral insights
+                            item {
+                                ChartCard(
+                                    title = "Peak Usage Times",
+                                    description = "Which parts of the day you use apps most"
+                                ) {
+                                    HorizontalTimePatternChart(
+                                        sessions = uiState.dailySessions
+                                    )
                                 }
                             }
-                        }
-                        StatsPeriod.WEEKLY -> {
-                            uiState.weeklyStats?.let { stats ->
-                                item {
-                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                        WeeklyStatsContent(stats, uiState.weeklyTrend)
-                                    }
-                                }
+                            */
 
-                                // Stacked Bar Chart
-                                item {
-                                    ChartCard(
-                                        title = "Usage Breakdown",
-                                        description = "Daily usage this week"
-                                    ) {
-                                        StackedBarUsageChart(
-                                            sessions = uiState.weeklySessions,
-                                            period = ChartPeriod.WEEKLY
-                                        )
-                                    }
-                                }
-
-                                // Time Pattern Chart
-                                item {
-                                    ChartCard(
-                                        title = "Peak Usage Times",
-                                        description = "Your average usage patterns this week"
-                                    ) {
-                                        HorizontalTimePatternChart(
-                                            sessions = uiState.weeklySessions
-                                        )
-                                    }
-                                }
-
-                                // Goal Progress Chart
-                                item {
-                                    ChartCard(
-                                        title = "Goal Progress",
-                                        description = "Daily progress against your goal"
-                                    ) {
-                                        GoalProgressChart(
-                                            sessions = uiState.weeklySessions,
-                                            period = ChartPeriod.WEEKLY,
-                                            dailyGoalMinutes = uiState.goalProgress
-                                                .firstOrNull()?.goal?.dailyLimitMinutes
-                                        )
-                                    }
+                            // Smart Insights Card - insights before goal progress
+                            item {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    SmartInsightsCard(
+                                        sessions = uiState.dailySessions,
+                                        period = StatsPeriod.DAILY,
+                                        trend = uiState.dailyTrend,
+                                        streakConsistency = uiState.streakConsistency
+                                    )
                                 }
                             }
-                        }
-                        StatsPeriod.MONTHLY -> {
-                            uiState.monthlyStats?.let { stats ->
-                                item {
-                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                        MonthlyStatsContent(stats, uiState.monthlyTrend)
-                                    }
-                                }
 
-                                // Phase 5: Goal Compliance Calendar
-                                // Phase 4.3: Added month navigation
-                                if (uiState.goalComplianceData.isNotEmpty()) {
-                                    item {
-                                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                            GoalComplianceCalendar(
-                                                complianceData = uiState.goalComplianceData,
-                                                monthOffset = uiState.calendarMonthOffset,
-                                                onPreviousMonth = { viewModel.selectPreviousMonth() },
-                                                onNextMonth = { viewModel.selectNextMonth() }
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // Stacked Bar Chart
-                                item {
-                                    ChartCard(
-                                        title = "Usage Breakdown",
-                                        description = "Daily usage this month"
-                                    ) {
-                                        StackedBarUsageChart(
-                                            sessions = uiState.monthlySessions,
-                                            period = ChartPeriod.MONTHLY
-                                        )
-                                    }
-                                }
-
-                                // Time Pattern Chart
-                                item {
-                                    ChartCard(
-                                        title = "Peak Usage Times",
-                                        description = "Weekly usage patterns"
-                                    ) {
-                                        HorizontalTimePatternChart(
-                                            sessions = uiState.monthlySessions
-                                        )
-                                    }
-                                }
-
-                                // Goal Progress Chart
-                                item {
-                                    ChartCard(
-                                        title = "Goal Progress",
-                                        description = "Monthly progress tracking"
-                                    ) {
-                                        GoalProgressChart(
-                                            sessions = uiState.monthlySessions,
-                                            period = ChartPeriod.MONTHLY,
-                                            dailyGoalMinutes = uiState.goalProgress
-                                                .firstOrNull()?.goal?.dailyLimitMinutes
-                                        )
-                                    }
+                            /* // Goal Progress Chart - Motivational tracking
+                            item {
+                                ChartCard(
+                                    title = "Goal Progress",
+                                    description = "Tracking your daily usage goal"
+                                ) {
+                                    GoalProgressChart(
+                                        sessions = uiState.dailySessions,
+                                        period = ChartPeriod.DAILY,
+                                        dailyGoalMinutes = uiState.goalProgress
+                                            .firstOrNull()?.goal?.dailyLimitMinutes
+                                    )
                                 }
                             }
+                            */
+
+                      /*      // Goal Progress Timeline - Recent progress visualization
+                            item {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    GoalProgressTimeline(
+                                        sessions = uiState.dailySessions,
+                                        dailyGoalMinutes = uiState.goalProgress
+                                            .firstOrNull()?.goal?.dailyLimitMinutes
+                                    )
+                                }
+                            }*/
                         }
                     }
+
+                    StatsPeriod.WEEKLY -> {
+                        uiState.weeklyStats?.let { stats ->
+                       /*     item {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    WeeklyStatsContent(stats, uiState.weeklyTrend)
+                                }
+                            }*/
+
+                            /* // Time Pattern Chart
+                            item {
+                                ChartCard(
+                                    title = "Peak Usage Times",
+                                    description = "Your average usage patterns this week"
+                                ) {
+                                    HorizontalTimePatternChart(
+                                        sessions = uiState.weeklySessions
+                                    )
+                                }
+                            }
+                            */
+
+                            // Smart Insights Card - insights before goal progress
+                            item {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    SmartInsightsCard(
+                                        sessions = uiState.weeklySessions,
+                                        period = StatsPeriod.WEEKLY,
+                                        trend = uiState.weeklyTrend,
+                                        streakConsistency = uiState.streakConsistency
+                                    )
+                                }
+                            }
+
+                            /* // Goal Progress Chart
+                            item {
+                                ChartCard(
+                                    title = "Goal Progress",
+                                    description = "Daily progress against your goal"
+                                ) {
+                                    GoalProgressChart(
+                                        sessions = uiState.weeklySessions,
+                                        period = ChartPeriod.WEEKLY,
+                                        dailyGoalMinutes = uiState.goalProgress
+                                            .firstOrNull()?.goal?.dailyLimitMinutes
+                                    )
+                                }
+                            }
+                            */
+
+
+                        }
+                    }
+
+                    StatsPeriod.MONTHLY -> {
+                        uiState.monthlyStats?.let { stats ->
+                   /*         item {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    MonthlyStatsContent(stats, uiState.monthlyTrend)
+                                }
+                            }*/
+
+                            // Goal Compliance Calendar - Monthly compliance visualization
+                            if (uiState.goalComplianceData.isNotEmpty()) {
+                                item {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        GoalComplianceCalendar(
+                                            complianceData = uiState.goalComplianceData,
+                                            monthOffset = uiState.calendarMonthOffset,
+                                            onPreviousMonth = { viewModel.selectPreviousMonth() },
+                                            onNextMonth = { viewModel.selectNextMonth() }
+                                        )
+                                    }
+                                }
+                            }
+
+                            /* // Time Pattern Chart
+                            item {
+                                ChartCard(
+                                    title = "Peak Usage Times",
+                                    description = "Weekly usage patterns"
+                                ) {
+                                    HorizontalTimePatternChart(
+                                        sessions = uiState.monthlySessions
+                                    )
+                                }
+                            }
+                            */
+
+                            // Smart Insights Card - insights before goal progress
+                            item {
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    SmartInsightsCard(
+                                        sessions = uiState.monthlySessions,
+                                        period = StatsPeriod.MONTHLY,
+                                        trend = uiState.monthlyTrend,
+                                        streakConsistency = uiState.streakConsistency
+                                    )
+                                }
+                            }
+
+                            /* // Goal Progress Chart
+                            item {
+                                ChartCard(
+                                    title = "Goal Progress",
+                                    description = "Monthly progress tracking"
+                                ) {
+                                    GoalProgressChart(
+                                        sessions = uiState.monthlySessions,
+                                        period = ChartPeriod.MONTHLY,
+                                        dailyGoalMinutes = uiState.goalProgress
+                                            .firstOrNull()?.goal?.dailyLimitMinutes
+                                    )
+                                }
+                            }
+                            */
+                        }
+                    }
+                }
             }
         }
     }

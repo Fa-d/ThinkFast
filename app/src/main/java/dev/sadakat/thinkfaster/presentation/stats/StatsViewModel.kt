@@ -120,7 +120,7 @@ class StatsViewModel(
                 val comparativeAnalytics = calculateComparativeAnalyticsUseCase()
 
                 // Build goal compliance data for calendar
-                val complianceData = buildGoalComplianceData(goalProgress, monthStart, monthEnd)
+                val complianceData = buildGoalComplianceData(goalProgress, monthStart, monthEnd, monthlySessions)
 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -216,34 +216,58 @@ class StatsViewModel(
 
     /**
      * Build goal compliance data for calendar visualization
-     * Maps each date to whether the goal was met (true/false)
+     * Maps each date to whether the goal was met (true/false/null for no data)
      */
     private fun buildGoalComplianceData(
         goalProgress: List<GoalProgress>,
         monthStart: String,
-        monthEnd: String
-    ): Map<String, Boolean> {
-        val complianceMap = mutableMapOf<String, Boolean>()
+        monthEnd: String,
+        monthlySessions: List<UsageSession>
+    ): Map<String, Boolean?> {
+        val complianceMap = mutableMapOf<String, Boolean?>()
 
-        // For now, use the first goal if available
-        val mainGoal = goalProgress.firstOrNull() ?: return emptyMap()
+        // Get the daily goal limit
+        val dailyGoalMinutes = goalProgress.firstOrNull()?.goal?.dailyLimitMinutes ?: return emptyMap()
+
+        // Group sessions by date and calculate total minutes per day
+        val dailyUsageMap = mutableMapOf<String, Float>()
+        val calendar = Calendar.getInstance()
+
+        monthlySessions.forEach { session ->
+            calendar.timeInMillis = session.startTimestamp
+            val dateStr = dateFormatter.format(calendar.time)
+            val durationMinutes = session.duration / 600000f
+            dailyUsageMap[dateStr] = (dailyUsageMap[dateStr] ?: 0f) + durationMinutes
+        }
 
         // Parse dates and iterate through the month
-        val calendar = Calendar.getInstance()
         val startDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(monthStart)
         val endDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(monthEnd)
 
         if (startDate == null || endDate == null) return emptyMap()
+
+        // Get today's date to exclude future days
+        val todayCalendar = Calendar.getInstance()
+        val todayDateStr = dateFormatter.format(todayCalendar.time)
 
         calendar.time = startDate
 
         while (calendar.time <= endDate) {
             val dateStr = dateFormatter.format(calendar.time)
 
-            // Check if goal was met on this date
-            // For now, we'll mark as true if the goal exists and it's not over limit
-            // This is a simplified version - in a real implementation, you'd query daily compliance
-            complianceMap[dateStr] = !mainGoal.isOverLimit
+            // Only include today and past dates, not future dates
+            if (dateStr <= todayDateStr) {
+                // Check if goal was met on this date based on actual usage
+                val totalMinutes = dailyUsageMap[dateStr] ?: 0f
+                // Only mark as compliant if there's actual usage data
+                // If totalMinutes is 0, it means no data (not compliant)
+                complianceMap[dateStr] = if (totalMinutes > 0f) {
+                    totalMinutes <= dailyGoalMinutes
+                } else {
+                    null  // No data for this day
+                }
+            }
+            // Future dates are not added to the map (will show as gray)
 
             calendar.add(Calendar.DAY_OF_MONTH, 1)
         }
@@ -280,7 +304,7 @@ data class StatsUiState(
     val interventionInsights: InterventionInsights? = null,
     val predictiveInsights: PredictiveInsights? = null,
     val comparativeAnalytics: ComparativeAnalytics? = null,
-    val goalComplianceData: Map<String, Boolean> = emptyMap(),
+    val goalComplianceData: Map<String, Boolean?> = emptyMap(),
 
     val selectedPeriod: StatsPeriod = StatsPeriod.WEEKLY,
     val error: String? = null
@@ -369,8 +393,8 @@ data class StatsUiState(
         get() {
             val mainGoal = goalProgress.firstOrNull() ?: return null
 
-            // Count days met goal from goal compliance data
-            val daysMetGoal = goalComplianceData.count { it.value }
+            // Count days met goal from goal compliance data (only count true values, not null or false)
+            val daysMetGoal = goalComplianceData.count { it.value == true }
             val totalDays = goalComplianceData.size.coerceAtLeast(1)
 
             return dev.sadakat.thinkfaster.presentation.stats.components.StreakConsistency(

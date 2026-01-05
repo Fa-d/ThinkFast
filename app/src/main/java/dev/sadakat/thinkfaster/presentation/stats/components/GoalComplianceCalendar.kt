@@ -53,7 +53,7 @@ import java.util.Locale
  */
 @Composable
 fun GoalComplianceCalendar(
-    complianceData: Map<String, Boolean>,  // date -> met goal?
+    complianceData: Map<String, Boolean?>,  // date -> met goal? (null = no data)
     modifier: Modifier = Modifier,
     monthOffset: Int = 0,  // Phase 4.3: 0 = current month, -1 = previous, +1 = next
     onPreviousMonth: () -> Unit = {},  // Phase 4.3: Navigation callback
@@ -122,23 +122,16 @@ fun GoalComplianceCalendar(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Legend
+            // Legend (matching GoalProgressTimeline style)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.Center
             ) {
-                LegendItem(
-                    color = Color(0xFF4CAF50), // Green
-                    label = "Met goal"
-                )
-                LegendItem(
-                    color = Color(0xFFF44336), // Red
-                    label = "Missed"
-                )
-                LegendItem(
-                    color = Color(0xFFBDBDBD), // Gray
-                    label = "No data"
-                )
+                LegendItem(color = 0xFF4CAF50, label = "Under")
+                Spacer(modifier = Modifier.width(16.dp))
+                LegendItem(color = 0xFFFF5252, label = "Over")
+                Spacer(modifier = Modifier.width(16.dp))
+                LegendItem(color = 0xFFBDBDBD, label = "No data")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -193,7 +186,7 @@ fun GoalComplianceCalendar(
 }
 
 /**
- * Single day cell in the calendar
+ * Single day cell in the calendar - styled like GoalProgressTimeline
  */
 @Composable
 private fun CalendarDayCell(
@@ -202,23 +195,28 @@ private fun CalendarDayCell(
     metGoal: Boolean?,
     isCurrentMonth: Boolean
 ) {
-    val backgroundColor = when {
-        metGoal == true -> Color(0xFF4CAF50).copy(alpha = if (isCurrentMonth) 1f else 0.3f)
-        metGoal == false -> Color(0xFFF44336).copy(alpha = if (isCurrentMonth) 1f else 0.3f)
-        else -> Color(0xFFBDBDBD).copy(alpha = if (isCurrentMonth) 0.3f else 0.1f)
+    // Determine compliance status (similar to GoalProgressTimeline)
+    val complianceStatus = when {
+        metGoal == true -> ComplianceStatus.UNDER_GOAL
+        metGoal == false -> ComplianceStatus.OVER_GOAL
+        else -> null
+    }
+
+    val progressColor = when (complianceStatus) {
+        ComplianceStatus.UNDER_GOAL -> 0xFF4CAF50
+        ComplianceStatus.OVER_GOAL -> 0xFFFF5252
+        null -> 0xFFBDBDBD
     }
 
     Box(
         modifier = Modifier
             .aspectRatio(1f)
-            .clip(CircleShape)
-            .background(backgroundColor)
             .then(
                 if (isToday) {
                     Modifier.border(
                         width = 2.dp,
                         color = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
+                        shape = RoundedCornerShape(8.dp)
                     )
                 } else {
                     Modifier
@@ -226,25 +224,82 @@ private fun CalendarDayCell(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = day.dayOfMonth.toString(),
-            fontSize = 12.sp,
-            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-            color = if (metGoal != null && isCurrentMonth) {
-                Color.White
-            } else {
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        if (complianceStatus != null && isCurrentMonth) {
+            // Colored circle with status symbol (like GoalProgressTimeline)
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(
+                        color = Color(progressColor).copy(
+                            alpha = if (isCurrentMonth) 1f else 0.3f
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = when (complianceStatus) {
+                        ComplianceStatus.UNDER_GOAL -> "✓"
+                        ComplianceStatus.OVER_GOAL -> "✗"
+                    },
+                    fontSize = 16.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
             }
-        )
+        } else {
+            // No data or not current month - show gray circle with day number
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(
+                        color = Color(0xFFBDBDBD).copy(
+                            alpha = if (isCurrentMonth) 0.3f else 0.1f
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = day.dayOfMonth.toString(),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(
+                        alpha = if (isCurrentMonth) 0.5f else 0.3f
+                    )
+                )
+            }
+        }
+
+        // Today indicator dot
+        if (isToday) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 2.dp)
+                    .size(4.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    )
+            )
+        }
     }
 }
 
 /**
- * Legend item showing color and label
+ * Compliance status enum (matching GoalProgressTimeline)
+ */
+private enum class ComplianceStatus {
+    UNDER_GOAL,
+    OVER_GOAL
+}
+
+/**
+ * Legend item showing color and label (matching GoalProgressTimeline style)
  */
 @Composable
 private fun LegendItem(
-    color: Color,
+    color: Long,
     label: String
 ) {
     Row(
@@ -255,13 +310,13 @@ private fun LegendItem(
             modifier = Modifier
                 .size(12.dp)
                 .clip(CircleShape)
-                .background(color)
+                .background(Color(color))
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = label,
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -270,10 +325,10 @@ private fun LegendItem(
  * Summary statistics below the calendar
  */
 @Composable
-private fun ComplianceSummary(complianceData: Map<String, Boolean>) {
+private fun ComplianceSummary(complianceData: Map<String, Boolean?>) {
     val totalDays = complianceData.size
-    val metGoalDays = complianceData.values.count { it }
-    val missedGoalDays = complianceData.values.count { !it }
+    val metGoalDays = complianceData.values.count { it == true }
+    val missedGoalDays = complianceData.values.count { it == false }
     val complianceRate = if (totalDays > 0) {
         (metGoalDays.toFloat() / totalDays * 100).toInt()
     } else 0
