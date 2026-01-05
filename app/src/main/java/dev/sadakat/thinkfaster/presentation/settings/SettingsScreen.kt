@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import dev.sadakat.thinkfaster.data.preferences.SyncPreferences
@@ -37,6 +41,7 @@ import dev.sadakat.thinkfaster.presentation.navigation.Screen
 import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
 import dev.sadakat.thinkfaster.ui.theme.AppColors
+import dev.sadakat.thinkfaster.ui.theme.getMaxContentWidth
 import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import dev.sadakat.thinkfaster.BuildConfig
 import org.koin.compose.koinInject
@@ -72,15 +77,24 @@ fun SettingsScreen(
                     )
                 })
         }) { paddingValues ->
-        if (useTwoColumns) {
-            // Two-column grid layout for landscape tablets
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            val maxWidth = getMaxContentWidth()
+
+            if (useTwoColumns) {
+                // Two-column grid layout for landscape tablets
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = maxWidth)
+                        .fillMaxHeight()
+                        .padding(horizontal = 20.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Row with two columns
@@ -108,46 +122,7 @@ fun SettingsScreen(
                                     }
                                 })
                         }
-                    }
 
-                    // Right column
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // Group 3: Notifications, Appearance, Intervention
-                        SettingsGroupCard {
-                            SettingsMenuItem(
-                                icon = "🔔",
-                                iconBackgroundColor = Color.Transparent,
-                                title = "Notifications",
-                                onClick = { showNotificationsSheet = true })
-                            SettingsDivider()
-                            SettingsMenuItem(
-                                icon = "🌙",
-                                iconBackgroundColor = Color.Transparent,
-                                title = "Appearance",
-                                onClick = { navController.navigate("theme_appearance") })
-                            SettingsDivider()
-                            SettingsMenuItem(
-                                icon = "✋",
-                                iconBackgroundColor = Color.Transparent,
-                                title = "Intervention",
-                                onClick = { showInterventionSheet = true })
-                        }
-                    }
-                }
-
-                // Row with two columns
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Left column
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
                         // Group 5: Help & Support, About
                         SettingsGroupCard {
                             SettingsMenuItem(
@@ -169,6 +144,15 @@ fun SettingsScreen(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // Group 2: Goals
+                        SettingsGroupCard {
+                            SettingsMenuItem(
+                                icon = "🎯",
+                                iconBackgroundColor = Color.Transparent,
+                                title = "Goals",
+                                onClick = { navController.navigate(Screen.Home.route) })
+                        }
+
                         // Group 6: App Version
                         val context = LocalContext.current
                         val versionName = remember {
@@ -189,20 +173,62 @@ fun SettingsScreen(
                     }
                 }
 
+                // Row with two columns
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Left column
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Group 3: Notifications
+                        SettingsGroupCard {
+                            SettingsMenuItem(
+                                icon = "🔔",
+                                iconBackgroundColor = Color.Transparent,
+                                title = "Notifications",
+                                onClick = { showNotificationsSheet = true })
+                        }
+                    }
+
+                    // Right column
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Group 4: Appearance, Intervention
+                        SettingsGroupCard {
+                            SettingsMenuItem(
+                                icon = "🌙",
+                                iconBackgroundColor = Color.Transparent,
+                                title = "Appearance",
+                                onClick = { navController.navigate("theme_appearance") })
+                            SettingsDivider()
+                            SettingsMenuItem(
+                                icon = "✋",
+                                iconBackgroundColor = Color.Transparent,
+                                title = "Intervention",
+                                onClick = { showInterventionSheet = true })
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
-        } else {
-            // Original single-column layout
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 20.dp),
-                contentPadding = PaddingValues(
-                    top = 16.dp, bottom = 24.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            } else {
+                // Single-column layout for portrait phones
+                LazyColumn(
+                    modifier = Modifier
+                        .widthIn(max = maxWidth)
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp),
+                    contentPadding = PaddingValues(
+                        top = 16.dp, bottom = 24.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
             // Group 1: Account (standalone)
             item {
                 SettingsGroupCard {
@@ -299,32 +325,90 @@ fun SettingsScreen(
         }
 
         if (showInterventionSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showInterventionSheet = false },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-            ) {
-                InterventionSettingsBottomSheet(
-                    uiState = uiState,
-                    viewModel = viewModel,
-                    onDismiss = { showInterventionSheet = false })
+            val useDialog = shouldUseTwoColumnLayout()
+
+            if (useDialog) {
+                // Use Dialog for landscape tablets
+                Dialog(
+                    onDismissRequest = { showInterventionSheet = false },
+                    properties = DialogProperties(
+                        dismissOnBackPress = true,
+                        dismissOnClickOutside = true,
+                        usePlatformDefaultWidth = false
+                    )
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .heightIn(max = 600.dp)
+                            .verticalScroll(rememberScrollState()),
+                        shape = Shapes.bottomSheet
+                    ) {
+                        InterventionSettingsBottomSheet(
+                            uiState = uiState,
+                            viewModel = viewModel,
+                            onDismiss = { showInterventionSheet = false })
+                    }
+                }
+            } else {
+                // Use ModalBottomSheet for portrait phones
+                ModalBottomSheet(
+                    onDismissRequest = { showInterventionSheet = false },
+                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                ) {
+                    InterventionSettingsBottomSheet(
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        onDismiss = { showInterventionSheet = false })
+                }
             }
         }
 
         // Friction Level Bottom Sheet
         if (showFrictionSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showFrictionSheet = false },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-            ) {
-                FrictionLevelBottomSheet(
-                    currentLevel = uiState.currentFrictionLevel,
-                    selectedOverride = uiState.frictionLevelOverride,
-                    onLevelSelected = {
-                        viewModel.setFrictionLevel(it)
-                        showFrictionSheet = false
-                    })
+            val useDialog = shouldUseTwoColumnLayout()
+
+            if (useDialog) {
+                Dialog(
+                    onDismissRequest = { showFrictionSheet = false },
+                    properties = DialogProperties(
+                        dismissOnBackPress = true,
+                        dismissOnClickOutside = true,
+                        usePlatformDefaultWidth = false
+                    )
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .heightIn(max = 500.dp)
+                            .verticalScroll(rememberScrollState()),
+                        shape = Shapes.bottomSheet
+                    ) {
+                        FrictionLevelBottomSheet(
+                            currentLevel = uiState.currentFrictionLevel,
+                            selectedOverride = uiState.frictionLevelOverride,
+                            onLevelSelected = {
+                                viewModel.setFrictionLevel(it)
+                                showFrictionSheet = false
+                            })
+                    }
+                }
+            } else {
+                ModalBottomSheet(
+                    onDismissRequest = { showFrictionSheet = false },
+                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                ) {
+                    FrictionLevelBottomSheet(
+                        currentLevel = uiState.currentFrictionLevel,
+                        selectedOverride = uiState.frictionLevelOverride,
+                        onLevelSelected = {
+                            viewModel.setFrictionLevel(it)
+                            showFrictionSheet = false
+                        })
+                }
             }
         }
+        } // Close Box wrapper
     }
 }
 
@@ -876,34 +960,95 @@ private fun InterventionSettingsBottomSheet(
 
     // Friction Level Bottom Sheet
     if (showFrictionSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showFrictionSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ) {
-            FrictionLevelBottomSheet(
-                currentLevel = uiState.currentFrictionLevel,
-                selectedOverride = uiState.frictionLevelOverride,
-                onLevelSelected = {
-                    viewModel.setFrictionLevel(it)
-                    showFrictionSheet = false
-                })
+        val useDialog = shouldUseTwoColumnLayout()
+
+        if (useDialog) {
+            Dialog(
+                onDismissRequest = { showFrictionSheet = false },
+                properties = DialogProperties(
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = true,
+                    usePlatformDefaultWidth = false
+                )
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .heightIn(max = 500.dp)
+                        .verticalScroll(rememberScrollState()),
+                    shape = Shapes.bottomSheet
+                ) {
+                    FrictionLevelBottomSheet(
+                        currentLevel = uiState.currentFrictionLevel,
+                        selectedOverride = uiState.frictionLevelOverride,
+                        onLevelSelected = {
+                            viewModel.setFrictionLevel(it)
+                            showFrictionSheet = false
+                        })
+                }
+            }
+        } else {
+            ModalBottomSheet(
+                onDismissRequest = { showFrictionSheet = false },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                FrictionLevelBottomSheet(
+                    currentLevel = uiState.currentFrictionLevel,
+                    selectedOverride = uiState.frictionLevelOverride,
+                    onLevelSelected = {
+                        viewModel.setFrictionLevel(it)
+                        showFrictionSheet = false
+                    })
+            }
         }
     }
     if (showSnoozeBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showSnoozeBottomSheet = false },
-            sheetState = rememberModalBottomSheetState()
-        ) {
-            SnoozeBottomSheetContent(
-                snoozeActive = uiState.snoozeActive,
-                remainingMinutes = uiState.snoozeRemainingMinutes,
-                onToggleSnooze = { enabled, duration ->
-                    viewModel.toggleSnooze(enabled, duration)
-                },
-                onSetDuration = { duration ->
-                    viewModel.setSnoozeDuration(duration)
-                    showSnoozeBottomSheet = false
-                })
+        val useDialog = shouldUseTwoColumnLayout()
+
+        if (useDialog) {
+            Dialog(
+                onDismissRequest = { showSnoozeBottomSheet = false },
+                properties = DialogProperties(
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = true,
+                    usePlatformDefaultWidth = false
+                )
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .heightIn(max = 500.dp)
+                        .verticalScroll(rememberScrollState()),
+                    shape = Shapes.bottomSheet
+                ) {
+                    SnoozeBottomSheetContent(
+                        snoozeActive = uiState.snoozeActive,
+                        remainingMinutes = uiState.snoozeRemainingMinutes,
+                        onToggleSnooze = { enabled, duration ->
+                            viewModel.toggleSnooze(enabled, duration)
+                        },
+                        onSetDuration = { duration ->
+                            viewModel.setSnoozeDuration(duration)
+                            showSnoozeBottomSheet = false
+                        })
+                }
+            }
+        } else {
+            ModalBottomSheet(
+                onDismissRequest = { showSnoozeBottomSheet = false },
+                sheetState = rememberModalBottomSheetState()
+            ) {
+                SnoozeBottomSheetContent(
+                    snoozeActive = uiState.snoozeActive,
+                    remainingMinutes = uiState.snoozeRemainingMinutes,
+                    onToggleSnooze = { enabled, duration ->
+                        viewModel.toggleSnooze(enabled, duration)
+                    },
+                    onSetDuration = { duration ->
+                        viewModel.setSnoozeDuration(duration)
+                        showSnoozeBottomSheet = false
+                    })
+            }
         }
     }
 }

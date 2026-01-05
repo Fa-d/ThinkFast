@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
@@ -342,6 +343,7 @@ private fun CompactOverlayContent(
     onDismiss: () -> Unit
 ) {
     val isDarkTheme = isSystemInDarkTheme()
+    val coroutineScope = rememberCoroutineScope()
 
     // Entrance animation state
     var visible by remember { mutableStateOf(false) }
@@ -434,7 +436,7 @@ private fun CompactOverlayContent(
                                 onDismiss()
                             } else {
                                 // Snap back with animation
-                                CoroutineScope(Dispatchers.Main).launch {
+                                coroutineScope.launch {
                                     animate(
                                         initialValue = offsetY,
                                         targetValue = 0f,
@@ -578,92 +580,115 @@ private fun CompactOverlayContent(
                         }
                     }
                 } else {
-                    // Original single-column layout
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp)
-                            .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    // Single-column layout with buttons at bottom
+                    Box(
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        // Scrollable content area
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp)
+                                .verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                        // App name
-                        Text(
-                            text = "ThinkFaster",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = style.textColor.copy(alpha = 0.9f),
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Intervention content (shared composable)
-                        interventionContent?.let { content ->
-                            InterventionContentRenderer(
-                                content = content,
-                                textColor = style.textColor,
-                                secondaryTextColor = style.secondaryTextColor
+                            // App name
+                            Text(
+                                text = "ThinkFaster",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = style.textColor.copy(alpha = 0.9f),
+                                textAlign = TextAlign.Center
                             )
-                        }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                            Spacer(modifier = Modifier.height(24.dp))
 
-                        // Feedback or action buttons
-                        if (showFeedbackPrompt) {
-                            CompactFeedbackPrompt(
-                                onFeedback = onFeedbackReceived,
-                                onDismiss = onSkipFeedback,
-                                style = style
-                            )
-                        } else {
-                            // Snooze button
-                            OutlinedButton(
-                                onClick = onSnoozeClick,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = Color.White.copy(alpha = 0.15f),
-                                    contentColor = style.textColor
-                                ),
-                                border = BorderStroke(1.5.dp, style.textColor.copy(alpha = 0.3f)),
-                                shape = Shapes.button
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Pause,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = style.textColor.copy(alpha = 0.8f)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Snooze $snoozeDurationMinutes min",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = style.textColor
+                            // Intervention content (shared composable)
+                            interventionContent?.let { content ->
+                                InterventionContentRenderer(
+                                    content = content,
+                                    textColor = style.textColor,
+                                    secondaryTextColor = style.secondaryTextColor
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            // Extra padding at bottom for button area
+                            Spacer(modifier = Modifier.height(250.dp))
+                        }
 
-                            CompactActionButtons(
-                                frictionLevel = frictionLevel,
-                                onGoBackClick = onGoBackClick,
-                                onProceedClick = onProceedClick,
-                                textColor = style.textColor,
-                                isDarkTheme = isDarkTheme
-                            )
+                        // Fixed buttons at bottom with gradient overlay
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.BottomCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            Color.Black.copy(alpha = 0.3f)
+                                        )
+                                    )
+                                )
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                if (showFeedbackPrompt) {
+                                    CompactFeedbackPrompt(
+                                        onFeedback = onFeedbackReceived,
+                                        onDismiss = onSkipFeedback,
+                                        style = style
+                                    )
+                                } else {
+                                    // Snooze button
+                                    OutlinedButton(
+                                        onClick = onSnoozeClick,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = Color.White.copy(alpha = 0.15f),
+                                            contentColor = style.textColor
+                                        ),
+                                        border = BorderStroke(1.5.dp, style.textColor.copy(alpha = 0.3f)),
+                                        shape = Shapes.button
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Pause,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = style.textColor.copy(alpha = 0.8f)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Snooze $snoozeDurationMinutes min",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = style.textColor
+                                        )
+                                    }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                                    CompactActionButtons(
+                                        frictionLevel = frictionLevel,
+                                        onGoBackClick = onGoBackClick,
+                                        onProceedClick = onProceedClick,
+                                        textColor = style.textColor,
+                                        isDarkTheme = isDarkTheme
+                                    )
 
-                            Text(
-                                text = "Building mindful usage habits",
-                                fontSize = 13.sp,
-                                color = style.secondaryTextColor.copy(alpha = 0.8f),
-                                textAlign = TextAlign.Center
-                            )
+                                    Text(
+                                        text = "Building mindful usage habits",
+                                        fontSize = 13.sp,
+                                        color = style.secondaryTextColor.copy(alpha = 0.8f),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
                         }
                     }
                 }

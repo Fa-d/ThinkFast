@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sadakat.thinkfaster.domain.model.UsageSession
@@ -160,6 +161,8 @@ private fun DayProgressIndicator(
         Text(
             text = dayData.dayLabel,
             fontSize = 10.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             fontWeight = if (dayData.isToday) FontWeight.Bold else FontWeight.Normal,
             color = if (dayData.isToday) {
                 MaterialTheme.colorScheme.primary
@@ -191,7 +194,8 @@ private fun DayProgressIndicator(
                         modifier = Modifier
                             .size(32.dp)
                             .background(
-                                color = androidx.compose.ui.graphics.Color(0xFFBDBDBD).copy(alpha = 0.5f),
+                                color = androidx.compose.ui.graphics.Color(0xFFBDBDBD)
+                                    .copy(alpha = 0.5f),
                                 shape = CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -204,6 +208,7 @@ private fun DayProgressIndicator(
                         )
                     }
                 }
+
                 else -> {
                     val progressColor = when (dayData.complianceStatus) {
                         ComplianceStatus.UNDER_GOAL -> 0xFF4CAF50
