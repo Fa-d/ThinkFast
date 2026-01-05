@@ -294,4 +294,100 @@ data class StatsUiState(
             StatsPeriod.WEEKLY -> weeklySessions
             StatsPeriod.MONTHLY -> monthlySessions
         }
+
+    /**
+     * Get overview stats for the currently selected period
+     * Used by OverviewStatsCard
+     */
+    val overviewStats: dev.sadakat.thinkfaster.presentation.stats.components.OverviewStats?
+        get() {
+            val goalMinutes = goalProgress.firstOrNull()?.goal?.dailyLimitMinutes
+
+            return when (selectedPeriod) {
+                StatsPeriod.DAILY -> dailyStats?.let { stats ->
+                    val totalMinutes = (stats.totalUsageMillis / (1000 * 60)).toInt()
+                    val progressPercentage = if (goalMinutes != null && goalMinutes > 0) {
+                        ((totalMinutes.toFloat() / goalMinutes.toFloat()) * 100).toInt()
+                    } else {
+                        0
+                    }
+                    dev.sadakat.thinkfaster.presentation.stats.components.OverviewStats(
+                        totalMinutes = totalMinutes,
+                        goalMinutes = goalMinutes,
+                        progressPercentage = progressPercentage,
+                        sessionCount = stats.sessionCount,
+                        avgSessionMinutes = if (stats.sessionCount > 0) {
+                            (stats.totalUsageMillis / (1000 * 60 * stats.sessionCount)).toInt()
+                        } else 0
+                    )
+                }
+                StatsPeriod.WEEKLY -> weeklyStats?.let { stats ->
+                    val totalMinutes = (stats.totalUsageMillis / (1000 * 60)).toInt()
+                    val avgDailyMinutes = totalMinutes / 7
+                    val progressPercentage = if (goalMinutes != null && goalMinutes > 0) {
+                        ((avgDailyMinutes.toFloat() / goalMinutes.toFloat()) * 100).toInt()
+                    } else {
+                        0
+                    }
+                    dev.sadakat.thinkfaster.presentation.stats.components.OverviewStats(
+                        totalMinutes = totalMinutes,
+                        goalMinutes = goalMinutes?.let { it * 7 }, // Weekly goal
+                        progressPercentage = progressPercentage,
+                        sessionCount = stats.sessionCount,
+                        avgSessionMinutes = if (stats.sessionCount > 0) {
+                            (stats.totalUsageMillis / (1000 * 60 * stats.sessionCount)).toInt()
+                        } else 0
+                    )
+                }
+                StatsPeriod.MONTHLY -> monthlyStats?.let { stats ->
+                    val totalMinutes = (stats.totalUsageMillis / (1000 * 60)).toInt()
+                    val daysInMonth = 30 // Approximate
+                    val avgDailyMinutes = totalMinutes / daysInMonth
+                    val progressPercentage = if (goalMinutes != null && goalMinutes > 0) {
+                        ((avgDailyMinutes.toFloat() / goalMinutes.toFloat()) * 100).toInt()
+                    } else {
+                        0
+                    }
+                    dev.sadakat.thinkfaster.presentation.stats.components.OverviewStats(
+                        totalMinutes = totalMinutes,
+                        goalMinutes = goalMinutes?.let { it * daysInMonth }, // Monthly goal
+                        progressPercentage = progressPercentage,
+                        sessionCount = stats.sessionCount,
+                        avgSessionMinutes = if (stats.sessionCount > 0) {
+                            (stats.totalUsageMillis / (1000 * 60 * stats.sessionCount)).toInt()
+                        } else 0
+                    )
+                }
+            }
+        }
+
+    /**
+     * Get streak and consistency data
+     * Used by StreakConsistencyCard
+     */
+    val streakConsistency: dev.sadakat.thinkfaster.presentation.stats.components.StreakConsistency?
+        get() {
+            val mainGoal = goalProgress.firstOrNull() ?: return null
+
+            // Count days met goal from goal compliance data
+            val daysMetGoal = goalComplianceData.count { it.value }
+            val totalDays = goalComplianceData.size.coerceAtLeast(1)
+
+            return dev.sadakat.thinkfaster.presentation.stats.components.StreakConsistency(
+                currentStreak = mainGoal.goal.currentStreak,
+                daysMetGoal = daysMetGoal,
+                totalDays = totalDays
+            )
+        }
+
+    /**
+     * Get app usage breakdown by package name
+     * Used by AppBreakdownChart
+     */
+    val appBreakdown: Map<String, Int>
+        get() = currentPeriodSessions
+            .groupBy { session -> session.targetApp }
+            .mapValues { (_, sessions) ->
+                sessions.sumOf { session -> (session.duration / (1000 * 60)).toInt() }
+            }
 }

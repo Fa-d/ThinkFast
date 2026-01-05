@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
@@ -28,8 +29,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,15 +54,15 @@ import dev.sadakat.thinkfaster.domain.model.WeeklyStatistics
 import dev.sadakat.thinkfaster.presentation.stats.charts.StackedBarUsageChart
 import dev.sadakat.thinkfaster.presentation.stats.charts.HorizontalTimePatternChart
 import dev.sadakat.thinkfaster.presentation.stats.charts.GoalProgressChart
-import dev.sadakat.thinkfaster.presentation.stats.components.SmartInsightCard
-import dev.sadakat.thinkfaster.presentation.stats.components.PredictiveInsightsCard
-import dev.sadakat.thinkfaster.presentation.stats.components.BehavioralInsightsCard
-import dev.sadakat.thinkfaster.presentation.stats.components.InterventionEffectivenessCard
-import dev.sadakat.thinkfaster.presentation.stats.components.ComparativeAnalyticsCard
 import dev.sadakat.thinkfaster.presentation.stats.components.GoalComplianceCalendar
 import dev.sadakat.thinkfaster.presentation.stats.components.ErrorStateCard
 import dev.sadakat.thinkfaster.presentation.stats.components.EmptyStatsCard
 import dev.sadakat.thinkfaster.presentation.stats.components.InsightCardSkeleton
+import dev.sadakat.thinkfaster.presentation.stats.components.OverviewStatsCard
+import dev.sadakat.thinkfaster.presentation.stats.components.StreakConsistencyCard
+import dev.sadakat.thinkfaster.presentation.stats.charts.AppBreakdownChart
+import dev.sadakat.thinkfaster.ui.components.rememberFadeInAnimation
+import androidx.compose.ui.graphics.graphicsLayer
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -118,45 +117,29 @@ fun StatsScreen(
                 CircularProgressIndicator()
             }
         } else {
-            Column(
-                modifier = Modifier.fillMaxSize()
+            // Statistics content
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 0.dp,
+                    end = 0.dp,
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = contentPadding.calculateBottomPadding() + 16.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Period selector tabs - directly below TopAppBar
-                TabRow(
-                    selectedTabIndex = uiState.selectedPeriod.ordinal,
-                    modifier = Modifier.padding(top = paddingValues.calculateTopPadding())
-                ) {
-                    Tab(
-                        selected = uiState.selectedPeriod == StatsPeriod.DAILY,
-                        onClick = { viewModel.selectPeriod(StatsPeriod.DAILY) },
-                        text = { Text("Today") }
-                    )
-                    Tab(
-                        selected = uiState.selectedPeriod == StatsPeriod.WEEKLY,
-                        onClick = { viewModel.selectPeriod(StatsPeriod.WEEKLY) },
-                        text = { Text("Week") }
-                    )
-                    Tab(
-                        selected = uiState.selectedPeriod == StatsPeriod.MONTHLY,
-                        onClick = { viewModel.selectPeriod(StatsPeriod.MONTHLY) },
-                        text = { Text("Month") }
+                // Time range selector
+                item {
+                    TimeRangeSelector(
+                        selectedPeriod = uiState.selectedPeriod,
+                        onPeriodSelected = { viewModel.selectPeriod(it) }
                     )
                 }
 
-                // Statistics content
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 16.dp,
-                        bottom = contentPadding.calculateBottomPadding() + 16.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Phase 1: Error state handling
-                    uiState.error?.let { errorMessage ->
-                        item {
+                // Phase 1: Error state handling
+                uiState.error?.let { errorMessage ->
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                             ErrorStateCard(
                                 errorMessage = errorMessage,
                                 onRetry = { viewModel.loadStatistics() },
@@ -164,14 +147,16 @@ fun StatsScreen(
                             )
                         }
                     }
+                }
 
-                    // Phase 1: Empty state handling - check if any stats data exists
-                    val hasAnyData = uiState.dailyStats != null ||
-                            uiState.weeklyStats != null ||
-                            uiState.monthlyStats != null
+                // Phase 1: Empty state handling - check if any stats data exists
+                val hasAnyData = uiState.dailyStats != null ||
+                        uiState.weeklyStats != null ||
+                        uiState.monthlyStats != null
 
-                    if (!hasAnyData && uiState.error == null) {
-                        item {
+                if (!hasAnyData && uiState.error == null) {
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                             EmptyStatsCard(
                                 onNavigateToManageApps = {
                                     navController.navigate("manage_apps")
@@ -179,41 +164,58 @@ fun StatsScreen(
                             )
                         }
                     }
+                }
 
-                    // Phase 5: Smart Insight - Featured insight (shown on all tabs)
-                    // Phase 2.2: Show skeleton while loading
-                    // Phase 5.1: Added entrance animation
-                    if (hasAnyData) {
-                        val smartInsight = uiState.smartInsight
-                        if (smartInsight != null) {
-                            item {
-                                AnimatedVisibility(
-                                    visible = showContent,
-                                    enter = fadeIn(animationSpec = tween(400)) +
-                                            slideInVertically(
-                                                initialOffsetY = { it / 4 },
-                                                animationSpec = tween(400)
-                                            )
-                                ) {
-                                    SmartInsightCard(insight = smartInsight)
-                                }
-                            }
-                        } else if (uiState.isRefreshing) {
-                            item {
-                                InsightCardSkeleton()
+                // New: Overview Stats Card with circular progress (matches Home design)
+                if (hasAnyData) {
+                    uiState.overviewStats?.let { stats ->
+                        item {
+                            val alpha = rememberFadeInAnimation(durationMillis = 600)
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .graphicsLayer(alpha = alpha)
+                            ) {
+                                OverviewStatsCard(stats = stats)
                             }
                         }
                     }
 
-                    when (uiState.selectedPeriod) {
+                    // Streak & Consistency Card
+                    uiState.streakConsistency?.let { streakData ->
+                        item {
+                            val alpha = rememberFadeInAnimation(durationMillis = 600)
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .graphicsLayer(alpha = alpha)
+                            ) {
+                                StreakConsistencyCard(streakConsistency = streakData)
+                            }
+                        }
+                    }
+
+                    // App Breakdown Donut Chart
+                    if (uiState.appBreakdown.isNotEmpty()) {
+                        item {
+                            val alpha = rememberFadeInAnimation(durationMillis = 600)
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .graphicsLayer(alpha = alpha)
+                            ) {
+                                AppBreakdownChart(appUsageMap = uiState.appBreakdown)
+                            }
+                        }
+                    }
+                }
+
+                when (uiState.selectedPeriod) {
                         StatsPeriod.DAILY -> {
                             uiState.dailyStats?.let { stats ->
-                                item { DailyStatsContent(stats, uiState.dailyTrend) }
-
-                                // Phase 5: Predictive Insights
-                                uiState.predictiveInsights?.let { predictive ->
-                                    item {
-                                        PredictiveInsightsCard(insights = predictive)
+                                item {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        DailyStatsContent(stats, uiState.dailyTrend)
                                     }
                                 }
 
@@ -260,26 +262,9 @@ fun StatsScreen(
                         }
                         StatsPeriod.WEEKLY -> {
                             uiState.weeklyStats?.let { stats ->
-                                item { WeeklyStatsContent(stats, uiState.weeklyTrend) }
-
-                                // Phase 5: Behavioral Insights
-                                uiState.behavioralInsights?.let { behavioral ->
-                                    item {
-                                        BehavioralInsightsCard(insights = behavioral)
-                                    }
-                                }
-
-                                // Phase 5: Intervention Effectiveness
-                                uiState.interventionInsights?.let { intervention ->
-                                    item {
-                                        InterventionEffectivenessCard(insights = intervention)
-                                    }
-                                }
-
-                                // Phase 5: Comparative Analytics
-                                uiState.comparativeAnalytics?.let { comparative ->
-                                    item {
-                                        ComparativeAnalyticsCard(analytics = comparative)
+                                item {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        WeeklyStatsContent(stats, uiState.weeklyTrend)
                                     }
                                 }
 
@@ -326,25 +311,24 @@ fun StatsScreen(
                         }
                         StatsPeriod.MONTHLY -> {
                             uiState.monthlyStats?.let { stats ->
-                                item { MonthlyStatsContent(stats, uiState.monthlyTrend) }
+                                item {
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        MonthlyStatsContent(stats, uiState.monthlyTrend)
+                                    }
+                                }
 
                                 // Phase 5: Goal Compliance Calendar
                                 // Phase 4.3: Added month navigation
                                 if (uiState.goalComplianceData.isNotEmpty()) {
                                     item {
-                                        GoalComplianceCalendar(
-                                            complianceData = uiState.goalComplianceData,
-                                            monthOffset = uiState.calendarMonthOffset,
-                                            onPreviousMonth = { viewModel.selectPreviousMonth() },
-                                            onNextMonth = { viewModel.selectNextMonth() }
-                                        )
-                                    }
-                                }
-
-                                // Phase 5: Comparative Analytics (for monthly view)
-                                uiState.comparativeAnalytics?.let { comparative ->
-                                    item {
-                                        ComparativeAnalyticsCard(analytics = comparative)
+                                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                            GoalComplianceCalendar(
+                                                complianceData = uiState.goalComplianceData,
+                                                monthOffset = uiState.calendarMonthOffset,
+                                                onPreviousMonth = { viewModel.selectPreviousMonth() },
+                                                onNextMonth = { viewModel.selectNextMonth() }
+                                            )
+                                        }
                                     }
                                 }
 
@@ -390,7 +374,6 @@ fun StatsScreen(
                             }
                         }
                     }
-                }
             }
         }
     }
@@ -803,6 +786,89 @@ private fun ChartCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             content()
+        }
+    }
+}
+
+/**
+ * Time range selector - horizontal chip row for period selection
+ * Replaces the tab-based navigation with a cleaner chip design
+ */
+@Composable
+private fun TimeRangeSelector(
+    selectedPeriod: StatsPeriod,
+    onPeriodSelected: (StatsPeriod) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Today chip
+        TimeRangeChip(
+            label = "Today",
+            isSelected = selectedPeriod == StatsPeriod.DAILY,
+            onClick = { onPeriodSelected(StatsPeriod.DAILY) },
+            modifier = Modifier.weight(1f)
+        )
+
+        // Week chip
+        TimeRangeChip(
+            label = "Week",
+            isSelected = selectedPeriod == StatsPeriod.WEEKLY,
+            onClick = { onPeriodSelected(StatsPeriod.WEEKLY) },
+            modifier = Modifier.weight(1f)
+        )
+
+        // Month chip
+        TimeRangeChip(
+            label = "Month",
+            isSelected = selectedPeriod == StatsPeriod.MONTHLY,
+            onClick = { onPeriodSelected(StatsPeriod.MONTHLY) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+/**
+ * Individual time range chip component
+ */
+@Composable
+private fun TimeRangeChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .height(48.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
         }
     }
 }

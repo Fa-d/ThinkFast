@@ -2,11 +2,14 @@ package dev.sadakat.thinkfaster.presentation.settings
 
 import android.app.TimePickerDialog
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Pause
@@ -15,6 +18,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -37,1129 +42,272 @@ import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
 /**
- * Settings screen - goal management and app configuration
+ * Settings screen - iOS-style grouped menu with bottom sheets
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavHostController,
     viewModel: GoalViewModel = koinViewModel(),
-    contentPadding: PaddingValues = PaddingValues()
+    contentPadding: PaddingValues = PaddingValues(),
+    syncPreferences: SyncPreferences = koinInject()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    var showNotificationsSheet by remember { mutableStateOf(false) }
+    var showInterventionSheet by remember { mutableStateOf(false) }
+    var showFrictionSheet by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
-            TopAppBar(title = {
-                Text(
-                    "Settings",
-                    style = MaterialTheme.typography.headlineLarge
-                )
-            }, actions = {
-                IconButton(onClick = { viewModel.refresh() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                }
-            })
+            TopAppBar(
+                title = {
+                    Text(
+                        "Settings",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                })
         }) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .padding(horizontal = 20.dp),
             contentPadding = PaddingValues(
-                start = Spacing.md,
-                end = Spacing.md,
-                top = Spacing.md,
-                bottom = contentPadding.calculateBottomPadding() + Spacing.md
+                top = 16.dp, bottom = 24.dp
             ),
-            verticalArrangement = Spacing.verticalArrangementSM
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-
-            // Success/Error messages
+            // Group 1: Account (standalone)
             item {
-                uiState.successMessage?.let { message ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = Shapes.button,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    ) {
-                        Text(
-                            text = "✓ $message",
-                            modifier = Modifier.padding(Spacing.md),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-
-                uiState.error?.let { error ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = Shapes.button,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(Spacing.md),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = error,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.weight(1f)
-                            )
-                            TextButton(onClick = { viewModel.clearError() }) {
-                                Text("Dismiss")
+                SettingsGroupCard {
+                    SettingsMenuItem(
+                        icon = "👤",
+                        iconBackgroundColor = Color.Transparent,
+                        title = "Account",
+                        onClick = {
+                            val isAuthenticated = syncPreferences.isAuthenticated()
+                            if (isAuthenticated) {
+                                navController.navigate(Screen.AccountManagement.route)
+                            } else {
+                                navController.navigate(Screen.Login.route)
                             }
-                        }
-                    }
+                        })
                 }
             }
 
 
-            // Empty state if no tracked apps (separate card for emphasis)
-            if (uiState.trackedAppsCount == 0) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = Shapes.card,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(Spacing.lg),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Spacing.verticalArrangementSM
-                        ) {
-                            Text(
-                                text = "💡 Tip",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Add apps to track usage and set daily time limits",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
+            // Group 3: Notifications, Appearance, Intervention Settings
+            item {
+                SettingsGroupCard {
+                    SettingsMenuItem(
+                        icon = "🔔",
+                        iconBackgroundColor = Color.Transparent,
+                        title = "Notifications",
+                        onClick = { showNotificationsSheet = true })
+                    SettingsDivider()
+                    SettingsMenuItem(
+                        icon = "🌙",
+                        iconBackgroundColor = Color.Transparent,
+                        title = "Appearance",
+                        onClick = { navController.navigate("theme_appearance") })
+                    SettingsDivider()
+                    SettingsMenuItem(
+                        icon = "✋",
+                        iconBackgroundColor = Color.Transparent,
+                        title = "Intervention Settings",
+                        onClick = { showInterventionSheet = true })
                 }
             }
 
-            // ========== ACCOUNT SECTION ==========
+
+            // Group 5: Help & Support, About
             item {
-                SectionHeader(title = "Account & Data")
-            }
-            item {
-                AccountAndDataSection(
-                    navController = navController
-                )
+                SettingsGroupCard {
+                    SettingsMenuItem(
+                        icon = "❓",
+                        iconBackgroundColor = Color.Transparent,
+                        title = "Help & Support",
+                        onClick = { /* TODO: Navigate to Help & Support */ })
+                    SettingsDivider()
+                    SettingsMenuItem(
+                        icon = "ℹ️",
+                        iconBackgroundColor = Color.Transparent,
+                        title = "About",
+                        onClick = { /* TODO: Navigate to About */ })
+                }
             }
 
-            // ========== SECTION 1: TIMER & ALERTS ==========
+            // Group 6: App Version
             item {
-                SectionHeader(title = "Timer & Alerts")
-            }
-            item {
-                TimerAndAlertsSection(
-                    timerDuration = uiState.appSettings.timerAlertMinutes,
-                    onTimerDurationChange = { viewModel.setTimerAlertDuration(it) },
-                    alwaysShowReminder = uiState.appSettings.alwaysShowReminder,
-                    onAlwaysShowReminderChange = { viewModel.setAlwaysShowReminder(it) },
-                    overlayStyle = uiState.appSettings.overlayStyle,
-                    onOverlayStyleChange = { viewModel.setOverlayStyle(it) },
-                    lockedMode = uiState.appSettings.lockedMode,
-                    onLockedModeChange = { viewModel.setLockedMode(it) })
-            }
+                val context = LocalContext.current
+                val versionName = remember {
+                    try {
+                        context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
 
-            // ========== SECTION 2: INTERVENTIONS ==========
-            item {
-                SectionHeader(title = "Interventions")
+                SettingsGroupCard {
+                    SettingsVersionItem(
+                        icon = "📱",
+                        title = "App Version",
+                        version = versionName ?: "Unknown"
+                    )
+                }
             }
-            item {
-                InterventionsSection(
+        }
+
+        // Bottom Sheets
+        if (showNotificationsSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showNotificationsSheet = false },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                NotificationSettingsBottomSheet(
                     appSettings = uiState.appSettings,
                     viewModel = viewModel,
-                    currentFrictionLevel = uiState.currentFrictionLevel,
-                    frictionLevelOverride = uiState.frictionLevelOverride,
-                    onFrictionLevelSelected = { viewModel.setFrictionLevel(it) },
-                    snoozeActive = uiState.snoozeActive,
-                    snoozeRemainingMinutes = uiState.snoozeRemainingMinutes
-                )
-            }
-
-            // ========== SECTION 3: APPEARANCE ==========
-            item {
-                SectionHeader(title = "Appearance")
-            }
-            item {
-                AppearanceSection(
-                    navController = navController
-                )
+                    onDismiss = { showNotificationsSheet = false })
             }
         }
-    }
-}
 
-@Composable
-private fun GoalCard(
-    appName: String,
-    appIcon: String,
-    progress: GoalProgress?,
-    isLoading: Boolean,
-    isSaving: Boolean,
-    onSetGoal: (Int) -> Unit
-) {
-    var sliderValue by remember {
-        mutableStateOf(
-            progress?.goal?.dailyLimitMinutes?.toFloat() ?: 30f
-        )
-    }
-    val currentLimit = progress?.goal?.dailyLimitMinutes ?: 30
-
-    Card(
-        modifier = Modifier.fillMaxWidth(), shape = Shapes.card, colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.lg),
-            verticalArrangement = Spacing.verticalArrangementMD
-        ) {
-            // App header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        if (showInterventionSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showInterventionSheet = false },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(text = appIcon, fontSize = 32.sp)
-                    Text(
-                        text = appName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                if (progress?.goal != null) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = progress.goal.getStreakMessage(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = progress.goal.getLongestStreakMessage(),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Current progress (if goal exists)
-            if (progress != null) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = Shapes.button,
-                    colors = CardDefaults.cardColors(
-                        containerColor = when (progress.getProgressColor()) {
-                            dev.sadakat.thinkfaster.domain.model.ProgressColor.GREEN -> MaterialTheme.colorScheme.primaryContainer
-
-                            dev.sadakat.thinkfaster.domain.model.ProgressColor.YELLOW -> MaterialTheme.colorScheme.tertiaryContainer
-
-                            dev.sadakat.thinkfaster.domain.model.ProgressColor.ORANGE -> MaterialTheme.colorScheme.errorContainer.copy(
-                                alpha = 0.6f
-                            )
-
-                            dev.sadakat.thinkfaster.domain.model.ProgressColor.RED -> MaterialTheme.colorScheme.errorContainer
-                        }
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(Spacing.md),
-                        verticalArrangement = Spacing.verticalArrangementSM
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Today:",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = progress.formatTodayUsage(),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        LinearProgressIndicator(
-                            progress = (progress.percentageUsed / 100f).coerceIn(0f, 1f),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = progress.getStatusMessage(),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                text = progress.formatRemainingTime(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            Divider()
-
-            // Goal setting slider
-            Column(
-                verticalArrangement = Spacing.verticalArrangementSM
-            ) {
-                Text(
-                    text = "Daily Limit: ${sliderValue.roundToInt()} minutes",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
-
-                Slider(
-                    value = sliderValue,
-                    onValueChange = { sliderValue = it },
-                    valueRange = 5f..180f,
-                    steps = 34, // 5-minute increments
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "5 min",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "180 min",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Set goal button
-            Button(
-                onClick = { onSetGoal(sliderValue.roundToInt()) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                enabled = !isSaving && sliderValue.roundToInt() != currentLimit,
-                shape = Shapes.button
-            ) {
-                if (isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text(
-                        text = if (progress?.goal != null) "Update Goal" else "Set Goal",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                InterventionSettingsBottomSheet(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    onDismiss = { showInterventionSheet = false })
             }
         }
-    }
-}
 
-@Composable
-private fun TimerDurationCard(
-    currentDuration: Int, onDurationChange: (Int) -> Unit
-) {
-    var sliderValue by remember { mutableStateOf(currentDuration.toFloat()) }
-    val hasChanged = sliderValue.roundToInt() != currentDuration
-
-    Card(
-        modifier = Modifier.fillMaxWidth(), shape = Shapes.card, colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.lg),
-            verticalArrangement = Spacing.verticalArrangementMD
-        ) {
-            // Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Spacing.horizontalArrangementSM
+        // Friction Level Bottom Sheet
+        if (showFrictionSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showFrictionSheet = false },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
-                Text(text = "⏰", fontSize = 24.sp)
-                Text(
-                    text = "Timer Alert Duration",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Text(
-                text = "Get an alert after using the app continuously for this duration",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Current value display
-            Text(
-                text = "${sliderValue.roundToInt()} minutes",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            // Slider
-            Slider(
-                value = sliderValue,
-                onValueChange = { sliderValue = it },
-                valueRange = 1f..120f,
-                steps = 118, // 1-minute increments
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Range labels
-            Row(
-                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "1 min",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "120 min",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Apply button (only shown when value changed)
-            if (hasChanged) {
-                Button(
-                    onClick = { onDurationChange(sliderValue.roundToInt()) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = Shapes.button
-                ) {
-                    Text(
-                        text = "Apply",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                FrictionLevelBottomSheet(
+                    currentLevel = uiState.currentFrictionLevel,
+                    selectedOverride = uiState.frictionLevelOverride,
+                    onLevelSelected = {
+                        viewModel.setFrictionLevel(it)
+                        showFrictionSheet = false
+                    })
             }
         }
     }
 }
 
 /**
- * Section Header - Consistent header for settings sections
+ * Settings group card - rounded container for grouped settings items (iOS-style)
  */
 @Composable
-private fun SectionHeader(
-    title: String, modifier: Modifier = Modifier
+private fun SettingsGroupCard(
+    content: @Composable ColumnScope.() -> Unit
 ) {
-    Text(
-        text = title,
-        modifier = modifier.padding(
-            start = Spacing.md, top = Spacing.lg, bottom = Spacing.sm
-        ),
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-}
-
-/**
- * Always Show Reminder Card - Toggle for reminder overlay
- */
-@Composable
-private fun AlwaysShowReminderCard(
-    enabled: Boolean, onToggle: (Boolean) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(), shape = Shapes.card, colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.lg),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(text = "🔔", fontSize = 24.sp)
-                    Text(
-                        text = "Always Show Reminder",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Show reminder overlay every time you open Facebook or Instagram",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Switch(
-                checked = enabled, onCheckedChange = onToggle
-            )
-        }
+    val isDarkTheme = isSystemInDarkTheme()
+    val cardBackgroundColor = if (isDarkTheme) {
+        Color(0xFF1C1C1E) // iOS dark mode card color
+    } else {
+        Color(0xFFFFFFFF) // iOS light mode card color (white)
     }
-}
 
-/**
- * Overlay Style Card - Segmented control for overlay style selection
- */
-@Composable
-private fun OverlayStyleCard(
-    currentStyle: dev.sadakat.thinkfaster.domain.model.OverlayStyle,
-    onStyleChange: (dev.sadakat.thinkfaster.domain.model.OverlayStyle) -> Unit
-) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(14.dp),
+        color = cardBackgroundColor,
+        shadowElevation = 0.dp
     ) {
-        Column(
-            modifier = Modifier.padding(Spacing.lg)
-        ) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Spacing.horizontalArrangementSM
-            ) {
-                Text(text = "📐", fontSize = 24.sp)
-                Text(
-                    text = "Overlay Style",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Segmented control style toggle
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Spacing.horizontalArrangementSM
-            ) {
-                // Full-screen option
-                OutlinedButton(
-                    onClick = { onStyleChange(dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.primaryContainer
-                        else Color.Transparent,
-                        contentColor = if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurface
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline
-                    )
-                ) {
-                    Text("Full-screen", fontWeight = FontWeight.Medium)
-                }
-
-                // Compact option
-                OutlinedButton(
-                    onClick = { onStyleChange(dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.primaryContainer
-                        else Color.Transparent,
-                        contentColor = if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurface
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        if (currentStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline
-                    )
-                ) {
-                    Text("Compact", fontWeight = FontWeight.Medium)
-                }
-            }
+        Column {
+            content()
         }
     }
 }
 
 /**
- * Locked Mode Card - Toggle for maximum friction mode
+ * iOS-style divider for settings items
  */
 @Composable
-private fun LockedModeCard(
-    enabled: Boolean, onToggle: (Boolean) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(), shape = Shapes.card, colors = CardDefaults.cardColors(
-            containerColor = if (enabled) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), border = if (enabled) {
-            BorderStroke(
-                2.dp, MaterialTheme.colorScheme.error
-            )
-        } else null
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.lg),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(
-                        text = if (enabled) "🔒" else "🔓", fontSize = 24.sp
-                    )
-                    Text(
-                        text = "Locked Mode",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = if (enabled) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onBackground
-                        }
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (enabled) {
-                        "Maximum friction - 10 second delay with countdown. You requested this extra control."
-                    } else {
-                        "Enable maximum friction for extra self-control (10s delay)"
-                    }, style = MaterialTheme.typography.bodyMedium, color = if (enabled) {
-                        MaterialTheme.colorScheme.onErrorContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }, lineHeight = 20.sp
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Switch(
-                checked = enabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.error,
-                    checkedTrackColor = MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
-                    uncheckedThumbColor = MaterialTheme.colorScheme.surfaceVariant,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        }
+private fun SettingsDivider() {
+    val isDarkTheme = isSystemInDarkTheme()
+    val dividerColor = if (isDarkTheme) {
+        Color(0xFF38383A) // iOS dark mode separator color
+    } else {
+        Color(0xFFC6C6C8) // iOS light mode separator color
     }
-}
 
-/**
- * Theme & Appearance Card - Navigation link to theme settings
- */
-@Composable
-private fun ThemeAppearanceCard(
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.lg),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(text = "🎨", fontSize = 24.sp)
-                    Text(
-                        text = "Theme & Appearance",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Customize app theme, colors, and appearance",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                )
-            }
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "Customize theme",
-                tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                modifier = Modifier
-                    .size(32.dp)
-                    .rotate(270f)
-            )
-        }
-    }
-}
-
-/**
- * Intervention Analytics Card - Navigation link to analytics
- */
-@Composable
-private fun InterventionAnalyticsCard(
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.lg),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(text = "📊", fontSize = 24.sp)
-                    Text(
-                        text = "Intervention Analytics",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "View intervention effectiveness and content performance",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                )
-            }
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "View analytics",
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier
-                    .size(32.dp)
-                    .rotate(270f)
-            )
-        }
-    }
-}
-
-/**
- * Friction Level selector card - shows summary and opens bottom sheet for selection
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FrictionLevelCard(
-    currentLevel: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel,
-    selectedOverride: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?,
-    onLevelSelected: (dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?) -> Unit
-) {
-    var showBottomSheet by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 68.dp), color = dividerColor, thickness = 0.5.dp
     )
+}
 
-    // Get display name for current selection
-    val currentDisplayName = when {
-        selectedOverride == null -> "Auto (Recommended)"
-        else -> selectedOverride.displayName
+/**
+ * Settings menu item - individual row in settings card (iOS-style)
+ */
+@Composable
+private fun SettingsMenuItem(
+    icon: String,
+    iconBackgroundColor: Color,
+    title: String,
+    titleColor: Color? = null,
+    showChevron: Boolean = true,
+    onClick: () -> Unit
+) {
+    val isDarkTheme = isSystemInDarkTheme()
+    val defaultTextColor = if (isDarkTheme) Color.White else Color.Black
+    val finalTitleColor = titleColor ?: defaultTextColor
+    val chevronColor = if (isDarkTheme) {
+        Color(0xFF3C3C43).copy(alpha = 0.6f)
+    } else {
+        Color(0xFF8E8E93)
     }
 
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showBottomSheet = true },
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.lg),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                // Header
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(text = "⚙️", fontSize = 24.sp)
-                    Text(
-                        text = "Intervention Strength",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Control how much friction appears when opening apps",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Current selection display
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(
-                        text = "Current:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = currentDisplayName,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "Show options",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            // Icon with circular background
+            Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .rotate(270f)
+                    .clip(CircleShape)
+                    .background(iconBackgroundColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = icon, fontSize = 18.sp
+                )
+            }
+
+            Text(
+                text = title,
+                fontSize = 17.sp,
+                color = finalTitleColor,
+                fontWeight = FontWeight.Normal
             )
         }
-    }
 
-    // Bottom Sheet
-    if (showBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Surface(
-                        modifier = Modifier
-                            .padding(vertical = 16.dp)
-                            .width(32.dp)
-                            .height(4.dp),
-                        shape = RoundedCornerShape(2.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    ) {}
-                }
-            }) {
-            FrictionLevelBottomSheetContent(
-                currentLevel = currentLevel,
-                selectedOverride = selectedOverride,
-                onLevelSelected = {
-                    onLevelSelected(it)
-                    showBottomSheet = false
-                })
-        }
-    }
-}
-
-/**
- * Bottom sheet content for friction level selection
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FrictionLevelBottomSheetContent(
-    currentLevel: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel,
-    selectedOverride: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?,
-    onLevelSelected: (dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?) -> Unit
-) {
-    val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = screenHeight * 0.7f)
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 24.dp),
-        verticalArrangement = Spacing.verticalArrangementMD
-    ) {
-        // Title
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "Intervention Strength",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Select the level of friction",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 8.dp),
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-
-        // Auto option (null = automatic based on tenure)
-        FrictionLevelOption(
-            title = "Auto (Recommended)",
-            description = "Gradually increases based on your app usage tenure",
-            level = null,
-            currentLevel = currentLevel,
-            isSelected = selectedOverride == null,
-            onSelect = { onLevelSelected(null) })
-
-        // Manual options for each friction level
-        dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.values().forEach { level ->
-            FrictionLevelOption(
-                title = level.displayName,
-                description = level.description,
-                level = level,
-                currentLevel = currentLevel,
-                isSelected = selectedOverride == level,
-                onSelect = { onLevelSelected(level) })
-        }
-    }
-}
-
-/**
- * Individual friction level option row
- */
-@Composable
-private fun FrictionLevelOption(
-    title: String,
-    description: String,
-    level: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?,
-    currentLevel: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel,
-    isSelected: Boolean,
-    onSelect: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(), shape = Shapes.button, colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            }
-        ), border = if (isSelected) {
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        } else null, onClick = onSelect
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.md),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(
-                        text = title,
-                        style = if (isSelected) MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.titleMedium,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-
-                    // Show "Current" badge if this is the active level
-                    if (level == currentLevel && isSelected) {
-                        Text(
-                            text = "• Current",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = description, style = MaterialTheme.typography.bodySmall, color = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    }, lineHeight = 18.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Radio button indicator
-            RadioButton(
-                selected = isSelected, onClick = onSelect, colors = RadioButtonDefaults.colors(
-                    selectedColor = MaterialTheme.colorScheme.primary,
-                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-        }
-    }
-}
-
-/**
- * Notification settings card that opens a bottom sheet
- * Push Notification Strategy: Main entry point for notification settings
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun NotificationSettingsCard(
-    appSettings: AppSettings, viewModel: GoalViewModel
-) {
-    var showBottomSheet by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { showBottomSheet = true },
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.lg),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(text = "🔔", fontSize = 24.sp)
-                    Text(
-                        text = "Daily Reminders",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }/*   Spacer(modifier = Modifier.height(4.dp))
-                   Text(
-                       text = if (appSettings.motivationalNotificationsEnabled) {
-                           "Enabled • ${appSettings.getMorningTimeFormatted()} & ${appSettings.getEveningTimeFormatted()}"
-                       } else {
-                           "Tap to configure notification times"
-                       },
-                       fontSize = 14.sp,
-                       color = MaterialTheme.colorScheme.onSurfaceVariant,
-                       lineHeight = 20.sp
-                   )*/
-            }
-            Spacer(modifier = Modifier.width(16.dp))
+        if (showChevron) {
             Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "Open settings",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = chevronColor,
+                modifier = Modifier.size(20.dp)
             )
-        }
-    }
-
-    // Bottom sheet with notification settings
-    if (showBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ) {
-            NotificationSettingsBottomSheet(
-                appSettings = appSettings,
-                viewModel = viewModel,
-                onDismiss = { showBottomSheet = false })
         }
     }
 }
@@ -1178,24 +326,16 @@ private fun NotificationSettingsBottomSheet(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "🔔 Daily Reminders",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Stay on track with daily notifications",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        Text(
+            text = "🔔 Notifications",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Stay on track with daily notifications",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
         // Enable/Disable toggle
         Card(
@@ -1258,6 +398,348 @@ private fun NotificationSettingsBottomSheet(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/**
+ * Intervention Settings Bottom Sheet - Timer, Alerts, Friction Level, Snooze
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InterventionSettingsBottomSheet(
+    uiState: GoalUiState, viewModel: GoalViewModel, onDismiss: () -> Unit
+) {
+    var sliderValue by remember { mutableStateOf(uiState.appSettings.timerAlertMinutes.toFloat()) }
+    var showFrictionSheet by remember { mutableStateOf(false) }
+    var showSnoozeBottomSheet by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        // Header
+        Text(
+            text = "✋ Intervention Settings",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+
+        // Timer Alert Duration
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = Shapes.button,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(Spacing.md)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "⏰ Timer Alert",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "${sliderValue.roundToInt()} min",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { sliderValue = it },
+                    valueRange = 1f..120f,
+                    steps = 118,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (sliderValue.roundToInt() != uiState.appSettings.timerAlertMinutes) {
+                    Button(
+                        onClick = { viewModel.setTimerAlertDuration(sliderValue.roundToInt()) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        shape = Shapes.button
+                    ) {
+                        Text("Apply")
+                    }
+                }
+            }
+        }
+
+        // Overlay Style
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = Shapes.button,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(modifier = Modifier.padding(Spacing.md)) {
+                Text(
+                    text = "📐 Overlay Style",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.setOverlayStyle(dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.primaryContainer
+                            else Color.Transparent
+                        )
+                    ) {
+                        Text("Full-screen")
+                    }
+                    OutlinedButton(
+                        onClick = { viewModel.setOverlayStyle(dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (uiState.appSettings.overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.primaryContainer
+                            else Color.Transparent
+                        )
+                    ) {
+                        Text("Compact")
+                    }
+                }
+            }
+        }
+        // Friction Level
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showFrictionSheet = true },
+            shape = Shapes.button,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.md),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "⚙️ Intervention Strength",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    val currentDisplayName = when {
+                        uiState.frictionLevelOverride == null -> "Auto (Recommended)"
+                        else -> uiState.frictionLevelOverride.displayName
+                    }
+
+                    Spacer(Modifier.height(Spacing.xs))
+
+                    Text(
+                        text = "Current: $currentDisplayName",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Snooze Settings
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showSnoozeBottomSheet = true },
+            shape = Shapes.button,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.md),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Spacing.horizontalArrangementSM
+                    ) {
+                        Text(text = "⏸️", fontSize = 24.sp)
+                        Text(
+                            text = "Snooze Reminders",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (uiState.snoozeActive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    if (uiState.snoozeActive && uiState.snoozeRemainingMinutes > 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "${uiState.snoozeRemainingMinutes} min remaining",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                }
+                Surface(
+                    shape = Shapes.button,
+                    color = if (uiState.snoozeActive) MaterialTheme.colorScheme.tertiary
+                    else MaterialTheme.colorScheme.surface
+                ) {
+                    Text(
+                        text = if (uiState.snoozeActive) "Active" else "Off",
+                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    // Friction Level Bottom Sheet
+    if (showFrictionSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showFrictionSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            FrictionLevelBottomSheet(
+                currentLevel = uiState.currentFrictionLevel,
+                selectedOverride = uiState.frictionLevelOverride,
+                onLevelSelected = {
+                    viewModel.setFrictionLevel(it)
+                    showFrictionSheet = false
+                })
+        }
+    }
+    if (showSnoozeBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSnoozeBottomSheet = false },
+            sheetState = rememberModalBottomSheetState()
+        ) {
+            SnoozeBottomSheetContent(
+                snoozeActive = uiState.snoozeActive,
+                remainingMinutes = uiState.snoozeRemainingMinutes,
+                onToggleSnooze = { enabled, duration ->
+                    viewModel.toggleSnooze(enabled, duration)
+                },
+                onSetDuration = { duration ->
+                    viewModel.setSnoozeDuration(duration)
+                    showSnoozeBottomSheet = false
+                })
+        }
+    }
+}
+
+/**
+ * Friction Level Bottom Sheet Content
+ */
+@Composable
+private fun FrictionLevelBottomSheet(
+    currentLevel: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel,
+    selectedOverride: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?,
+    onLevelSelected: (dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Intervention Strength",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Select the level of friction",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // Auto option
+        FrictionLevelOption(
+            title = "Auto (Recommended)",
+            description = "Gradually increases based on your app usage tenure",
+            isSelected = selectedOverride == null,
+            onSelect = { onLevelSelected(null) })
+
+        // Manual options
+        dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.values().forEach { level ->
+            FrictionLevelOption(
+                title = level.displayName,
+                description = level.description,
+                isSelected = selectedOverride == level,
+                onSelect = { onLevelSelected(level) })
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/**
+ * Individual friction level option
+ */
+@Composable
+private fun FrictionLevelOption(
+    title: String, description: String, isSelected: Boolean, onSelect: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(), shape = Shapes.button, colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+            else MaterialTheme.colorScheme.surfaceVariant
+        ), onClick = onSelect
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.md),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            RadioButton(
+                selected = isSelected, onClick = onSelect
+            )
+        }
     }
 }
 
@@ -1363,763 +845,59 @@ private fun parseTime(timeString: String): Pair<Int, Int> {
 }
 
 /**
- * Account & Sync card - shows authentication status and provides access to sync settings
+ * Settings version item - displays app version (non-clickable)
  */
 @Composable
-private fun AccountAndSyncCard(
-    navController: NavHostController, syncPreferences: SyncPreferences = koinInject()
-) {
-    val isAuthenticated = syncPreferences.isAuthenticated()
-    val userEmail = syncPreferences.getUserEmail()
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                if (isAuthenticated) {
-                    navController.navigate(Screen.AccountManagement.route)
-                } else {
-                    navController.navigate(Screen.Login.route)
-                }
-            }, shape = Shapes.card, colors = CardDefaults.cardColors(
-            containerColor = if (isAuthenticated) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.lg),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(
-                        text = if (isAuthenticated) "☁️" else "🔐", fontSize = 24.sp
-                    )
-                    Text(
-                        text = "Account & Sync",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isAuthenticated) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (isAuthenticated) {
-                        "Signed in • Tap to manage"
-                    } else {
-                        "Sign in to sync your data across devices"
-                    }, style = MaterialTheme.typography.bodyMedium, color = if (isAuthenticated) {
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-                // Show email below if authenticated
-                if (isAuthenticated && userEmail != null) {
-                    Text(
-                        text = userEmail,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                }
-            }
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = if (isAuthenticated) "Manage account" else "Sign in",
-                tint = if (isAuthenticated) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier
-                    .size(32.dp)
-                    .rotate(270f)
-            )
-        }
-    }
-}
-
-/**
- * Custom slider with circular thumb for better visual appearance
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RoundedThumbSlider(
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    valueRange: ClosedFloatingPointRange<Float>,
-    steps: Int,
-    modifier: Modifier = Modifier
-) {
-    Slider(
-        value = value,
-        onValueChange = onValueChange,
-        valueRange = valueRange,
-        steps = steps,
-        modifier = modifier,
-        thumb = {
-            // Custom circular thumb using Surface
-            Surface(
-                shape = Shapes.badge, // Fully rounded (circular)
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-                shadowElevation = 4.dp,
-                tonalElevation = 4.dp
-            ) {}
-        })
-}
-
-/**
- * Timer & Alerts Section - Grouped card for timer and alert settings
- */
-@Composable
-private fun TimerAndAlertsSection(
-    timerDuration: Int,
-    onTimerDurationChange: (Int) -> Unit,
-    alwaysShowReminder: Boolean,
-    onAlwaysShowReminderChange: (Boolean) -> Unit,
-    overlayStyle: dev.sadakat.thinkfaster.domain.model.OverlayStyle,
-    onOverlayStyleChange: (dev.sadakat.thinkfaster.domain.model.OverlayStyle) -> Unit,
-    lockedMode: Boolean,
-    onLockedModeChange: (Boolean) -> Unit
-) {
-    var sliderValue by remember { mutableStateOf(timerDuration.toFloat()) }
-    val hasChanged = sliderValue.roundToInt() != timerDuration
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.lg),
-            verticalArrangement = Spacing.verticalArrangementMD
-        ) {
-            // Overlay Style
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Spacing.horizontalArrangementSM
-            ) {
-                Text(text = "📐", fontSize = 20.sp)
-                Text(
-                    text = "Overlay Style",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Spacing.horizontalArrangementSM
-            ) {
-                OutlinedButton(
-                    onClick = { onOverlayStyleChange(dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.primaryContainer
-                        else Color.Transparent,
-                        contentColor = if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurface
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.FULLSCREEN) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline
-                    )
-                ) {
-                    Text("Full-screen", fontWeight = FontWeight.Medium)
-                }
-                OutlinedButton(
-                    onClick = { onOverlayStyleChange(dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.primaryContainer
-                        else Color.Transparent,
-                        contentColor = if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurface
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        if (overlayStyle == dev.sadakat.thinkfaster.domain.model.OverlayStyle.COMPACT) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline
-                    )
-                ) {
-                    Text("Compact", fontWeight = FontWeight.Medium)
-                }
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-            // Timer Alert Duration
-            Column(verticalArrangement = Spacing.verticalArrangementSM) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(text = "⏰", fontSize = 20.sp)
-                    Text(
-                        text = "Timer Alert",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Surface(
-                        shape = Shapes.button,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-                    ) {
-                        Text(
-                            text = "${sliderValue.roundToInt()} min",
-                            modifier = Modifier.padding(
-                                horizontal = Spacing.md, vertical = Spacing.xs
-                            ),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-                RoundedThumbSlider(
-                    value = sliderValue,
-                    onValueChange = { sliderValue = it },
-                    valueRange = 1f..120f,
-                    steps = 118,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (hasChanged) {
-                    Button(
-                        onClick = { onTimerDurationChange(sliderValue.roundToInt()) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(40.dp),
-                        shape = Shapes.button
-                    ) {
-                        Text(
-                            "Apply",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-            // Always Show Reminder
-            SettingRow(
-                icon = "🔔",
-                title = "Reminder on App start",
-                description = "",
-                toggle = true,
-                checked = alwaysShowReminder,
-                onCheckedChange = onAlwaysShowReminderChange
-            )
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-            // Locked Mode
-            SettingRow(
-                icon = if (lockedMode) "🔒" else "🔓",
-                title = "Locked Mode",
-                description = "Maximum friction with 10s delay",
-                toggle = true,
-                checked = lockedMode,
-                onCheckedChange = onLockedModeChange,
-                titleColor = if (lockedMode) MaterialTheme.colorScheme.error else null
-            )
-        }
-    }
-}
-
-/**
- * Reusable setting row with toggle switch
- */
-@Composable
-private fun SettingRow(
+private fun SettingsVersionItem(
     icon: String,
     title: String,
-    description: String,
-    toggle: Boolean = false,
-    checked: Boolean = false,
-    onCheckedChange: ((Boolean) -> Unit)? = null,
-    titleColor: Color? = null
+    version: String
 ) {
+    val isDarkTheme = isSystemInDarkTheme()
+    val defaultTextColor = if (isDarkTheme) Color.White else Color.Black
+    val versionColor = if (isDarkTheme) {
+        Color(0xFF8E8E93)
+    } else {
+        Color(0xFF8E8E93)
+    }
+
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Spacing.horizontalArrangementSM,
             modifier = Modifier.weight(1f)
         ) {
-            Text(text = icon, fontSize = 20.sp)
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = titleColor ?: MaterialTheme.colorScheme.onBackground
-                )
-                if (description.isNotEmpty()) Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        if (toggle && onCheckedChange != null) {
-            Switch(
-                checked = checked, onCheckedChange = onCheckedChange
-            )
-        }
-    }
-}
-
-/**
- * Interventions Section - Grouped card for intervention settings
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun InterventionsSection(
-    appSettings: AppSettings,
-    viewModel: GoalViewModel,
-    currentFrictionLevel: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel,
-    frictionLevelOverride: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?,
-    onFrictionLevelSelected: (dev.sadakat.thinkfaster.domain.intervention.FrictionLevel?) -> Unit,
-    snoozeActive: Boolean,
-    snoozeRemainingMinutes: Int
-) {
-    var showFrictionBottomSheet by remember { mutableStateOf(false) }
-    var showNotificationBottomSheet by remember { mutableStateOf(false) }
-    var showSnoozeBottomSheet by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(Spacing.lg)) {
-            // Daily Reminders
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showNotificationBottomSheet = true },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Spacing.horizontalArrangementSM
-                    ) {
-                        Text(text = "🔔", fontSize = 24.sp)
-                        Text(
-                            text = "Daily Reminders",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }/*    Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (appSettings.motivationalNotificationsEnabled) {
-                                "Enabled • ${appSettings.getMorningTimeFormatted()} & ${appSettings.getEveningTimeFormatted()}"
-                            } else {
-                                "Tap to configure notification times"
-                            },
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            lineHeight = 20.sp
-                        )*/
-                }
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Open settings",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .rotate(270f)
-                )
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = Spacing.lg),
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
-
-            // Intervention Strength
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showFrictionBottomSheet = true },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Spacing.horizontalArrangementSM
-                    ) {
-                        Text(text = "⚙️", fontSize = 24.sp)
-                        Text(
-                            text = "Intervention Strength",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))/*      Text(
-                              text = "Control how much friction appears when opening apps",
-                              fontSize = 13.sp,
-                              color = MaterialTheme.colorScheme.onSurfaceVariant,
-                              lineHeight = 18.sp
-                          )
-                          Spacer(modifier = Modifier.height(12.dp))*/
-                    val currentDisplayName = when {
-                        frictionLevelOverride == null -> "Auto (Recommended)"
-                        else -> frictionLevelOverride.displayName
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Spacing.horizontalArrangementSM
-                    ) {
-                        Text(
-                            text = "Current:",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = currentDisplayName,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Show options",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .rotate(270f)
-                )
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = Spacing.lg),
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
-
-            // Snooze Settings
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showSnoozeBottomSheet = true },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Spacing.horizontalArrangementSM
-                    ) {
-                        Text(text = "⏸️", fontSize = 24.sp)
-                        Text(
-                            text = "Snooze Reminders",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (snoozeActive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }/*   Spacer(modifier = Modifier.height(8.dp))
-                       Text(
-                           text = "Temporarily pause interventions",
-                           fontSize = 13.sp,
-                           color = if (snoozeActive) MaterialTheme.colorScheme.onTertiaryContainer.copy(
-                               alpha = 0.8f
-                           )
-                           else MaterialTheme.colorScheme.onSurfaceVariant,
-                           lineHeight = 18.sp
-                       )*/
-                    if (snoozeActive && snoozeRemainingMinutes > 0) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "$snoozeRemainingMinutes min remaining",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
-                    }
-                }
-                Surface(
-                    shape = Shapes.button,
-                    color = if (snoozeActive) MaterialTheme.colorScheme.tertiary
-                    else MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Text(
-                        text = if (snoozeActive) "Active" else "Off",
-                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-        }
-    }
-
-    // Bottom sheets
-    if (showNotificationBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showNotificationBottomSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ) {
-            NotificationSettingsBottomSheet(
-                appSettings = appSettings,
-                viewModel = viewModel,
-                onDismiss = { showNotificationBottomSheet = false })
-        }
-    }
-
-    if (showFrictionBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showFrictionBottomSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ) {
-            FrictionLevelBottomSheetContent(
-                currentLevel = currentFrictionLevel,
-                selectedOverride = frictionLevelOverride,
-                onLevelSelected = {
-                    onFrictionLevelSelected(it)
-                    showFrictionBottomSheet = false
-                })
-        }
-    }
-
-    if (showSnoozeBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showSnoozeBottomSheet = false },
-            sheetState = rememberModalBottomSheetState()
-        ) {
-            SnoozeBottomSheetContent(
-                snoozeActive = snoozeActive,
-                remainingMinutes = snoozeRemainingMinutes,
-                onToggleSnooze = { enabled, duration ->
-                    viewModel.toggleSnooze(enabled, duration)
-                },
-                onSetDuration = { duration ->
-                    viewModel.setSnoozeDuration(duration)
-                    showSnoozeBottomSheet = false
-                })
-        }
-    }
-}
-
-/**
- * Account & Data Section - Grouped card for account and data settings
- */
-@Composable
-private fun AccountAndDataSection(
-    navController: NavHostController, syncPreferences: SyncPreferences = koinInject()
-) {
-    val isAuthenticated = syncPreferences.isAuthenticated()
-
-    Card(
-        modifier = Modifier.fillMaxWidth(), shape = Shapes.card, colors = CardDefaults.cardColors(
-            containerColor = if (isAuthenticated) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(Spacing.lg)) {
-            // Intervention Analytics
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { navController.navigate("analytics") },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Spacing.horizontalArrangementSM
-                    ) {
-                        Text(text = "📊", fontSize = 24.sp)
-                        Text(
-                            text = "Intervention Analytics",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "View intervention effectiveness and content performance",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                    )
-                }
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "View analytics",
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .rotate(270f)
-                )
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = Spacing.lg),
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
-
-            // Account & Sync
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        if (isAuthenticated) {
-                            navController.navigate(Screen.AccountManagement.route)
-                        } else {
-                            navController.navigate(Screen.Login.route)
-                        }
-                    },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Spacing.horizontalArrangementSM
-                    ) {
-                        Text(
-                            text = if (isAuthenticated) "☁️" else "🔐", fontSize = 24.sp
-                        )
-                        Text(
-                            text = "Account & Sync",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isAuthenticated) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    val userEmail = syncPreferences.getUserEmail()
-                    Text(
-                        text = if (isAuthenticated) {
-                            "Signed in • Tap to manage"
-                        } else {
-                            "Sign in to sync your data across devices"
-                        }, style = MaterialTheme.typography.bodyMedium, color = if (isAuthenticated) {
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                    if (isAuthenticated && userEmail != null) {
-                        Text(
-                            text = userEmail,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = if (isAuthenticated) "Manage account" else "Sign in",
-                    tint = if (isAuthenticated) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    modifier = Modifier
-                        .size(32.dp)
-                        .rotate(270f)
-                )
-            }
-        }
-    }
-}
-
-/**
- * Appearance Section - Theme & Appearance settings
- */
-@Composable
-private fun AppearanceSection(
-    navController: NavHostController
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { navController.navigate("theme_appearance") },
-        shape = Shapes.card,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.lg),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Spacing.horizontalArrangementSM
-                ) {
-                    Text(text = "🎨", fontSize = 24.sp)
-                    Text(
-                        text = "Theme & Appearance",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Customize app theme, colors, and appearance",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                )
-            }
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "Customize theme",
-                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+            // Icon with circular background
+            Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .rotate(270f)
+                    .clip(CircleShape)
+                    .background(Color.Transparent),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = icon, fontSize = 18.sp
+                )
+            }
+
+            Text(
+                text = title,
+                fontSize = 17.sp,
+                color = defaultTextColor,
+                fontWeight = FontWeight.Normal
             )
         }
+
+        Text(
+            text = version,
+            fontSize = 15.sp,
+            color = versionColor
+        )
     }
 }

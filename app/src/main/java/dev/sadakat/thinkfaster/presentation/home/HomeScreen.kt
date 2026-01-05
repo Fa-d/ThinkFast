@@ -569,7 +569,7 @@ private fun TodayAtAGlanceCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Today's Progress",
+                                text = "Today's Usage",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
