@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sadakat.thinkfaster.domain.model.AppCategory
 import dev.sadakat.thinkfaster.domain.model.InstalledAppInfo
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
 
 /**
@@ -51,7 +52,8 @@ fun AddAppsBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        shape = Shapes.bottomSheet
     ) {
         Column(
             modifier = Modifier
@@ -88,7 +90,7 @@ fun AddAppsBottomSheet(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = Shapes.button
                 ) {
                     Row(
                         modifier = Modifier.padding(Spacing.md),
@@ -120,7 +122,7 @@ fun AddAppsBottomSheet(
                     Icon(Icons.Default.Search, contentDescription = "Search")
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = Shapes.inputField,
                 colors = TextFieldDefaults.colors(
                     focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
                     unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
@@ -248,7 +250,7 @@ private fun AddAppListItem(
                     Modifier
                 }
             ),
-        shape = RoundedCornerShape(16.dp),
+        shape = Shapes.card,
         colors = CardDefaults.cardColors(
             containerColor = if (isTracked) {
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
@@ -340,7 +342,7 @@ private fun AddAppListItem(
                 isTracked -> {
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(8.dp)
+                        shape = Shapes.chip
                     ) {
                         Text(
                             text = "✓ Tracked",
@@ -354,7 +356,7 @@ private fun AddAppListItem(
                 isLimitReached -> {
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(8.dp)
+                        shape = Shapes.chip
                     ) {
                         Text(
                             text = "Limit",

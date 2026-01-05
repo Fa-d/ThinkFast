@@ -52,6 +52,7 @@ import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.presentation.overlay.components.BreathingExercise
 import dev.sadakat.thinkfaster.presentation.overlay.components.CelebrationScreen
 import dev.sadakat.thinkfaster.presentation.overlay.components.InterventionContentRenderer
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionTypography
 import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
@@ -551,7 +552,7 @@ private fun DynamicInterventionContent(
                         contentColor = style.secondaryTextColor
                     ),
                     border = BorderStroke(1.5.dp, style.borderColor),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = Shapes.button
                 ) {
                     Icon(
                         imageVector = Icons.Default.Pause,
@@ -765,7 +766,7 @@ private fun FeedbackPrompt(
         colors = CardDefaults.cardColors(
             containerColor = style.containerColor
         ),
-        shape = RoundedCornerShape(20.dp)
+        shape = Shapes.dialog
     ) {
         Column(
             modifier = Modifier.padding(24.dp),

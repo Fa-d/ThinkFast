@@ -54,6 +54,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.presentation.overlay.components.CelebrationScreen
 import dev.sadakat.thinkfaster.presentation.overlay.components.InterventionContentRenderer
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionGradients
 import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
@@ -445,7 +446,7 @@ private fun CompactTimerContent(
                         }
                     )
                 },
-            shape = RoundedCornerShape(24.dp),
+            shape = Shapes.dialog,
             colors = CardDefaults.cardColors(
                 containerColor = Color.Transparent
             ),
@@ -469,7 +470,7 @@ private fun CompactTimerContent(
                             .height(4.dp)
                             .background(
                                 Color.White.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(2.dp)
+                                shape = Shapes.progressIndicator
                             )
                     )
                 }
@@ -486,7 +487,7 @@ private fun CompactTimerContent(
 
                     // Session duration badge
                     Surface(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = Shapes.dialog,
                         color = Color.White.copy(alpha = 0.2f),
                         modifier = Modifier.padding(bottom = 16.dp)
                     ) {
@@ -549,7 +550,7 @@ private fun CompactTimerContent(
                                 contentColor = style.textColor
                             ),
                             border = BorderStroke(1.5.dp, style.textColor.copy(alpha = 0.3f)),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = Shapes.button
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Pause,

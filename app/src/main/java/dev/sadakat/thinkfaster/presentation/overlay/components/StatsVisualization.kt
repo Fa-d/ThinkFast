@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 
 /**
  * Enhanced usage stats visualization
@@ -253,7 +254,7 @@ private fun ComparisonBarItem(
             modifier = Modifier
                 .weight(1f)
                 .height(32.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(Shapes.card)
                 .background(barColor.copy(alpha = 0.2f))
         ) {
             // Filled portion
@@ -262,7 +263,7 @@ private fun ComparisonBarItem(
                 modifier = Modifier
                     .fillMaxWidth(progress)
                     .height(32.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(Shapes.card)
                     .background(barColor)
             )
         }

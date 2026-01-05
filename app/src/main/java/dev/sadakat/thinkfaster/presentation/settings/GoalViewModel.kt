@@ -531,6 +531,63 @@ class GoalViewModel(
             }
         }
     }
+
+    // ========== Debug: Force Intervention Type ==========
+
+    /**
+     * Debug: Set the forced intervention type for UI testing
+     * @param typeName ContentType enum name (e.g., "REFLECTION", "BREATHING") or null for normal behavior
+     */
+    fun setDebugForceInterventionType(typeName: String?) {
+        viewModelScope.launch {
+            try {
+                settingsRepository.setDebugForceInterventionType(typeName)
+
+                val typeDisplayName = if (typeName != null) {
+                    dev.sadakat.thinkfaster.domain.intervention.ContentSelector().getContentTypeDisplayName(typeName)
+                } else {
+                    "Normal (Random)"
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    successMessage = if (typeName != null) {
+                        "Debug: Forced to $typeDisplayName"
+                    } else {
+                        "Debug: Normal intervention behavior restored"
+                    }
+                )
+
+                // Clear success message after a delay
+                kotlinx.coroutines.delay(3000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Failed to set debug intervention type"
+                )
+            }
+        }
+    }
+
+    /**
+     * Debug: Get available content types for the dropdown
+     */
+    fun getAvailableDebugContentTypes(): List<Pair<String, String>> {
+        val contentSelector = dev.sadakat.thinkfaster.domain.intervention.ContentSelector()
+        val typeNames = contentSelector.getAvailableContentTypes()
+        return typeNames.map { typeName ->
+            Pair(typeName, contentSelector.getContentTypeDisplayName(typeName))
+        }
+    }
+
+    /**
+     * Debug: Launch the actual intervention overlay for testing
+     */
+    fun launchDebugOverlay(context: android.content.Context) {
+        dev.sadakat.thinkfaster.presentation.overlay.DebugOverlayManager.showDebugReminder(
+            context = context,
+            settingsRepository = settingsRepository
+        )
+    }
 }
 
 /**

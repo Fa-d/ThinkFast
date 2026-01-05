@@ -61,4 +61,15 @@ interface SettingsRepository {
      * Update all settings at once
      */
     suspend fun updateSettings(settings: AppSettings)
+
+    /**
+     * Debug: Force specific intervention type for UI testing
+     * Set to null for normal behavior, or a ContentType enum name for forced type
+     */
+    suspend fun setDebugForceInterventionType(typeName: String?)
+
+    /**
+     * Debug: Get the forced intervention type (returns ContentType enum name or null)
+     */
+    suspend fun getDebugForceInterventionType(): String?
 }

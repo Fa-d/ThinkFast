@@ -89,6 +89,7 @@ import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.presentation.overlay.components.CelebrationScreen
 import dev.sadakat.thinkfaster.presentation.overlay.components.InterventionContentRenderer
 import dev.sadakat.thinkfaster.presentation.overlay.components.OverlayEntranceAnimation
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionGradients
 import dev.sadakat.thinkfaster.ui.theme.InterventionTypography
@@ -706,7 +707,7 @@ private fun ReminderOverlayContent(
                                         )
                                     )
                                 ),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = Shapes.button
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Pause,
@@ -838,7 +839,7 @@ private fun ReminderOverlayContent(
                                     )
                                 )
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = Shapes.button
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Pause,
@@ -1125,7 +1126,7 @@ private fun FeedbackPrompt(
         colors = CardDefaults.cardColors(
             containerColor = style.containerColor
         ),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+        shape = Shapes.dialog
     ) {
         Column(
             modifier = Modifier.padding(24.dp),

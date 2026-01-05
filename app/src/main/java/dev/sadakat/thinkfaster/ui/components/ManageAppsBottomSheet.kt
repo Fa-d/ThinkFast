@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sadakat.thinkfaster.presentation.home.PerAppGoalUiModel
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
 import dev.sadakat.thinkfaster.ui.theme.AppColors
 
@@ -49,7 +50,8 @@ fun ManageAppsBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        shape = Shapes.bottomSheet
     ) {
         Column(
             modifier = Modifier

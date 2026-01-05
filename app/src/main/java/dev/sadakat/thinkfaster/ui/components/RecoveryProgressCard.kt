@@ -157,14 +157,14 @@ fun RecoveryProgressCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(12.dp)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(Shapes.chip)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(animatedProgress)
                                 .fillMaxHeight()
-                                .clip(RoundedCornerShape(6.dp))
+                                .clip(Shapes.chip)
                                 .background(AppColors.Progress.Approaching)
                         )
                     }

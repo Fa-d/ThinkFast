@@ -59,6 +59,57 @@ class ContentSelector {
     }
 
     /**
+     * Debug: Generate content by type name (bypasses randomization)
+     *
+     * @param contentTypeName The ContentType enum name (e.g., "REFLECTION", "BREATHING")
+     * @param context Current intervention context
+     * @return Generated intervention content of the specified type
+     */
+    fun generateContentByType(
+        contentTypeName: String,
+        context: InterventionContext
+    ): InterventionContent {
+        val contentType = try {
+            ContentType.valueOf(contentTypeName)
+        } catch (e: IllegalArgumentException) {
+            // Fallback to REFLECTION if invalid type name
+            ContentType.REFLECTION
+        }
+
+        val content = generateContent(contentType, context)
+        trackShownContent(content)
+        return content
+    }
+
+    /**
+     * Debug: Get all available content type names for UI display
+     */
+    fun getAvailableContentTypes(): List<String> {
+        return ContentType.values().map { it.name }
+    }
+
+    /**
+     * Debug: Get display name for a content type
+     */
+    fun getContentTypeDisplayName(typeName: String): String {
+        return try {
+            val type = ContentType.valueOf(typeName)
+            when (type) {
+                ContentType.REFLECTION -> "Reflection Question"
+                ContentType.TIME_ALTERNATIVE -> "Time Alternative"
+                ContentType.BREATHING -> "Breathing Exercise"
+                ContentType.STATS -> "Usage Statistics"
+                ContentType.EMOTIONAL_APPEAL -> "Emotional Appeal"
+                ContentType.QUOTE -> "Inspirational Quote"
+                ContentType.GAMIFICATION -> "Gamification Challenge"
+                ContentType.ACTIVITY_SUGGESTION -> "Activity Suggestion"
+            }
+        } catch (e: IllegalArgumentException) {
+            "Unknown"
+        }
+    }
+
+    /**
      * Determines content type weights based on context.
      *
      * Base weights (from research):

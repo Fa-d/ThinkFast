@@ -32,7 +32,8 @@ class ReminderOverlayViewModel(
     private val resultRepository: InterventionResultRepository,
     private val analyticsManager: AnalyticsManager,
     private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences,
-    private val rateLimiter: InterventionRateLimiter
+    private val rateLimiter: InterventionRateLimiter,
+    private val settingsRepository: dev.sadakat.thinkfaster.domain.repository.SettingsRepository
 ) : ViewModel() {
 
     private val contentSelector = ContentSelector()
@@ -42,6 +43,14 @@ class ReminderOverlayViewModel(
 
     // Phase G: Track intervention shown time for measuring decision time
     private var interventionShownTime: Long = 0L
+
+    /**
+     * Check if current session is a debug session (for testing)
+     * Debug sessions have sessionId == -1
+     */
+    private fun isDebugSession(): Boolean {
+        return _uiState.value.sessionId == -1L
+    }
 
     /**
      * Called when the overlay is shown to the user
@@ -60,23 +69,31 @@ class ReminderOverlayViewModel(
             // Build context with current usage data
             val context = buildInterventionContext(targetApp, sessionId)
 
-            // Phase G: Use effectiveness-based content selection if we have enough data
-            val effectivenessData = resultRepository.getEffectivenessByContentType()
-            val totalInterventions = effectivenessData.sumOf { it.total }
+            // Check for debug override first
+            val debugForceType: String? = settingsRepository.getDebugForceInterventionType()
 
-            val content = if (totalInterventions >= 50) {
-                // Use effectiveness-weighted selection when we have sufficient data
-                contentSelector.selectContentWithEffectiveness(
-                    context = context,
-                    interventionType = InterventionType.REMINDER,
-                    effectivenessData = effectivenessData
-                )
+            val content = if (debugForceType != null) {
+                // Debug: Use forced content type
+                contentSelector.generateContentByType(debugForceType, context)
             } else {
-                // Use basic selection for new users
-                contentSelector.selectContent(
-                    context = context,
-                    interventionType = InterventionType.REMINDER
-                )
+                // Phase G: Use effectiveness-based content selection if we have enough data
+                val effectivenessData = resultRepository.getEffectivenessByContentType()
+                val totalInterventions = effectivenessData.sumOf { it.total }
+
+                if (totalInterventions >= 50) {
+                    // Use effectiveness-weighted selection when we have sufficient data
+                    contentSelector.selectContentWithEffectiveness(
+                        context = context,
+                        interventionType = InterventionType.REMINDER,
+                        effectivenessData = effectivenessData
+                    )
+                } else {
+                    // Use basic selection for new users
+                    contentSelector.selectContent(
+                        context = context,
+                        interventionType = InterventionType.REMINDER
+                    )
+                }
             }
 
             _uiState.value = _uiState.value.copy(
@@ -87,15 +104,17 @@ class ReminderOverlayViewModel(
                 isLoading = false
             )
 
-            // Log reminder shown event with content type
-            usageRepository.insertEvent(
-                UsageEvent(
-                    sessionId = sessionId,
-                    eventType = Constants.EVENT_REMINDER_SHOWN,
+            // Log reminder shown event (skip for debug sessions)
+            if (sessionId != -1L) {
+                usageRepository.insertEvent(
+                    UsageEvent(
+                        sessionId = sessionId,
+                        eventType = Constants.EVENT_REMINDER_SHOWN,
                     timestamp = interventionShownTime,
                     metadata = "App: $targetApp | Content: ${content::class.simpleName}"
                 )
             )
+            }
         }
     }
 
@@ -129,15 +148,17 @@ class ReminderOverlayViewModel(
                 contentType = currentState.interventionContent?.javaClass?.simpleName ?: "Unknown"
             )
 
-            // Log proceed clicked event
-            usageRepository.insertEvent(
-                UsageEvent(
-                    sessionId = currentState.sessionId,
-                    eventType = Constants.EVENT_PROCEED_CLICKED,
-                    timestamp = System.currentTimeMillis(),
-                    metadata = "User chose to proceed | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
+            // Log proceed clicked event (skip for debug sessions)
+            if (!isDebugSession()) {
+                usageRepository.insertEvent(
+                    UsageEvent(
+                        sessionId = currentState.sessionId ?: return@launch,
+                        eventType = Constants.EVENT_PROCEED_CLICKED,
+                        timestamp = System.currentTimeMillis(),
+                        metadata = "User chose to proceed | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
+                    )
                 )
-            )
+            }
 
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
@@ -177,15 +198,17 @@ class ReminderOverlayViewModel(
                 contentType = currentState.interventionContent?.javaClass?.simpleName ?: "Unknown"
             )
 
-            // Log go back event (successful intervention!)
-            usageRepository.insertEvent(
-                UsageEvent(
-                    sessionId = currentState.sessionId,
-                    eventType = Constants.EVENT_GO_BACK_CLICKED,
-                    timestamp = System.currentTimeMillis(),
-                    metadata = "User chose to go back | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
+            // Log go back event (successful intervention!) - skip for debug sessions
+            if (!isDebugSession()) {
+                usageRepository.insertEvent(
+                    UsageEvent(
+                        sessionId = currentState.sessionId ?: return@launch,
+                        eventType = Constants.EVENT_GO_BACK_CLICKED,
+                        timestamp = System.currentTimeMillis(),
+                        metadata = "User chose to go back | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
+                    )
                 )
-            )
+            }
 
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
@@ -198,12 +221,22 @@ class ReminderOverlayViewModel(
 
     /**
      * Phase G: Records the intervention result for effectiveness tracking
+     * Skips database operations for debug sessions (sessionId == -1)
      */
     private suspend fun recordInterventionResult(
         sessionId: Long,
         userChoice: UserChoice,
         decisionTimeMs: Long
     ) {
+        // Skip database operations for debug sessions
+        if (sessionId == -1L) {
+            dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                "Skipping recordInterventionResult for debug session",
+                context = "ReminderOverlayViewModel.recordInterventionResult"
+            )
+            return
+        }
+
         val currentState = _uiState.value
         val context = currentState.interventionContext ?: return
         val content = currentState.interventionContent
@@ -260,11 +293,24 @@ class ReminderOverlayViewModel(
 
         viewModelScope.launch {
             try {
-                resultRepository.updateFeedback(
-                    sessionId = currentState.sessionId,
-                    feedback = feedback,
-                    timestamp = System.currentTimeMillis()
-                )
+                // Skip database operations for debug sessions
+                if (!isDebugSession()) {
+                    resultRepository.updateFeedback(
+                        sessionId = currentState.sessionId ?: return@launch,
+                        feedback = feedback,
+                        timestamp = System.currentTimeMillis()
+                    )
+
+                    // Log feedback event for analytics
+                    usageRepository.insertEvent(
+                        UsageEvent(
+                            sessionId = currentState.sessionId ?: return@launch,
+                            eventType = Constants.EVENT_FEEDBACK_PROVIDED,
+                            timestamp = System.currentTimeMillis(),
+                            metadata = "Feedback: ${feedback.name} | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
+                        )
+                    )
+                }
 
                 // Track to Firebase Analytics
                 analyticsManager.trackInterventionFeedback(
@@ -277,16 +323,6 @@ class ReminderOverlayViewModel(
                 _uiState.value = _uiState.value.copy(
                     shouldDismiss = true,
                     showFeedbackPrompt = false
-                )
-
-                // Log feedback event for analytics
-                usageRepository.insertEvent(
-                    UsageEvent(
-                        sessionId = currentState.sessionId,
-                        eventType = Constants.EVENT_FEEDBACK_PROVIDED,
-                        timestamp = System.currentTimeMillis(),
-                        metadata = "Feedback: ${feedback.name} | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
-                    )
                 )
 
                 dev.sadakat.thinkfaster.util.ErrorLogger.info(
@@ -358,15 +394,17 @@ class ReminderOverlayViewModel(
                 // Dismiss overlay
                 _uiState.value = _uiState.value.copy(shouldDismiss = true)
 
-                // Log snooze event
-                usageRepository.insertEvent(
-                    UsageEvent(
-                        sessionId = currentState.sessionId,
-                        eventType = Constants.EVENT_INTERVENTION_SNOOZED,
-                        timestamp = System.currentTimeMillis(),
-                        metadata = "Snoozed for $snoozeDurationMinutes minutes | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
+                // Log snooze event (skip for debug sessions)
+                if (!isDebugSession()) {
+                    usageRepository.insertEvent(
+                        UsageEvent(
+                            sessionId = currentState.sessionId ?: return@launch,
+                            eventType = Constants.EVENT_INTERVENTION_SNOOZED,
+                            timestamp = System.currentTimeMillis(),
+                            metadata = "Snoozed for $snoozeDurationMinutes minutes | Content: ${currentState.interventionContent?.javaClass?.simpleName}"
+                        )
                     )
-                )
+                }
 
                 dev.sadakat.thinkfaster.util.ErrorLogger.info(
                     "Intervention snoozed for $snoozeDurationMinutes minutes",

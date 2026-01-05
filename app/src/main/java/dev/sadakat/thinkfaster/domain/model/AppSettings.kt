@@ -22,7 +22,10 @@ data class AppSettings(
     val morningNotificationHour: Int = 8,
     val morningNotificationMinute: Int = 0,
     val eveningNotificationHour: Int = 20,
-    val eveningNotificationMinute: Int = 0
+    val eveningNotificationMinute: Int = 0,
+
+    // Debug: Force specific intervention type for testing (null = normal behavior)
+    val debugForceInterventionType: String? = null
 ) {
     /**
      * Get timer duration in milliseconds

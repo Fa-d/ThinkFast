@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sadakat.thinkfaster.presentation.home.PerAppGoalUiModel
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
 import dev.sadakat.thinkfaster.util.HapticFeedback
 
@@ -45,7 +46,8 @@ fun GoalEditorBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        shape = Shapes.bottomSheet
     ) {
         Column(
             modifier = Modifier

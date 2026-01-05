@@ -301,4 +301,34 @@ class OverlayManager(
          */
         private const val TRANSITION_DELAY_MS = 100L
     }
+
+    /**
+     * Debug: Show reminder overlay for testing intervention UI
+     * This bypasses normal session tracking and shows overlay with test data
+     *
+     * @param isCompactMode Whether to show compact (true) or full-screen (false) overlay
+     */
+    fun showDebugReminder(isCompactMode: Boolean = false) {
+        synchronized(overlayLock) {
+            // Use a special debug session ID that can be detected (-1 indicates debug mode)
+            val debugSessionId = -1L
+            val testTargetApp = "com.example.test"
+
+            ErrorLogger.info(
+                "showDebugReminder called - isCompactMode=$isCompactMode",
+                context = "OverlayManager"
+            )
+
+            // Dismiss any currently showing overlay first
+            if (currentOverlay != null) {
+                dismissAll()
+                // Small delay for clean transition
+                handler.postDelayed({
+                    showReminderInternal(debugSessionId, testTargetApp, isCompactMode)
+                }, TRANSITION_DELAY_MS)
+            } else {
+                showReminderInternal(debugSessionId, testTargetApp, isCompactMode)
+            }
+        }
+    }
 }

@@ -102,12 +102,28 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             putBoolean(KEY_ALWAYS_SHOW_REMINDER, settings.alwaysShowReminder)
             putBoolean(KEY_LOCKED_MODE, settings.lockedMode)
             putString(KEY_OVERLAY_STYLE, settings.overlayStyle.name)
+            putString(KEY_DEBUG_FORCE_INTERVENTION_TYPE, settings.debugForceInterventionType)
         }.apply()
 
         // Also sync locked mode to InterventionPreferences
         interventionPreferences.setLockedMode(settings.lockedMode)
 
         _settingsFlow.value = settings
+    }
+
+    /**
+     * Debug: Set forced intervention type for UI testing
+     */
+    override suspend fun setDebugForceInterventionType(typeName: String?) {
+        prefs.edit().putString(KEY_DEBUG_FORCE_INTERVENTION_TYPE, typeName).apply()
+        _settingsFlow.value = loadSettings()
+    }
+
+    /**
+     * Debug: Get forced intervention type
+     */
+    override suspend fun getDebugForceInterventionType(): String? {
+        return prefs.getString(KEY_DEBUG_FORCE_INTERVENTION_TYPE, null)
     }
 
     /**
@@ -146,7 +162,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             morningNotificationHour = notificationPreferences.getMorningHour(),
             morningNotificationMinute = notificationPreferences.getMorningMinute(),
             eveningNotificationHour = notificationPreferences.getEveningHour(),
-            eveningNotificationMinute = notificationPreferences.getEveningMinute()
+            eveningNotificationMinute = notificationPreferences.getEveningMinute(),
+            // Debug: Load forced intervention type
+            debugForceInterventionType = prefs.getString(KEY_DEBUG_FORCE_INTERVENTION_TYPE, null)
         )
     }
 
@@ -156,6 +174,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         private const val KEY_ALWAYS_SHOW_REMINDER = "always_show_reminder"
         private const val KEY_LOCKED_MODE = "locked_mode"
         private const val KEY_OVERLAY_STYLE = "overlay_style"
+        private const val KEY_DEBUG_FORCE_INTERVENTION_TYPE = "debug_force_intervention_type"
 
         // Default values
         private const val DEFAULT_TIMER_MINUTES = 10

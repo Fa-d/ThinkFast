@@ -37,6 +37,7 @@ import dev.sadakat.thinkfaster.presentation.navigation.Screen
 import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
 import dev.sadakat.thinkfaster.ui.theme.AppColors
+import dev.sadakat.thinkfaster.BuildConfig
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
@@ -617,6 +618,131 @@ private fun InterventionSettingsBottomSheet(
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium
                     )
+                }
+            }
+        }
+
+        // Debug Section - Only visible in debug builds
+        if (BuildConfig.DEBUG) {
+            var expanded by remember { mutableStateOf(false) }
+            val availableTypes = remember { viewModel.getAvailableDebugContentTypes() }
+            val currentType = uiState.appSettings.debugForceInterventionType
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = Shapes.button,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(Spacing.md)) {
+                    // Header
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "🔧",
+                            fontSize = 20.sp
+                        )
+                        Text(
+                            text = "Debug: Test Interventions",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+
+                    Text(
+                        text = "Force specific intervention types for UI testing",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(Spacing.md))
+
+                    // Dropdown for content type selection
+                    var selectedText by remember {
+                        mutableStateOf(
+                            if (currentType != null) {
+                                val contentSelector = dev.sadakat.thinkfaster.domain.intervention.ContentSelector()
+                                contentSelector.getContentTypeDisplayName(currentType)
+                            } else {
+                                "Normal (Random)"
+                            }
+                        )
+                    }
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedText,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Intervention Type") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.error,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
+                            )
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            // Normal option
+                            DropdownMenuItem(
+                                text = { Text("Normal (Random)") },
+                                onClick = {
+                                    viewModel.setDebugForceInterventionType(null)
+                                    selectedText = "Normal (Random)"
+                                    expanded = false
+                                }
+                            )
+
+                            HorizontalDivider()
+
+                            // Content type options
+                            availableTypes.forEach { (typeName, displayName) ->
+                                DropdownMenuItem(
+                                    text = { Text(displayName) },
+                                    onClick = {
+                                        viewModel.setDebugForceInterventionType(typeName)
+                                        selectedText = displayName
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+
+                    // Test Now button
+                    val context = LocalContext.current
+                    Button(
+                        onClick = {
+                            viewModel.launchDebugOverlay(context)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        ),
+                        shape = Shapes.button
+                    ) {
+                        Text("Test Now", style = MaterialTheme.typography.labelLarge)
+                    }
                 }
             }
         }

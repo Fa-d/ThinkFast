@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 
 /**
@@ -113,7 +114,7 @@ fun EnhancedActivitySuggestionContent(
                             .padding(top = 8.dp)
                             .background(
                                 color = InterventionColors.Success.copy(alpha = 0.2f),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = Shapes.button
                             )
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
@@ -178,7 +179,7 @@ fun EnhancedActivitySuggestionContent(
                     modifier = Modifier
                         .height(48.dp)
                         .padding(horizontal = 8.dp),
-                    shape = RoundedCornerShape(24.dp)
+                    shape = Shapes.dialog
                 ) {
                     Icon(
                         imageVector = Icons.Filled.CheckCircle,

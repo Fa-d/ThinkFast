@@ -106,23 +106,31 @@ class TimerOverlayViewModel(
                 bestSessionMinutes = bestSessionMinutes
             )
 
-            // Phase G: Use effectiveness-based content selection if we have enough data
-            val effectivenessData = resultRepository.getEffectivenessByContentType()
-            val totalInterventions = effectivenessData.sumOf { it.total }
+            // Check for debug override first
+            val debugForceType = settingsRepository.getDebugForceInterventionType()
 
-            val interventionContent = if (totalInterventions >= 50) {
-                // Use effectiveness-weighted selection when we have sufficient data
-                contentSelector.selectContentWithEffectiveness(
-                    context = context,
-                    interventionType = InterventionType.TIMER,
-                    effectivenessData = effectivenessData
-                )
+            val interventionContent = if (debugForceType != null) {
+                // Debug: Use forced content type
+                contentSelector.generateContentByType(debugForceType, context)
             } else {
-                // Use basic selection for new users
-                contentSelector.selectContent(
-                    context = context,
-                    interventionType = InterventionType.TIMER
-                )
+                // Phase G: Use effectiveness-based content selection if we have enough data
+                val effectivenessData = resultRepository.getEffectivenessByContentType()
+                val totalInterventions = effectivenessData.sumOf { it.total }
+
+                if (totalInterventions >= 50) {
+                    // Use effectiveness-weighted selection when we have sufficient data
+                    contentSelector.selectContentWithEffectiveness(
+                        context = context,
+                        interventionType = InterventionType.TIMER,
+                        effectivenessData = effectivenessData
+                    )
+                } else {
+                    // Use basic selection for new users
+                    contentSelector.selectContent(
+                        context = context,
+                        interventionType = InterventionType.TIMER
+                    )
+                }
             }
 
             // Format times for display

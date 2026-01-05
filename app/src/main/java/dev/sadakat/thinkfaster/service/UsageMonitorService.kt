@@ -184,6 +184,13 @@ class UsageMonitorService : Service() {
             settingsRepository = settingsRepository
         )
 
+        // Initialize debug overlay manager for testing intervention UI
+        dev.sadakat.thinkfaster.presentation.overlay.DebugOverlayManager.initialize(
+            manager = overlayManager!!,
+            reminder = reminderOverlay,
+            compactReminder = compactReminderOverlay
+        )
+
         // Set up session detector callbacks
         setupSessionCallbacks()
 
