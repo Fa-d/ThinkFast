@@ -58,6 +58,7 @@ import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionGradients
 import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
+import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import dev.sadakat.thinkfaster.util.ErrorLogger
 import dev.sadakat.thinkfaster.util.InterventionStyling
 import android.os.Handler
@@ -199,13 +200,18 @@ class CompactReminderOverlayWindow(
             }
         }
 
-        // Calculate ~70% screen dimensions
+        // Calculate responsive dimensions based on orientation
         val displayMetrics = context.resources.displayMetrics
         val screenWidth = displayMetrics.widthPixels
         val screenHeight = displayMetrics.heightPixels
+        val isLandscape = screenWidth > screenHeight
 
-        val cardWidth = (screenWidth * 0.85f).toInt()  // 85% on small screens
-        val cardHeight = (screenHeight * 0.75f).toInt() // 75% on small screens
+        // Adaptive sizing: landscape gets wider but shorter, portrait stays same
+        val widthFraction = if (isLandscape) 0.70f else 0.85f
+        val heightFraction = if (isLandscape) 0.60f else 0.75f
+
+        val cardWidth = (screenWidth * widthFraction).toInt()
+        val cardHeight = (screenHeight * heightFraction).toInt()
 
         // Setup window layout params - centered card with tap-outside enabled
         val params = WindowManager.LayoutParams(
@@ -387,6 +393,8 @@ private fun CompactOverlayContent(
         )
     }
 
+    val useTwoColumns = shouldUseTwoColumnLayout()
+
     // Full-screen container with tap-outside detection
     Box(
         modifier = Modifier
@@ -409,8 +417,8 @@ private fun CompactOverlayContent(
         // Center card with swipe-to-dismiss
         Card(
             modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .fillMaxHeight(0.75f)
+                .fillMaxWidth(if (useTwoColumns) 0.70f else 0.85f)
+                .fillMaxHeight(if (useTwoColumns) 0.60f else 0.75f)
                 .offset { IntOffset(0, offsetY.roundToInt()) }
                 .scale(scale)
                 .alpha(alpha)
@@ -473,92 +481,190 @@ private fun CompactOverlayContent(
                     )
                 }
 
-                // Scrollable content area
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp)
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // App name
-                    Text(
-                        text = "ThinkFaster",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = style.textColor.copy(alpha = 0.9f),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Intervention content (shared composable)
-                    interventionContent?.let { content ->
-                        InterventionContentRenderer(
-                            content = content,
-                            textColor = style.textColor,
-                            secondaryTextColor = style.secondaryTextColor
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    // Feedback or action buttons
-                    if (showFeedbackPrompt) {
-                        CompactFeedbackPrompt(
-                            onFeedback = onFeedbackReceived,
-                            onDismiss = onSkipFeedback,
-                            style = style
-                        )
-                    } else {
-                        // Snooze button
-                        OutlinedButton(
-                            onClick = onSnoozeClick,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = Color.White.copy(alpha = 0.15f),
-                                contentColor = style.textColor
-                            ),
-                            border = BorderStroke(1.5.dp, style.textColor.copy(alpha = 0.3f)),
-                            shape = Shapes.button
+                if (useTwoColumns) {
+                    // Two-column layout for landscape tablets
+                    Row(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Left: Content
+                        Column(
+                            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Pause,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = style.textColor.copy(alpha = 0.8f)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // App name
                             Text(
-                                text = "Snooze $snoozeDurationMinutes min",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = style.textColor
+                                text = "ThinkFaster",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = style.textColor.copy(alpha = 0.9f),
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // Intervention content
+                            interventionContent?.let { content ->
+                                InterventionContentRenderer(
+                                    content = content,
+                                    textColor = style.textColor,
+                                    secondaryTextColor = style.secondaryTextColor
+                                )
+                            }
+                        }
+
+                        // Right: Actions
+                        Column(
+                            modifier = Modifier.weight(0.6f),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            if (showFeedbackPrompt) {
+                                CompactFeedbackPrompt(
+                                    onFeedback = onFeedbackReceived,
+                                    onDismiss = onSkipFeedback,
+                                    style = style
+                                )
+                            } else {
+                                // Snooze button
+                                OutlinedButton(
+                                    onClick = onSnoozeClick,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = Color.White.copy(alpha = 0.15f),
+                                        contentColor = style.textColor
+                                    ),
+                                    border = BorderStroke(1.5.dp, style.textColor.copy(alpha = 0.3f)),
+                                    shape = Shapes.button
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Pause,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = style.textColor.copy(alpha = 0.8f)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Snooze $snoozeDurationMinutes min",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = style.textColor
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                CompactActionButtons(
+                                    frictionLevel = frictionLevel,
+                                    onGoBackClick = onGoBackClick,
+                                    onProceedClick = onProceedClick,
+                                    textColor = style.textColor,
+                                    isDarkTheme = isDarkTheme
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Text(
+                                    text = "Building mindful usage habits",
+                                    fontSize = 13.sp,
+                                    color = style.secondaryTextColor.copy(alpha = 0.8f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Original single-column layout
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp)
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // App name
+                        Text(
+                            text = "ThinkFaster",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = style.textColor.copy(alpha = 0.9f),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Intervention content (shared composable)
+                        interventionContent?.let { content ->
+                            InterventionContentRenderer(
+                                content = content,
+                                textColor = style.textColor,
+                                secondaryTextColor = style.secondaryTextColor
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
 
-                        CompactActionButtons(
-                            frictionLevel = frictionLevel,
-                            onGoBackClick = onGoBackClick,
-                            onProceedClick = onProceedClick,
-                            textColor = style.textColor,
-                            isDarkTheme = isDarkTheme
-                        )
+                        // Feedback or action buttons
+                        if (showFeedbackPrompt) {
+                            CompactFeedbackPrompt(
+                                onFeedback = onFeedbackReceived,
+                                onDismiss = onSkipFeedback,
+                                style = style
+                            )
+                        } else {
+                            // Snooze button
+                            OutlinedButton(
+                                onClick = onSnoozeClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = Color.White.copy(alpha = 0.15f),
+                                    contentColor = style.textColor
+                                ),
+                                border = BorderStroke(1.5.dp, style.textColor.copy(alpha = 0.3f)),
+                                shape = Shapes.button
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Pause,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = style.textColor.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Snooze $snoozeDurationMinutes min",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = style.textColor
+                                )
+                            }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                        Text(
-                            text = "Building mindful usage habits",
-                            fontSize = 13.sp,
-                            color = style.secondaryTextColor.copy(alpha = 0.8f),
-                            textAlign = TextAlign.Center
-                        )
+                            CompactActionButtons(
+                                frictionLevel = frictionLevel,
+                                onGoBackClick = onGoBackClick,
+                                onProceedClick = onProceedClick,
+                                textColor = style.textColor,
+                                isDarkTheme = isDarkTheme
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "Building mindful usage habits",
+                                fontSize = 13.sp,
+                                color = style.secondaryTextColor.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 }
             }

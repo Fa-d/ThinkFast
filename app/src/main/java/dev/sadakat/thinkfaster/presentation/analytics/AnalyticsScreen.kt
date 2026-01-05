@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import dev.sadakat.thinkfaster.analytics.AnalyticsManager
 import dev.sadakat.thinkfaster.domain.model.ContentEffectivenessStats
 import dev.sadakat.thinkfaster.domain.model.OverallAnalytics
+import dev.sadakat.thinkfaster.ui.theme.getMaxContentWidth
 import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.context.GlobalContext
@@ -147,13 +150,18 @@ private fun SuccessView(
     state: AnalyticsUiState.Success,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.TopCenter
     ) {
+        val maxWidth = getMaxContentWidth()
+        LazyColumn(
+            modifier = Modifier.widthIn(max = maxWidth),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         // Overall Stats
         item {
             OverallStatsCard(analytics = state.analytics)
@@ -207,6 +215,7 @@ private fun SuccessView(
             items(state.appStats.entries.toList()) { (app, stats) ->
                 AppStatsCard(appName = app, stats = stats)
             }
+        }
         }
     }
 }

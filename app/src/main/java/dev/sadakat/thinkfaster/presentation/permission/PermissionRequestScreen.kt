@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.sadakat.thinkfaster.ui.theme.getMaxContentWidth
 import androidx.navigation.NavHostController
 import dev.sadakat.thinkfaster.presentation.navigation.Screen
 import dev.sadakat.thinkfaster.util.PermissionHelper
@@ -65,15 +66,19 @@ fun PermissionRequestScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(contentPadding),
-            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
+            val maxWidth = getMaxContentWidth()
+            LazyColumn(
+                modifier = Modifier.widthIn(max = maxWidth),
+                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
             // Header
             item {
                 Column(
@@ -156,6 +161,7 @@ fun PermissionRequestScreen(
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
+            }
             }
         }
     }

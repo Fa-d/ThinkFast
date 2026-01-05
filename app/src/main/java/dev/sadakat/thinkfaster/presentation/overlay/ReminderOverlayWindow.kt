@@ -101,6 +101,7 @@ import dev.sadakat.thinkfaster.ui.theme.AccessibleColors
 import dev.sadakat.thinkfaster.ui.theme.adaptiveAnimationSpec
 import dev.sadakat.thinkfaster.ui.theme.isLandscape
 import dev.sadakat.thinkfaster.ui.theme.adaptiveColumnCount
+import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import dev.sadakat.thinkfaster.util.InterventionStyling
 import dev.sadakat.thinkfaster.util.ErrorLogger
 import androidx.compose.ui.semantics.semantics
@@ -606,7 +607,8 @@ private fun ReminderOverlayContent(
     }
 
     // Phase 4: Landscape layout support - two-column on tablets in landscape
-    val useLandscapeLayout = isLandscapeMode && adaptiveColumnCount() > 1
+    // Using shouldUseTwoColumnLayout() for consistency with other overlays
+    val useLandscapeLayout = shouldUseTwoColumnLayout()
 
     Box(
         modifier = Modifier

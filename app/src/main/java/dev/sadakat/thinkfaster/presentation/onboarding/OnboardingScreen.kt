@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -54,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import dev.sadakat.thinkfaster.presentation.navigation.Screen
+import dev.sadakat.thinkfaster.ui.theme.getMaxContentWidth
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -88,11 +90,16 @@ fun OnboardingScreen(
             .padding(contentPadding),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
+            val maxWidth = getMaxContentWidth()
+            Column(
+                modifier = Modifier
+                    .widthIn(max = maxWidth)
+                    .padding(24.dp)
+            ) {
             // Page indicator dots
             PageIndicator(
                 currentPage = uiState.currentPage,
@@ -203,6 +210,7 @@ fun OnboardingScreen(
                 ) {
                     Text("Skip for now")
                 }
+            }
             }
         }
     }

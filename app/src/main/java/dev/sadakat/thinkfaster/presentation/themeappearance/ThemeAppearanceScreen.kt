@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sadakat.thinkfaster.ui.theme.ThemeMode
+import dev.sadakat.thinkfaster.ui.theme.getMaxContentWidth
 import dev.sadakat.thinkfaster.util.ThemePreferences
 
 /**
@@ -43,13 +44,18 @@ fun ThemeAppearanceScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentAlignment = Alignment.TopCenter
         ) {
+            val maxWidth = getMaxContentWidth()
+            LazyColumn(
+                modifier = Modifier.widthIn(max = maxWidth),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Header
             item {
                 Column(
@@ -87,6 +93,7 @@ fun ThemeAppearanceScreen(
             item {
                 AmoledDarkCard()
             }
+        }
         }
     }
 }

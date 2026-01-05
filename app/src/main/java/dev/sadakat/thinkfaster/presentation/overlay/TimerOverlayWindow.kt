@@ -53,9 +53,11 @@ import dev.sadakat.thinkfaster.presentation.overlay.components.BreathingExercise
 import dev.sadakat.thinkfaster.presentation.overlay.components.CelebrationScreen
 import dev.sadakat.thinkfaster.presentation.overlay.components.InterventionContentRenderer
 import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
+import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionTypography
 import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
+import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import dev.sadakat.thinkfaster.util.ErrorLogger
 import dev.sadakat.thinkfaster.util.InterventionAnimations
 import dev.sadakat.thinkfaster.util.InterventionStyling
@@ -447,6 +449,7 @@ private fun DynamicInterventionContent(
     isDarkTheme: Boolean
 ) {
     val style = InterventionStyling.getStyleForContent(content, isDarkTheme)
+    val useTwoColumns = shouldUseTwoColumnLayout()
 
     // Get actual app name from package name using PackageManager
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -463,120 +466,205 @@ private fun DynamicInterventionContent(
         } ?: "App"
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Top section: App name
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = appName,
-                style = InterventionTypography.AppName,
-                color = style.textColor,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Format timer alert duration dynamically
-            val alertText = when {
-                timerAlertMinutes >= 60 -> {
-                    val hours = timerAlertMinutes / 60
-                    val mins = timerAlertMinutes % 60
-                    if (mins > 0) "$hours-Hour $mins-Minute Alert" else "$hours-Hour Alert"
-                }
-                else -> "$timerAlertMinutes-Minute Alert"
-            }
-
-            Text(
-                text = alertText,
-                style = InterventionTypography.InterventionSubtext,
-                color = style.secondaryTextColor,
-                textAlign = TextAlign.Center
-            )
+    // Format timer alert duration dynamically
+    val alertText = when {
+        timerAlertMinutes >= 60 -> {
+            val hours = timerAlertMinutes / 60
+            val mins = timerAlertMinutes % 60
+            if (mins > 0) "$hours-Hour $mins-Minute Alert" else "$hours-Hour Alert"
         }
+        else -> "$timerAlertMinutes-Minute Alert"
+    }
 
-        // Middle section: Content-specific UI
+    if (useTwoColumns) {
+        // Two-column landscape layout for tablets
         Box(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(Spacing.xl),
             contentAlignment = Alignment.Center
         ) {
-            // Use shared intervention content renderer
-            InterventionContentRenderer(
-                content = content,
-                textColor = style.textColor,
-                secondaryTextColor = style.secondaryTextColor
-            )
-        }
-
-        // Bottom section: Buttons / Feedback
-        // Phase 1: Show feedback prompt OR action buttons
-        AnimatedVisibility(
-            visible = showFeedbackPrompt,
-            enter = slideInVertically(
-                initialOffsetY = { it / 2 }  // Slide up from 50% below
-            ) + fadeIn(),
-            exit = slideOutVertically(
-                targetOffsetY = { it / 2 }
-            ) + fadeOut()
-        ) {
-            FeedbackPrompt(
-                onFeedback = onFeedbackReceived,
-                onDismiss = onSkipFeedback,
-                style = style
-            )
-        }
-
-        AnimatedVisibility(
-            visible = !showFeedbackPrompt,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Phase 2: Snooze button
-                OutlinedButton(
-                    onClick = onSnoozeClick,
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .height(48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = style.containerColor,
-                        contentColor = style.secondaryTextColor
-                    ),
-                    border = BorderStroke(1.5.dp, style.borderColor),
-                    shape = Shapes.button
+                // Left column: App name + content
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Pause,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = style.iconColor
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Snooze for $snoozeDurationMinutes minutes",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = style.textColor
+                        text = appName,
+                        style = InterventionTypography.AppName,
+                        color = style.textColor,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Text(
+                        text = alertText,
+                        style = InterventionTypography.InterventionSubtext,
+                        color = style.secondaryTextColor,
+                        textAlign = TextAlign.Center
+                    )
+
+                    InterventionContentRenderer(
+                        content = content,
+                        textColor = style.textColor,
+                        secondaryTextColor = style.secondaryTextColor
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // Right column: Actions
+                Column(
+                    modifier = Modifier.weight(0.7f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (showFeedbackPrompt) {
+                        FeedbackPrompt(
+                            onFeedback = onFeedbackReceived,
+                            onDismiss = onSkipFeedback,
+                            style = style
+                        )
+                    } else {
+                        // Snooze + action buttons
+                        OutlinedButton(
+                            onClick = onSnoozeClick,
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = style.containerColor,
+                                contentColor = style.secondaryTextColor
+                            ),
+                            border = BorderStroke(1.5.dp, style.borderColor),
+                            shape = Shapes.button
+                        ) {
+                            Icon(Icons.Default.Pause, null, Modifier.size(20.dp), style.iconColor)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Snooze $snoozeDurationMinutes min", fontSize = 15.sp, color = style.textColor)
+                        }
 
-                InterventionButtons(
-                    frictionLevel = frictionLevel,
-                    onProceed = onProceed,
-                    onGoBack = onGoBack,
-                    isDarkTheme = isDarkTheme
+                        Spacer(Modifier.height(16.dp))
+
+                        InterventionButtons(
+                            frictionLevel = frictionLevel,
+                            onProceed = onProceed,
+                            onGoBack = onGoBack,
+                            isDarkTheme = isDarkTheme
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        // Original portrait layout
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Top section: App name
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = appName,
+                    style = InterventionTypography.AppName,
+                    color = style.textColor,
+                    textAlign = TextAlign.Center
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = alertText,
+                    style = InterventionTypography.InterventionSubtext,
+                    color = style.secondaryTextColor,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            // Middle section: Content-specific UI
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                // Use shared intervention content renderer
+                InterventionContentRenderer(
+                    content = content,
+                    textColor = style.textColor,
+                    secondaryTextColor = style.secondaryTextColor
+                )
+            }
+
+            // Bottom section: Buttons / Feedback
+            // Phase 1: Show feedback prompt OR action buttons
+            AnimatedVisibility(
+                visible = showFeedbackPrompt,
+                enter = slideInVertically(
+                    initialOffsetY = { it / 2 }  // Slide up from 50% below
+                ) + fadeIn(),
+                exit = slideOutVertically(
+                    targetOffsetY = { it / 2 }
+                ) + fadeOut()
+            ) {
+                FeedbackPrompt(
+                    onFeedback = onFeedbackReceived,
+                    onDismiss = onSkipFeedback,
+                    style = style
+                )
+            }
+
+            AnimatedVisibility(
+                visible = !showFeedbackPrompt,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Phase 2: Snooze button
+                    OutlinedButton(
+                        onClick = onSnoozeClick,
+                        modifier = Modifier
+                            .fillMaxWidth(0.85f)
+                            .height(48.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = style.containerColor,
+                            contentColor = style.secondaryTextColor
+                        ),
+                        border = BorderStroke(1.5.dp, style.borderColor),
+                        shape = Shapes.button
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Pause,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = style.iconColor
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Snooze for $snoozeDurationMinutes minutes",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = style.textColor
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    InterventionButtons(
+                        frictionLevel = frictionLevel,
+                        onProceed = onProceed,
+                        onGoBack = onGoBack,
+                        isDarkTheme = isDarkTheme
+                    )
+                }
             }
         }
     }

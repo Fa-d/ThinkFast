@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.sadakat.thinkfaster.ui.theme.getMaxContentWidth
 import androidx.navigation.NavController
 import dev.sadakat.thinkfaster.presentation.navigation.Screen
 import dev.sadakat.thinkfaster.service.UsageMonitorService
@@ -86,11 +88,16 @@ fun OnboardingPermissionNotificationScreen(
             .padding(contentPadding),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
+            val maxWidth = getMaxContentWidth()
+            Column(
+                modifier = Modifier
+                    .widthIn(max = maxWidth)
+                    .padding(24.dp)
+            ) {
             // Progress indicator: Step 5 of 6
             OnboardingProgressIndicator(
                 currentStep = 5,
@@ -322,6 +329,7 @@ fun OnboardingPermissionNotificationScreen(
                         }
                     }
                 }
+            }
             }
         }
     }

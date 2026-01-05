@@ -41,6 +41,8 @@ import dev.sadakat.thinkfaster.domain.model.AppCategory
 import dev.sadakat.thinkfaster.domain.model.GoalProgress
 import dev.sadakat.thinkfaster.domain.model.InstalledAppInfo
 import dev.sadakat.thinkfaster.domain.model.TrackedApp
+import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
+import dev.sadakat.thinkfaster.ui.theme.getAdaptiveColumnCount
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
@@ -286,16 +288,70 @@ private fun TrackedAppsContent(
         }
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            top = 8.dp,
-            end = 16.dp,
-            bottom = 80.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    val useTwoColumns = shouldUseTwoColumnLayout()
+
+    if (useTwoColumns) {
+        // Two-column grid for landscape tablets
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (filteredApps.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    EmptyTrackedAppsState()
+                }
+            }
+
+            // Display apps in adaptive grid (2-3 columns based on screen size)
+            val columnCount = getAdaptiveColumnCount()
+            filteredApps.chunked(columnCount).forEach { rowApps ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    rowApps.forEach { app ->
+                        val progress = goalProgressMap[app.packageName]
+                        TrackedAppCard(
+                            appName = app.appName,
+                            packageName = app.packageName,
+                            icon = app.icon,
+                            goalProgress = progress,
+                            isExpanded = expandedAppForGoal == app.packageName,
+                            isSavingGoal = isSavingGoal,
+                            onRemoveClick = { onRemoveApp(app.packageName) },
+                            onToggleExpanded = { onToggleGoalExpansion(app.packageName) },
+                            onSetGoal = { onSetGoal(app.packageName, it) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    // Fill empty columns
+                    repeat(columnCount - rowApps.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(80.dp))
+        }
+    } else {
+        // Original single-column layout
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 8.dp,
+                end = 16.dp,
+                bottom = 80.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
         if (filteredApps.isEmpty()) {
             item {
                 EmptyTrackedAppsState()
@@ -316,6 +372,7 @@ private fun TrackedAppsContent(
                 onSetGoal = { onSetGoal(app.packageName, it) }
             )
         }
+    }
     }
 }
 
@@ -528,14 +585,15 @@ private fun TrackedAppCard(
     isSavingGoal: Boolean,
     onRemoveClick: () -> Unit,
     onToggleExpanded: () -> Unit,
-    onSetGoal: (Int) -> Unit
+    onSetGoal: (Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var sliderValue by remember(goalProgress?.goal?.dailyLimitMinutes) {
         mutableStateOf(goalProgress?.goal?.dailyLimitMinutes?.toFloat() ?: 30f)
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.then(Modifier.fillMaxWidth()),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface

@@ -204,6 +204,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    // WindowSizeClass for adaptive layouts
+    implementation("androidx.compose.material3:material3-window-size-class:1.3.1")
 
     // Room
     implementation(libs.androidx.room.runtime)

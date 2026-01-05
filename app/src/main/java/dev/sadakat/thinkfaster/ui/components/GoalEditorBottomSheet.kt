@@ -8,9 +8,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import dev.sadakat.thinkfaster.presentation.home.PerAppGoalUiModel
 import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
+import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import dev.sadakat.thinkfaster.util.HapticFeedback
 
 /**
@@ -35,153 +38,207 @@ fun GoalEditorBottomSheet(
     progressText: String? = null  // Optional progress indicator for sequential goal setting
 ) {
     val context = LocalContext.current
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true  // Full height only
-    )
+    val useDialog = shouldUseTwoColumnLayout()
 
     // Initialize slider value with current goal or default 60 minutes
     var sliderValue by remember(app.dailyLimitMinutes) {
         mutableStateOf((app.dailyLimitMinutes ?: 60).toFloat())
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = Shapes.bottomSheet
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .padding(Spacing.lg)
+    if (useDialog) {
+        // Use Dialog for landscape tablets
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+                usePlatformDefaultWidth = false
+            )
         ) {
-            // Cancel button (top-right)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .wrapContentHeight(),
+                shape = Shapes.bottomSheet
             ) {
-                // Progress indicator (if setting goals for multiple apps)
-                if (progressText != null) {
-                    Text(
-                        text = progressText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-
-                TextButton(onClick = {
-                    HapticFeedback.light(context)
-                    onDismiss()
-                }) {
-                    Text(
-                        text = "Cancel",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(Spacing.lg))
-
-            // App icon (centered, large)
-            AppIconView(
-                drawable = app.appIcon,
-                appName = app.appName,
-                size = 80.dp,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.md))
-
-            // App name (centered)
-            Text(
-                text = app.appName,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.sm))
-
-            // Current goal (centered)
-            Text(
-                text = if (app.dailyLimitMinutes != null) {
-                    "Current goal: ${app.dailyLimitMinutes} min/day"
-                } else {
-                    "Set a daily goal for this app"
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Slider value display (large, centered)
-            Text(
-                text = "${sliderValue.toInt()} min",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-
-            Text(
-                text = "Daily goal",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.md))
-
-            // Slider
-            Slider(
-                value = sliderValue,
-                onValueChange = { sliderValue = it },
-                valueRange = 15f..180f,
-                steps = 32,  // 5-minute increments
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Slider range labels
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "15 min",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "180 min",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                GoalEditorContent(
+                    app = app,
+                    sliderValue = sliderValue,
+                    onSliderValueChange = { sliderValue = it },
+                    onDismiss = onDismiss,
+                    onSaveGoal = onSaveGoal,
+                    progressText = progressText,
+                    context = context
                 )
             }
+        }
+    } else {
+        // Use ModalBottomSheet for portrait phones
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true  // Full height only
+        )
 
-            Spacer(modifier = Modifier.height(Spacing.xl))
-
-            // Save button
-            Button(
-                onClick = {
-                    HapticFeedback.success(context)
-                    onSaveGoal(sliderValue.toInt())
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large
-            ) {
-                Text(
-                    text = "Save Goal",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(Spacing.sm))
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = sheetState,
+            shape = Shapes.bottomSheet
+        ) {
+            GoalEditorContent(
+                app = app,
+                sliderValue = sliderValue,
+                onSliderValueChange = { sliderValue = it },
+                onDismiss = onDismiss,
+                onSaveGoal = onSaveGoal,
+                progressText = progressText,
+                context = context
+            )
         }
     }
 }
+
+@Composable
+private fun GoalEditorContent(
+    app: PerAppGoalUiModel,
+    sliderValue: Float,
+    onSliderValueChange: (Float) -> Unit,
+    onDismiss: () -> Unit,
+    onSaveGoal: (Int) -> Unit,
+    progressText: String?,
+    context: android.content.Context
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .padding(Spacing.lg)
+    ) {
+        // Cancel button (top-right)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Progress indicator (if setting goals for multiple apps)
+            if (progressText != null) {
+                Text(
+                    text = progressText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+
+            TextButton(onClick = {
+                HapticFeedback.light(context)
+                onDismiss()
+            }) {
+                Text(
+                    text = "Cancel",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.lg))
+
+        // App icon (centered, large)
+        AppIconView(
+            drawable = app.appIcon,
+            appName = app.appName,
+            size = 80.dp,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        Spacer(modifier = Modifier.height(Spacing.md))
+
+        // App name (centered)
+        Text(
+            text = app.appName,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        Spacer(modifier = Modifier.height(Spacing.sm))
+
+        // Current goal (centered)
+        Text(
+            text = if (app.dailyLimitMinutes != null) {
+                "Current goal: ${app.dailyLimitMinutes} min/day"
+            } else {
+                "Set a daily goal for this app"
+            },
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Slider value display (large, centered)
+        Text(
+            text = "${sliderValue.toInt()} min",
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        Text(
+            text = "Daily goal",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        Spacer(modifier = Modifier.height(Spacing.md))
+
+        // Slider
+        Slider(
+            value = sliderValue,
+            onValueChange = onSliderValueChange,
+            valueRange = 15f..180f,
+            steps = 32,  // 5-minute increments
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Slider range labels
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "15 min",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "180 min",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.xl))
+
+        // Save button
+        Button(
+            onClick = {
+                HapticFeedback.success(context)
+                onSaveGoal(sliderValue.toInt())
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Text(
+                text = "Save Goal",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.sm))
+    }
+}
+

@@ -37,6 +37,7 @@ import dev.sadakat.thinkfaster.presentation.navigation.Screen
 import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
 import dev.sadakat.thinkfaster.ui.theme.AppColors
+import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import dev.sadakat.thinkfaster.BuildConfig
 import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
@@ -54,6 +55,7 @@ fun SettingsScreen(
     syncPreferences: SyncPreferences = koinInject()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val useTwoColumns = shouldUseTwoColumnLayout()
 
     var showNotificationsSheet by remember { mutableStateOf(false) }
     var showInterventionSheet by remember { mutableStateOf(false) }
@@ -70,16 +72,137 @@ fun SettingsScreen(
                     )
                 })
         }) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 20.dp),
-            contentPadding = PaddingValues(
-                top = 16.dp, bottom = 24.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        if (useTwoColumns) {
+            // Two-column grid layout for landscape tablets
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Row with two columns
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Left column
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Group 1: Account
+                        SettingsGroupCard {
+                            SettingsMenuItem(
+                                icon = "👤",
+                                iconBackgroundColor = Color.Transparent,
+                                title = "Account",
+                                onClick = {
+                                    val isAuthenticated = syncPreferences.isAuthenticated()
+                                    if (isAuthenticated) {
+                                        navController.navigate(Screen.AccountManagement.route)
+                                    } else {
+                                        navController.navigate(Screen.Login.route)
+                                    }
+                                })
+                        }
+                    }
+
+                    // Right column
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Group 3: Notifications, Appearance, Intervention
+                        SettingsGroupCard {
+                            SettingsMenuItem(
+                                icon = "🔔",
+                                iconBackgroundColor = Color.Transparent,
+                                title = "Notifications",
+                                onClick = { showNotificationsSheet = true })
+                            SettingsDivider()
+                            SettingsMenuItem(
+                                icon = "🌙",
+                                iconBackgroundColor = Color.Transparent,
+                                title = "Appearance",
+                                onClick = { navController.navigate("theme_appearance") })
+                            SettingsDivider()
+                            SettingsMenuItem(
+                                icon = "✋",
+                                iconBackgroundColor = Color.Transparent,
+                                title = "Intervention",
+                                onClick = { showInterventionSheet = true })
+                        }
+                    }
+                }
+
+                // Row with two columns
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Left column
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Group 5: Help & Support, About
+                        SettingsGroupCard {
+                            SettingsMenuItem(
+                                icon = "❓",
+                                iconBackgroundColor = Color.Transparent,
+                                title = "Help & Support",
+                                onClick = { /* TODO */ })
+                            SettingsDivider()
+                            SettingsMenuItem(
+                                icon = "ℹ️",
+                                iconBackgroundColor = Color.Transparent,
+                                title = "About",
+                                onClick = { /* TODO */ })
+                        }
+                    }
+
+                    // Right column
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Group 6: App Version
+                        val context = LocalContext.current
+                        val versionName = remember {
+                            try {
+                                context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+
+                        SettingsGroupCard {
+                            SettingsVersionItem(
+                                icon = "📱",
+                                title = "App Version",
+                                version = versionName ?: "Unknown"
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        } else {
+            // Original single-column layout
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 20.dp),
+                contentPadding = PaddingValues(
+                    top = 16.dp, bottom = 24.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Group 1: Account (standalone)
             item {
                 SettingsGroupCard {
@@ -160,6 +283,7 @@ fun SettingsScreen(
                 }
             }
         }
+        } // End of else block
 
         // Bottom Sheets
         if (showNotificationsSheet) {

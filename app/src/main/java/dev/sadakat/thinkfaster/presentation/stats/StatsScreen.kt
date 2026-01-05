@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -63,6 +64,8 @@ import dev.sadakat.thinkfaster.presentation.stats.components.OverviewStatsCard
 import dev.sadakat.thinkfaster.presentation.stats.components.StreakConsistencyCard
 import dev.sadakat.thinkfaster.presentation.stats.charts.AppBreakdownChart
 import dev.sadakat.thinkfaster.ui.components.rememberFadeInAnimation
+import dev.sadakat.thinkfaster.ui.theme.getMaxContentWidth
+import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import androidx.compose.ui.graphics.graphicsLayer
 import org.koin.androidx.compose.koinViewModel
 
@@ -77,6 +80,7 @@ fun StatsScreen(
     contentPadding: PaddingValues = PaddingValues()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val useTwoColumns = shouldUseTwoColumnLayout()
 
     // Phase 5.1: Card entrance animation state
     var showContent by remember { mutableStateOf(false) }
@@ -125,16 +129,21 @@ fun StatsScreen(
             }
         } else {
             // Statistics content
-            LazyColumn(
+            Box(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 0.dp,
-                    end = 0.dp,
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = contentPadding.calculateBottomPadding() + 16.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                contentAlignment = Alignment.TopCenter
             ) {
+                val maxWidth = getMaxContentWidth()
+                LazyColumn(
+                    modifier = Modifier.widthIn(max = maxWidth),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = paddingValues.calculateTopPadding(),
+                        bottom = contentPadding.calculateBottomPadding() + 16.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 // Time range selector
                 item {
                     TimeRangeSelector(
@@ -380,6 +389,7 @@ fun StatsScreen(
                     }
                 }
             }
+            } // Close Box wrapper
         }
     }
 }

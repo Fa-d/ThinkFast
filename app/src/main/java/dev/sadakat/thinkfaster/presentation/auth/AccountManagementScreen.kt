@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.sadakat.thinkfaster.ui.theme.getMaxContentWidth
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -56,13 +57,19 @@ fun AccountManagementScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
+            val maxWidth = getMaxContentWidth()
+            Column(
+                modifier = Modifier
+                    .widthIn(max = maxWidth)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
             // Account Info Card
             AccountInfoCard(uiState)
             
@@ -123,9 +130,10 @@ fun AccountManagementScreen(
                 )
                 Text("Delete Account Data", fontSize = 16.sp)
             }
+            }
         }
     }
-    
+
     // Sign out confirmation dialog
     if (showSignOutDialog) {
         AlertDialog(

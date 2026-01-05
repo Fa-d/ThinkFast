@@ -22,10 +22,12 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -61,6 +63,7 @@ import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
 import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.theme.AppColors
 import dev.sadakat.thinkfaster.ui.theme.ProgressColors
+import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import dev.sadakat.thinkfaster.util.HapticFeedback
 import dev.sadakat.thinkfaster.util.PermissionHelper
 import kotlinx.coroutines.delay
@@ -465,6 +468,7 @@ private fun TodayAtAGlanceCard(
     onStopService: () -> Unit
 ) {
     val alpha = rememberFadeInAnimation(durationMillis = 600)
+    val useTwoColumns = shouldUseTwoColumnLayout()
 
     Column(
         modifier = Modifier
@@ -553,7 +557,256 @@ private fun TodayAtAGlanceCard(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Spacing.verticalArrangementMD
                 ) {
-                    // Progress section - new design matching the image
+                    if (useTwoColumns) {
+                        // Two-column layout for landscape tablets
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.lg)
+                        ) {
+                            // Left: Progress section
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = Shapes.button,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(Spacing.lg),
+                                    verticalArrangement = Spacing.verticalArrangementMD
+                                ) {
+                                    // Progress section content (from the original Column)
+                                    Text(
+                                        text = "Today's Usage",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+
+                                    // Progress ring and metrics
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Circular progress ring
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier.size(120.dp)
+                                        ) {
+                                            val progress = (uiState.progressPercentage ?: 0) / 100f
+                                            val progressColor = AppColors.Progress.getColorForPercentage(
+                                                uiState.progressPercentage ?: 0
+                                            )
+
+                                            Canvas(modifier = Modifier.size(120.dp)) {
+                                                drawArc(
+                                                    color = progressColor.copy(alpha = 0.2f),
+                                                    startAngle = -90f,
+                                                    sweepAngle = 360f,
+                                                    useCenter = false,
+                                                    style = Stroke(
+                                                        width = 10.dp.toPx(),
+                                                        cap = StrokeCap.Round
+                                                    )
+                                                )
+
+                                                drawArc(
+                                                    color = progressColor,
+                                                    startAngle = -90f,
+                                                    sweepAngle = 360f * progress.coerceIn(0f, 1f),
+                                                    useCenter = false,
+                                                    style = Stroke(
+                                                        width = 10.dp.toPx(),
+                                                        cap = StrokeCap.Round
+                                                    )
+                                                )
+                                            }
+
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Spacing.verticalArrangementXS
+                                            ) {
+                                                Text(
+                                                    text = "${uiState.progressPercentage ?: 0}%",
+                                                    style = MaterialTheme.typography.headlineMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = "of goal",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+
+                                        // Metrics column
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            // Total time
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Spacing.horizontalArrangementSM
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.AccessTime,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(Spacing.xs))
+                                                Column {
+                                                    Text(
+                                                        text = "Total",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                    Text(
+                                                        text = "${uiState.totalUsageMinutes}m",
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+                                            }
+
+                                            // Sessions
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Spacing.horizontalArrangementSM
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.BarChart,
+                                                    contentDescription = null,
+                                                    tint = AppColors.Progress.OnTrack,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(Spacing.xs))
+                                                Column {
+                                                    Text(
+                                                        text = "Sessions",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                    Text(
+                                                        text = "${uiState.todaySessionsCount}",
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+                                            }
+
+                                            // Streak
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Spacing.horizontalArrangementSM
+                                            ) {
+                                                Text(
+                                                    text = "🔥",
+                                                    fontSize = 20.sp
+                                                )
+                                                Spacer(modifier = Modifier.width(Spacing.xs))
+                                                Column {
+                                                    Text(
+                                                        text = "Streak",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                    Text(
+                                                        text = "${uiState.currentStreak}",
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Right: Monitoring status
+                            Card(
+                                modifier = Modifier.weight(0.7f),
+                                shape = Shapes.button,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (uiState.isServiceRunning && hasPermissions) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    }
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(Spacing.lg),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "Monitoring",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+
+                                    if (uiState.isServiceRunning && hasPermissions) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Text(
+                                            text = "Active",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    } else if (!hasPermissions) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Text(
+                                            text = "No permissions",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Pause,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Text(
+                                            text = "Paused",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(Spacing.md))
+
+                                    if (hasPermissions) {
+                                        Switch(
+                                            checked = uiState.isServiceRunning,
+                                            onCheckedChange = { checked ->
+                                                if (checked) onStartService() else onStopService()
+                                            },
+                                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Original single-column layout
+                        // Progress section - new design matching the image
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -808,6 +1061,7 @@ private fun TodayAtAGlanceCard(
                     }
                 }
             }
+        } // Close else block (useTwoColumns)
     }
 }
 
