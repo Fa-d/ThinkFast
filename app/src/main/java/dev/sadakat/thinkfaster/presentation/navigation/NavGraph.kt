@@ -6,6 +6,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -38,6 +39,7 @@ fun NavGraph(
     navController: NavHostController,
     startDestination: String = Screen.PermissionRequest.route,
     contentPadding: PaddingValues = PaddingValues(),
+    modifier: Modifier = Modifier,
     analyticsReporter: FirebaseAnalyticsReporter = koinInject()
 ) {
     // Track previous destination to avoid duplicate screen_view events
@@ -69,7 +71,8 @@ fun NavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = startDestination,
+        modifier = modifier
     ) {
         // Onboarding screen - first-time user experience (DEPRECATED - use new 6-step flow)
         composable(route = Screen.Onboarding.route) {

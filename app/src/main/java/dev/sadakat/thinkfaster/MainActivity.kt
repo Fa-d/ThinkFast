@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -48,6 +49,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.NavigationRailItem as MaterialNavigationRailItem
+import androidx.compose.material3.NavigationRail
+import dev.sadakat.thinkfaster.ui.theme.isLandscape
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -154,6 +158,7 @@ fun MainScreen() {
     val context = LocalContext.current
     val navController = rememberNavController()
     val analyticsManager: AnalyticsManager = koinInject()
+    val landscapeMode = isLandscape()
 
     // Determine start destination based on onboarding completion and permissions
     val startDestination = if (!isOnboardingCompleted(context)) {
@@ -175,8 +180,8 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Hide bottom navigation on onboarding, permission request, analytics, theme appearance, login, manage apps, and account management screens
-    val showBottomBar = currentRoute != Screen.Onboarding.route &&
+    // Hide navigation on onboarding, permission request, analytics, theme appearance, login, manage apps, and account management screens
+    val showNavigation = currentRoute != Screen.Onboarding.route &&
                         currentRoute != Screen.OnboardingWelcome.route &&
                         currentRoute != Screen.OnboardingGoals.route &&
                         currentRoute != Screen.OnboardingPermissionUsage.route &&
@@ -190,22 +195,43 @@ fun MainScreen() {
                         currentRoute != Screen.ManageApps.route &&
                         currentRoute != Screen.AccountManagement.route
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            if (showBottomBar) {
-                EnhancedNavigationBar(
+    if (landscapeMode && showNavigation) {
+        // Landscape: Navigation rail on the side
+        Row(modifier = Modifier.fillMaxSize()) {
+            EnhancedNavigationRail(
+                navController = navController,
+                currentDestination = navBackStackEntry?.destination
+            )
+            Box(modifier = Modifier.weight(1f)) {
+                NavGraph(
                     navController = navController,
-                    currentDestination = navBackStackEntry?.destination
+                    startDestination = startDestination,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        bottom = 16.dp
+                    ),
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
-    ) { innerPadding ->
-        NavGraph(
-            navController = navController,
-            startDestination = startDestination,
-            contentPadding = innerPadding
-        )
+    } else {
+        // Portrait: Bottom navigation bar
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            bottomBar = {
+                if (showNavigation) {
+                    EnhancedNavigationBar(
+                        navController = navController,
+                        currentDestination = navBackStackEntry?.destination
+                    )
+                }
+            }
+        ) { innerPadding ->
+            NavGraph(
+                navController = navController,
+                startDestination = startDestination,
+                contentPadding = innerPadding
+            )
+        }
     }
 }
 
@@ -362,6 +388,96 @@ fun NavigationBarItem(
                 style = MaterialTheme.typography.labelSmall,
                 color = contentColor
             )
+        }
+    }
+}
+
+/**
+ * Enhanced navigation rail for landscape mode
+ * Shows navigation items vertically on the side with consistent project design
+ */
+@Composable
+fun EnhancedNavigationRail(
+    navController: androidx.navigation.NavController,
+    currentDestination: androidx.navigation.NavDestination?
+) {
+    val view = LocalView.current
+
+    // Define navigation items with outlined/filled variants
+    val navigationItems = listOf(
+        BottomNavItem(
+            route = Screen.Home.route,
+            label = "Home",
+            iconSelected = Icons.Filled.Home,
+            iconUnselected = Icons.Outlined.Home,
+            contentDescription = "Home"
+        ),
+        BottomNavItem(
+            route = Screen.Statistics.route,
+            label = "Statistics",
+            iconSelected = Icons.Filled.BarChart,
+            iconUnselected = Icons.Outlined.BarChart,
+            contentDescription = "Statistics"
+        ),
+        BottomNavItem(
+            route = Screen.Settings.route,
+            label = "Settings",
+            iconSelected = Icons.Filled.Settings,
+            iconUnselected = Icons.Outlined.Settings,
+            contentDescription = "Settings"
+        )
+    )
+
+    NavigationRail(
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier.fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            navigationItems.forEach { item ->
+            val isSelected = currentDestination?.hierarchy?.any {
+                it.route == item.route
+            } == true
+
+            MaterialNavigationRailItem(
+                icon = {
+                    Icon(
+                        imageVector = if (isSelected) item.iconSelected else item.iconUnselected,
+                        contentDescription = item.contentDescription,
+                        tint = if (isSelected) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                },
+                label = {
+                    Text(
+                        text = item.label,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                },
+                selected = isSelected,
+                onClick = {
+                    // Haptic feedback on selection
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    } else {
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    }
+
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
         }
     }
 }
