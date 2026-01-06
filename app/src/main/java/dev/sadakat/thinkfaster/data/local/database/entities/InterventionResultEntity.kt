@@ -2,16 +2,34 @@ package dev.sadakat.thinkfaster.data.local.database.entities
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
  * Entity for tracking intervention effectiveness
  * Phase G: Tracks how users respond to interventions and measures outcomes
  * Phase 1: Added user feedback and context for ML training
+ * Phase 2: Added persona and opportunity tracking for JITAI-based interventions
  *
  * The app now uses time-based and usage-pattern-based context for intervention timing.
+ *
+ * Performance Optimization: Added indexes for JITAI analytics queries
+ * - targetApp: For app-specific analytics
+ * - timestamp: For date range queries
+ * - userPersona: For persona-based analytics
+ * - userChoice: For effectiveness calculations
  */
-@Entity(tableName = "intervention_results")
+@Entity(
+    tableName = "intervention_results",
+    indices = [
+        Index(value = ["targetApp"]),
+        Index(value = ["timestamp"]),
+        Index(value = ["user_persona"]),
+        Index(value = ["userChoice"]),
+        Index(value = ["targetApp", "timestamp"]),
+        Index(value = ["user_persona", "userChoice"])
+    ]
+)
 data class InterventionResultEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -55,6 +73,22 @@ data class InterventionResultEntity(
 
     @ColumnInfo(name = "snooze_duration_ms")
     val snoozeDurationMs: Long? = null,   // How long was the snooze?
+
+    // Phase 2: Persona and opportunity tracking
+    @ColumnInfo(name = "user_persona")
+    val userPersona: String? = null,       // "HEAVY_COMPULSIVE_USER", etc.
+
+    @ColumnInfo(name = "persona_confidence")
+    val personaConfidence: String? = null, // "LOW", "MEDIUM", "HIGH"
+
+    @ColumnInfo(name = "opportunity_score")
+    val opportunityScore: Int? = null,     // 0-100
+
+    @ColumnInfo(name = "opportunity_level")
+    val opportunityLevel: String? = null,  // "EXCELLENT", "GOOD", "MODERATE", "POOR"
+
+    @ColumnInfo(name = "decision_source")
+    val decisionSource: String? = null,    // "OPPORTUNITY_BASED", "BASIC_RATE_LIMIT", etc.
 
     // Outcome (optional - filled after session ends)
     val finalSessionDurationMs: Long?,    // Total session duration

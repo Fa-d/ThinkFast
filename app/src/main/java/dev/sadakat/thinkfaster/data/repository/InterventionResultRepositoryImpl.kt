@@ -8,6 +8,10 @@ import dev.sadakat.thinkfaster.domain.model.ContentEffectivenessStats
 import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.domain.model.InterventionResult
 import dev.sadakat.thinkfaster.domain.model.OverallAnalytics
+import dev.sadakat.thinkfaster.domain.model.PersonaContentTypeStats
+import dev.sadakat.thinkfaster.domain.model.PersonaEffectivenessStats
+import dev.sadakat.thinkfaster.domain.model.PersonaHistoryEntry
+import dev.sadakat.thinkfaster.domain.model.OpportunityLevelEffectivenessStats
 import dev.sadakat.thinkfaster.domain.repository.AppInterventionStats
 import dev.sadakat.thinkfaster.domain.repository.ContextEffectivenessStats as DomainContextEffectivenessStats
 import dev.sadakat.thinkfaster.domain.repository.DailyEffectivenessStat as DomainDailyEffectivenessStat
@@ -162,6 +166,10 @@ class InterventionResultRepositoryImpl(
         return resultDao.getTotalResultCount()
     }
 
+    override suspend fun getFirstResult(): InterventionResult? {
+        return resultDao.getFirstResult()?.toDomain()
+    }
+
     // ========== Phase 3: Intervention Effectiveness Queries ==========
 
     override suspend fun getEffectivenessByTimeWindow(
@@ -246,5 +254,54 @@ class InterventionResultRepositoryImpl(
 
     override suspend fun updateResultUserId(resultId: Long, userId: String) {
         resultDao.updateUserId(resultId, userId)
+    }
+
+    // ========== Phase 2 JITAI: Persona and Opportunity Analytics ==========
+
+    override suspend fun getEffectivenessByPersona(): List<PersonaEffectivenessStats> {
+        return resultDao.getEffectivenessByPersona().map { entity ->
+            PersonaEffectivenessStats(
+                personaName = entity.personaName,
+                confidence = entity.confidence,
+                total = entity.total,
+                goBackCount = entity.goBackCount,
+                avgDecisionTimeMs = entity.avgDecisionTimeMs,
+                avgFinalDurationMs = entity.avgFinalDurationMs
+            )
+        }
+    }
+
+    override suspend fun getEffectivenessByOpportunityLevel(): List<OpportunityLevelEffectivenessStats> {
+        return resultDao.getEffectivenessByOpportunityLevel().map { entity ->
+            OpportunityLevelEffectivenessStats(
+                opportunityLevel = entity.opportunityLevel,
+                opportunityScore = entity.opportunityScore,
+                total = entity.total,
+                goBackCount = entity.goBackCount,
+                avgDecisionTimeMs = entity.avgDecisionTimeMs
+            )
+        }
+    }
+
+    override suspend fun getEffectivenessByPersonaAndContentType(): List<PersonaContentTypeStats> {
+        return resultDao.getEffectivenessByPersonaAndContentType().map { entity ->
+            PersonaContentTypeStats(
+                personaName = entity.personaName,
+                contentType = entity.contentType,
+                total = entity.total,
+                goBackCount = entity.goBackCount,
+                avgDecisionTimeMs = entity.avgDecisionTimeMs
+            )
+        }
+    }
+
+    override suspend fun getPersonaHistoryByDay(): List<PersonaHistoryEntry> {
+        return resultDao.getPersonaHistoryByDay().map { entity ->
+            PersonaHistoryEntry(
+                day = entity.day,
+                personaName = entity.personaName,
+                count = entity.count
+            )
+        }
     }
 }

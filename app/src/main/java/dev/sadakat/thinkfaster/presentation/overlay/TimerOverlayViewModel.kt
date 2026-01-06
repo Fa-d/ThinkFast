@@ -314,6 +314,9 @@ class TimerOverlayViewModel(
         val content = currentState.interventionContent
         val targetApp = currentState.targetApp ?: return
 
+        // Phase 2 JITAI: Get JITAI context and clear it after use
+        val jitaiContext = dev.sadakat.thinkfaster.domain.intervention.JitaiContextHolder.getAndClearContext()
+
         val calendar = Calendar.getInstance()
 
         val result = InterventionResult(
@@ -330,6 +333,12 @@ class TimerOverlayViewModel(
             currentSessionDurationMs = context.currentSessionMinutes * 60 * 1000L,  // Convert minutes to ms
             userChoice = userChoice,
             timeToShowDecisionMs = decisionTimeMs,
+            // Phase 2 JITAI: Include persona and opportunity tracking
+            userPersona = jitaiContext?.persona?.name,
+            personaConfidence = jitaiContext?.personaConfidence?.name,
+            opportunityScore = jitaiContext?.opportunityScore,
+            opportunityLevel = jitaiContext?.opportunityLevel?.name,
+            decisionSource = jitaiContext?.decisionSource,
             timestamp = interventionShownTime
         )
 

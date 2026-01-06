@@ -4,6 +4,7 @@ package dev.sadakat.thinkfaster.domain.model
  * Domain model for intervention result tracking
  * Phase G: Measures intervention effectiveness
  * Phase 1: Added user feedback and context for ML training
+ * Phase 2: Added persona and opportunity tracking for JITAI-based interventions
  *
  * The app now uses time-based and usage-pattern-based context for intervention timing.
  */
@@ -35,6 +36,13 @@ data class InterventionResult(
     val audioActive: Boolean = false,        // Was phone call or media playing?
     val wasSnoozed: Boolean = false,         // Did user snooze this intervention?
     val snoozeDurationMs: Long? = null,      // How long was the snooze?
+
+    // Phase 2: Persona and opportunity tracking
+    val userPersona: String? = null,              // "HEAVY_COMPULSIVE_USER", etc.
+    val personaConfidence: String? = null,        // "LOW", "MEDIUM", "HIGH"
+    val opportunityScore: Int? = null,            // 0-100
+    val opportunityLevel: String? = null,         // "EXCELLENT", "GOOD", "MODERATE", "POOR"
+    val decisionSource: String? = null,           // "OPPORTUNITY_BASED", "BASIC_RATE_LIMIT", etc.
 
     // Outcome (optional - filled after session ends)
     val finalSessionDurationMs: Long? = null,

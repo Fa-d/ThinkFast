@@ -147,6 +147,9 @@ interface InterventionResultDao {
     @Query("SELECT COUNT(*) FROM intervention_results")
     suspend fun getTotalResultCount(): Int
 
+    @Query("SELECT * FROM intervention_results ORDER BY timestamp ASC LIMIT 1")
+    suspend fun getFirstResult(): InterventionResultEntity?
+
     // Phase 3: Intervention effectiveness queries
 
     /**
@@ -252,6 +255,89 @@ interface InterventionResultDao {
 
     @Query("SELECT * FROM intervention_results")
     suspend fun getAllResults(): List<InterventionResultEntity>
+
+    // ========== Phase 2 JITAI: Persona and Opportunity Analytics ==========
+
+    /**
+     * Get effectiveness by user persona
+     * Aggregates intervention success rates by detected persona
+     */
+    @Query("""
+        SELECT
+            user_persona as personaName,
+            persona_confidence as confidence,
+            COUNT(*) as total,
+            SUM(CASE WHEN userChoice = 'GO_BACK' THEN 1 ELSE 0 END) as goBackCount,
+            AVG(timeToShowDecisionMs) as avgDecisionTimeMs,
+            AVG(finalSessionDurationMs) as avgFinalDurationMs
+        FROM intervention_results
+        WHERE user_persona IS NOT NULL
+          AND finalSessionDurationMs IS NOT NULL
+        GROUP BY user_persona, persona_confidence
+        ORDER BY total DESC
+    """)
+    suspend fun getEffectivenessByPersona(): List<PersonaEffectivenessStats>
+
+    /**
+     * Get effectiveness by opportunity level
+     * Aggregates intervention success rates by JITAI opportunity score level
+     */
+    @Query("""
+        SELECT
+            opportunity_level as opportunityLevel,
+            opportunity_score as opportunityScore,
+            COUNT(*) as total,
+            SUM(CASE WHEN userChoice = 'GO_BACK' THEN 1 ELSE 0 END) as goBackCount,
+            AVG(timeToShowDecisionMs) as avgDecisionTimeMs
+        FROM intervention_results
+        WHERE opportunity_level IS NOT NULL
+          AND finalSessionDurationMs IS NOT NULL
+        GROUP BY opportunity_level
+        ORDER BY
+            CASE opportunity_level
+                WHEN 'EXCELLENT' THEN 1
+                WHEN 'GOOD' THEN 2
+                WHEN 'MODERATE' THEN 3
+                WHEN 'POOR' THEN 4
+                ELSE 5
+            END
+    """)
+    suspend fun getEffectivenessByOpportunityLevel(): List<OpportunityLevelEffectivenessStats>
+
+    /**
+     * Get effectiveness by persona and content type combination
+     * Helps identify which content types work best for each persona
+     */
+    @Query("""
+        SELECT
+            user_persona as personaName,
+            contentType,
+            COUNT(*) as total,
+            SUM(CASE WHEN userChoice = 'GO_BACK' THEN 1 ELSE 0 END) as goBackCount,
+            AVG(timeToShowDecisionMs) as avgDecisionTimeMs
+        FROM intervention_results
+        WHERE user_persona IS NOT NULL
+          AND finalSessionDurationMs IS NOT NULL
+        GROUP BY user_persona, contentType
+        ORDER BY user_persona, total DESC
+    """)
+    suspend fun getEffectivenessByPersonaAndContentType(): List<PersonaContentTypeStats>
+
+    /**
+     * Get persona transition history
+     * Shows how users' personas have changed over time
+     */
+    @Query("""
+        SELECT
+            date(timestamp/1000, 'unixepoch', 'localtime') as day,
+            user_persona as personaName,
+            COUNT(*) as count
+        FROM intervention_results
+        WHERE user_persona IS NOT NULL
+        GROUP BY day, user_persona
+        ORDER BY day DESC, count DESC
+    """)
+    suspend fun getPersonaHistoryByDay(): List<PersonaHistoryEntry>
 }
 
 /**
@@ -333,3 +419,57 @@ data class DailyEffectivenessStat(
     val successRate: Double
         get() = if (total > 0) (goBackCount.toDouble() / total) * 100 else 0.0
 }
+
+// ========== Phase 2 JITAI: Persona and Opportunity Analytics Data Classes ==========
+
+/**
+ * Stats for intervention effectiveness by persona
+ */
+data class PersonaEffectivenessStats(
+    val personaName: String,
+    val confidence: String,
+    val total: Int,
+    val goBackCount: Int,
+    val avgDecisionTimeMs: Double?,
+    val avgFinalDurationMs: Double?
+) {
+    val successRate: Double
+        get() = if (total > 0) (goBackCount.toDouble() / total) * 100 else 0.0
+}
+
+/**
+ * Stats for intervention effectiveness by opportunity level
+ */
+data class OpportunityLevelEffectivenessStats(
+    val opportunityLevel: String,
+    val opportunityScore: Int?,
+    val total: Int,
+    val goBackCount: Int,
+    val avgDecisionTimeMs: Double?
+) {
+    val successRate: Double
+        get() = if (total > 0) (goBackCount.toDouble() / total) * 100 else 0.0
+}
+
+/**
+ * Stats for intervention effectiveness by persona and content type
+ */
+data class PersonaContentTypeStats(
+    val personaName: String,
+    val contentType: String,
+    val total: Int,
+    val goBackCount: Int,
+    val avgDecisionTimeMs: Double?
+) {
+    val successRate: Double
+        get() = if (total > 0) (goBackCount.toDouble() / total) * 100 else 0.0
+}
+
+/**
+ * Persona history entry for tracking persona changes over time
+ */
+data class PersonaHistoryEntry(
+    val day: String,
+    val personaName: String,
+    val count: Int
+)

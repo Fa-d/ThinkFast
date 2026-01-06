@@ -20,6 +20,10 @@ import dev.sadakat.thinkfaster.data.sync.SettingsSyncManager
 import dev.sadakat.thinkfaster.data.sync.SyncCoordinator
 import dev.sadakat.thinkfaster.data.sync.backend.SupabaseSyncBackend
 import dev.sadakat.thinkfaster.data.sync.backend.SyncBackend
+import dev.sadakat.thinkfaster.domain.intervention.ContentSelector
+import dev.sadakat.thinkfaster.domain.intervention.OpportunityDetector
+import dev.sadakat.thinkfaster.domain.intervention.PersonaAwareContentSelector
+import dev.sadakat.thinkfaster.domain.intervention.PersonaDetector
 import dev.sadakat.thinkfaster.domain.repository.GoalRepository
 import dev.sadakat.thinkfaster.domain.repository.InterventionResultRepository
 import dev.sadakat.thinkfaster.domain.repository.SettingsRepository
@@ -50,6 +54,31 @@ val repositoryModule = module {
         InterventionRateLimiter(
             context = androidContext(),
             interventionPreferences = get()
+        )
+    }
+
+    // PersonaDetector (singleton) - Phase 2 JITAI: Behavioral user segmentation
+    single {
+        PersonaDetector(
+            interventionResultRepository = get(),
+            usageRepository = get(),
+            preferences = get()
+        )
+    }
+
+    // OpportunityDetector (singleton) - Phase 2 JITAI: Smart intervention timing
+    single {
+        OpportunityDetector(
+            interventionRepository = get(),
+            preferences = get()
+        )
+    }
+
+    // PersonaAwareContentSelector (singleton) - Phase 2 JITAI: Personalized content selection
+    single {
+        PersonaAwareContentSelector(
+            personaDetector = get(),
+            baseContentSelector = ContentSelector()
         )
     }
 

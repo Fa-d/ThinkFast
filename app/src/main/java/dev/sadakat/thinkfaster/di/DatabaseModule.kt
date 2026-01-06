@@ -7,6 +7,8 @@ import dev.sadakat.thinkfaster.data.local.database.MIGRATION_2_3
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_3_4
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_4_5
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_5_6
+import dev.sadakat.thinkfaster.data.local.database.MIGRATION_6_7
+import dev.sadakat.thinkfaster.data.local.database.MIGRATION_7_8
 import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
 import dev.sadakat.thinkfaster.data.seed.callback.SeedDatabaseCallback
 import dev.sadakat.thinkfaster.util.Constants
@@ -22,8 +24,10 @@ val databaseModule = module {
             MIGRATION_2_3,  // Broken Streak Recovery: Add streak recovery table
             MIGRATION_3_4,  // First-Week Retention: Add user baseline table
             MIGRATION_4_5,  // Phase 1: Add feedback and context fields for ML training
-            MIGRATION_5_6   // Phase 2: Add sync metadata columns for multi-device sync
-        ).fallbackToDestructiveMigration()  // Fallback for development
+            MIGRATION_5_6,  // Phase 2: Add sync metadata columns for multi-device sync
+            MIGRATION_6_7,  // Phase 2 JITAI: Add persona and opportunity tracking columns
+            MIGRATION_7_8   // Phase 2 JITAI: Add performance optimization indexes
+        ).fallbackToDestructiveMigrationOnDowngrade()  // Production-safe: only fallback on downgrade
 
         // Only add seed callback for non-production builds
         if (BuildConfig.USER_PERSONA != "PRODUCTION") {

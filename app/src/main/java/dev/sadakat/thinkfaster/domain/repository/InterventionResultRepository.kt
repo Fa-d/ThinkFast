@@ -4,6 +4,10 @@ import dev.sadakat.thinkfaster.domain.model.ContentEffectivenessStats
 import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.domain.model.InterventionResult
 import dev.sadakat.thinkfaster.domain.model.OverallAnalytics
+import dev.sadakat.thinkfaster.domain.model.PersonaContentTypeStats
+import dev.sadakat.thinkfaster.domain.model.PersonaEffectivenessStats
+import dev.sadakat.thinkfaster.domain.model.PersonaHistoryEntry
+import dev.sadakat.thinkfaster.domain.model.OpportunityLevelEffectivenessStats
 
 /**
  * Repository interface for intervention result tracking
@@ -143,6 +147,12 @@ interface InterventionResultRepository {
      */
     suspend fun getTotalResultCount(): Int
 
+    /**
+     * Get the first (oldest) intervention result for this user
+     * Used to determine how long they've been using the app
+     */
+    suspend fun getFirstResult(): InterventionResult?
+
     // ========== Phase 3: Intervention Effectiveness Queries ==========
 
     /**
@@ -204,6 +214,32 @@ interface InterventionResultRepository {
      * Update user ID for an intervention result
      */
     suspend fun updateResultUserId(resultId: Long, userId: String)
+
+    // ========== Phase 2 JITAI: Persona and Opportunity Analytics ==========
+
+    /**
+     * Get effectiveness by user persona
+     * Aggregates intervention success rates by detected persona
+     */
+    suspend fun getEffectivenessByPersona(): List<PersonaEffectivenessStats>
+
+    /**
+     * Get effectiveness by opportunity level
+     * Aggregates intervention success rates by JITAI opportunity score level
+     */
+    suspend fun getEffectivenessByOpportunityLevel(): List<OpportunityLevelEffectivenessStats>
+
+    /**
+     * Get effectiveness by persona and content type combination
+     * Helps identify which content types work best for each persona
+     */
+    suspend fun getEffectivenessByPersonaAndContentType(): List<PersonaContentTypeStats>
+
+    /**
+     * Get persona transition history
+     * Shows how users' personas have changed over time
+     */
+    suspend fun getPersonaHistoryByDay(): List<PersonaHistoryEntry>
 }
 
 /**

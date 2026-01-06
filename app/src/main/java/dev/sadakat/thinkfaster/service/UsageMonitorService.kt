@@ -29,6 +29,7 @@ import dev.sadakat.thinkfaster.util.PermissionHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -50,10 +51,16 @@ class UsageMonitorService : Service() {
     private val trackedAppsRepository: dev.sadakat.thinkfaster.domain.repository.TrackedAppsRepository by inject()
     private val goalRepository: dev.sadakat.thinkfaster.domain.repository.GoalRepository by inject()
 
+    // JITAI dependencies - Phase 2
+    private val personaDetector: dev.sadakat.thinkfaster.domain.intervention.PersonaDetector by inject()
+    private val opportunityDetector: dev.sadakat.thinkfaster.domain.intervention.OpportunityDetector by inject()
+    private val personaAwareContentSelector: dev.sadakat.thinkfaster.domain.intervention.PersonaAwareContentSelector by inject()
+
     private lateinit var appLaunchDetector: AppLaunchDetector
     private lateinit var sessionDetector: SessionDetector
     private lateinit var contextDetector: ContextDetector
     private lateinit var rateLimiter: InterventionRateLimiter
+    private lateinit var adaptiveRateLimiter: AdaptiveInterventionRateLimiter  // JITAI-enhanced rate limiter
 
     // WindowManager-based overlays (full-screen and compact)
     private lateinit var reminderOverlay: ReminderOverlayWindow
@@ -152,6 +159,15 @@ class UsageMonitorService : Service() {
         rateLimiter = InterventionRateLimiter(
             context = this,
             interventionPreferences = interventionPrefs
+        )
+
+        // Initialize JITAI-enhanced adaptive rate limiter - Phase 2
+        adaptiveRateLimiter = AdaptiveInterventionRateLimiter(
+            context = this,
+            interventionPreferences = interventionPrefs,
+            baseRateLimiter = rateLimiter,
+            personaDetector = personaDetector,
+            opportunityDetector = opportunityDetector
         )
 
         // Initialize WindowManager-based overlays (full-screen and compact)
@@ -568,80 +584,215 @@ class UsageMonitorService : Service() {
     }
 
     /**
+     * Build InterventionContext from session state
+     * Phase 2 JITAI: Creates rich context for opportunity detection and content selection
+     *
+     * Performance Optimization: Uses parallel async queries to minimize decision time
+     * - Target: <100ms for JITAI decision making
+     * - Parallelizes independent database calls
+     * - Batches weekly sessions query into single range call
+     * - Tracks performance metrics for monitoring
+     */
+    private suspend fun buildInterventionContext(
+        sessionState: SessionDetector.SessionState
+    ): dev.sadakat.thinkfaster.domain.intervention.InterventionContext {
+        val startTime = System.currentTimeMillis()
+
+        // Prepare date strings once
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+        val yesterday = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000))
+        val weekAgo = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date(System.currentTimeMillis() - 6 * 24L * 60 * 60 * 1000))
+
+        // Parallelize all independent database queries using async/await
+        val todaySessionsDeferred = serviceScope.async {
+            usageRepository.getSessionsInRange(today, today)
+        }
+        val yesterdaySessionsDeferred = serviceScope.async {
+            usageRepository.getSessionsInRange(yesterday, yesterday)
+        }
+        val weeklySessionsDeferred = serviceScope.async {
+            // Batch weekly query into single range call instead of 7 separate calls
+            usageRepository.getSessionsInRange(weekAgo, today)
+        }
+        val goalDeferred = serviceScope.async {
+            goalRepository.getGoalByApp(sessionState.targetApp)
+        }
+        val bestSessionDeferred = serviceScope.async {
+            try {
+                interventionResultRepository.getFirstResult()?.currentSessionDurationMs?.div(1000 * 60)?.toInt() ?: 0
+            } catch (e: Exception) {
+                0
+            }
+        }
+
+        // Get install date synchronously (fast SharedPreferences read)
+        val installDate = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences.getInstance(this)
+            .getInstallDate()
+
+        // Await all parallel results
+        val sessionsToday = todaySessionsDeferred.await()
+        val sessionsYesterday = yesterdaySessionsDeferred.await()
+        val weeklySessions = weeklySessionsDeferred.await()
+        val goal = goalDeferred.await()
+        val bestSessionMinutes = bestSessionDeferred.await()
+
+        // Calculate total usage today (in minutes)
+        val totalUsageTodayMs = sessionsToday.sumOf { it.duration }
+        val totalUsageTodayMin = totalUsageTodayMs / 1000 / 60
+
+        // Calculate total usage yesterday (in minutes)
+        val totalUsageYesterdayMin = sessionsYesterday.sumOf { it.duration } / 1000 / 60
+
+        // Calculate weekly average
+        val weeklyAverageMin = if (weeklySessions.isNotEmpty()) {
+            weeklySessions.sumOf { it.duration } / 1000 / 60 / 7
+        } else {
+            0L
+        }
+
+        val goalMinutes = goal?.dailyLimitMinutes
+        val streakDays = goal?.currentStreak ?: 0
+
+        val daysSinceInstall = if (installDate > 0) {
+            ((System.currentTimeMillis() - installDate) / (1000 * 60 * 60 * 24)).toInt()
+        } else {
+            0
+        }
+
+        // Determine user friction level
+        val frictionLevel = dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.fromDaysSinceInstall(daysSinceInstall)
+
+        // Track performance
+        val decisionTimeMs = System.currentTimeMillis() - startTime
+        if (decisionTimeMs > 50) {
+            ErrorLogger.warning(
+                "buildInterventionContext took ${decisionTimeMs}ms (target: <100ms)",
+                context = "UsageMonitorService.buildInterventionContext"
+            )
+        }
+
+        return dev.sadakat.thinkfaster.domain.intervention.InterventionContext.create(
+            targetApp = sessionState.targetApp,
+            currentSessionDuration = System.currentTimeMillis() - sessionState.startTimestamp,
+            sessionCount = sessionsToday.size,
+            lastSessionEndTime = if (sessionsToday.size > 1) {
+                sessionsToday[sessionsToday.size - 2].endTimestamp ?: sessionsToday[sessionsToday.size - 2].startTimestamp
+            } else {
+                0L
+            },
+            totalUsageToday = totalUsageTodayMin,
+            totalUsageYesterday = totalUsageYesterdayMin,
+            weeklyAverage = weeklyAverageMin,
+            goalMinutes = goalMinutes,
+            streakDays = streakDays,
+            userFrictionLevel = frictionLevel,
+            installDate = installDate,
+            bestSessionMinutes = bestSessionMinutes
+        )
+    }
+
+    /**
      * Show reminder overlay when app is first opened
+     * Phase 2 JITAI: Enhanced with persona and opportunity detection
      */
     private fun showReminderOverlay(sessionState: SessionDetector.SessionState) {
-        // Phase 1: Rate limiting check
-        val sessionDuration = System.currentTimeMillis() - sessionState.startTimestamp
-        val rateLimitResult = rateLimiter.canShowIntervention(
-            InterventionRateLimiter.InterventionType.REMINDER,
-            sessionDuration
-        )
+        // Build intervention context for JITAI decision making
+        serviceScope.launch {
+            try {
+                val interventionContext = buildInterventionContext(sessionState)
 
-        if (!rateLimitResult.allowed) {
-            ErrorLogger.info(
-                "Skipping reminder overlay - rate limit: ${rateLimitResult.reason}",
-                context = "UsageMonitorService.showReminderOverlay"
-            )
-            return
+                // Phase 2 JITAI: Use AdaptiveInterventionRateLimiter with persona and opportunity detection
+                val sessionDuration = System.currentTimeMillis() - sessionState.startTimestamp
+                val adaptiveResult = adaptiveRateLimiter.canShowIntervention(
+                    interventionContext = interventionContext,
+                    interventionType = dev.sadakat.thinkfaster.domain.intervention.InterventionType.REMINDER,
+                    sessionDurationMs = sessionDuration,
+                    forceRefreshPersona = false
+                )
+
+                if (!adaptiveResult.allowed) {
+                    ErrorLogger.info(
+                        "Skipping reminder overlay - ${adaptiveResult.reason} | " +
+                        "Persona: ${adaptiveResult.persona?.name}, " +
+                        "Opportunity: ${adaptiveResult.opportunityLevel} (${adaptiveResult.opportunityScore}/100)",
+                        context = "UsageMonitorService.showReminderOverlay"
+                    )
+                    return@launch
+                }
+
+                // Store JITAI context for overlay to retrieve via JitaiContextHolder
+                adaptiveResult.persona?.let { persona ->
+                    adaptiveResult.personaConfidence?.let { confidence ->
+                        adaptiveResult.opportunityScore?.let { score ->
+                            adaptiveResult.opportunityLevel?.let { level ->
+                                adaptiveResult.decision?.let { decision ->
+                                    val jitaiContext = dev.sadakat.thinkfaster.domain.intervention.JitaiContext(
+                                        persona = persona,
+                                        personaConfidence = confidence,
+                                        opportunityScore = score,
+                                        opportunityLevel = level,
+                                        decision = decision,
+                                        decisionSource = adaptiveResult.decisionSource
+                                    )
+                                    dev.sadakat.thinkfaster.domain.intervention.JitaiContextHolder.setContext(jitaiContext)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check if interventions are snoozed
+                val interventionPrefs = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences.getInstance(this@UsageMonitorService)
+                if (interventionPrefs.isSnoozed()) {
+                    val remainingMinutes = interventionPrefs.getSnoozeRemainingMinutes()
+                    ErrorLogger.info(
+                        "Skipping reminder overlay - snoozed for $remainingMinutes more minutes",
+                        context = "UsageMonitorService.showReminderOverlay"
+                    )
+                    return@launch
+                }
+
+                // Check if overlay permission is granted
+                if (!PermissionHelper.hasOverlayPermission(this@UsageMonitorService)) {
+                    ErrorLogger.warning(
+                        "Cannot show reminder overlay - overlay permission not granted",
+                        context = "UsageMonitorService.showReminderOverlay"
+                    )
+                    return@launch
+                }
+
+                // Track that reminder overlay is showing
+                reminderOverlayShowing = true
+                reminderOverlayShownTime = System.currentTimeMillis()
+
+                // Record that we showed an intervention (for rate limiting)
+                adaptiveRateLimiter.recordIntervention(
+                    dev.sadakat.thinkfaster.domain.intervention.InterventionType.REMINDER
+                )
+
+                // Show WindowManager-based overlay via OverlayManager (prevents simultaneity)
+                overlayManager.showReminder(
+                    sessionId = sessionState.sessionId,
+                    targetApp = sessionState.targetApp
+                )
+
+                ErrorLogger.info(
+                    "Reminder overlay shown with JITAI context: " +
+                    "Persona=${adaptiveResult.persona?.name}, " +
+                    "Opportunity=${adaptiveResult.opportunityLevel}(${adaptiveResult.opportunityScore}/100)",
+                    context = "UsageMonitorService.showReminderOverlay"
+                )
+            } catch (e: Exception) {
+                ErrorLogger.error(
+                    e,
+                    message = "Failed to show reminder overlay with JITAI",
+                    context = "UsageMonitorService.showReminderOverlay"
+                )
+            }
         }
-
-        // Phase 2: Check if interventions are snoozed
-        val interventionPrefs = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences.getInstance(this)
-        if (interventionPrefs.isSnoozed()) {
-            val remainingMinutes = interventionPrefs.getSnoozeRemainingMinutes()
-            ErrorLogger.info(
-                "Skipping reminder overlay - snoozed for $remainingMinutes more minutes",
-                context = "UsageMonitorService.showReminderOverlay"
-            )
-            return
-        }
-
-        // Phase 3: Check context-based conditions
-        val sessionDurationForContext = System.currentTimeMillis() - sessionState.startTimestamp
-        val contextResult = contextDetector.shouldShowInterventionType(
-            ContextDetector.InterventionType.REMINDER,
-            sessionDurationForContext
-        )
-        if (!contextResult.shouldShowIntervention) {
-            ErrorLogger.info(
-                "Skipping reminder overlay - context check failed: ${contextResult.reason}",
-                context = "UsageMonitorService.showReminderOverlay"
-            )
-            return
-        }
-
-        // Phase 4: Check heuristic-based timing predictions
-        val prediction = checkHeuristicPrediction()
-        if (!prediction.shouldShowIntervention) {
-            ErrorLogger.info(
-                "Skipping reminder overlay - heuristic prediction: effectiveness=${prediction.effectivenessScore}, confidence=${prediction.confidence}",
-                context = "UsageMonitorService.showReminderOverlay"
-            )
-            return
-        }
-
-        // Check if overlay permission is granted
-        if (!PermissionHelper.hasOverlayPermission(this)) {
-            ErrorLogger.warning(
-                "Cannot show reminder overlay - overlay permission not granted",
-                context = "UsageMonitorService.showReminderOverlay"
-            )
-            return
-        }
-
-        // Track that reminder overlay is showing
-        reminderOverlayShowing = true
-        reminderOverlayShownTime = System.currentTimeMillis()
-
-        // Record that we showed an intervention (for rate limiting)
-        rateLimiter.recordIntervention(InterventionRateLimiter.InterventionType.REMINDER)
-
-        // Show WindowManager-based overlay via OverlayManager (prevents simultaneity)
-        overlayManager.showReminder(
-            sessionId = sessionState.sessionId,
-            targetApp = sessionState.targetApp
-        )
     }
 
     /**
@@ -691,6 +842,7 @@ class UsageMonitorService : Service() {
 
     /**
      * Show timer overlay after configured duration
+     * Phase 2 JITAI: Enhanced with persona and opportunity detection
      */
     private fun showTimerOverlay(sessionState: SessionDetector.SessionState) {
         ErrorLogger.info(
@@ -698,91 +850,104 @@ class UsageMonitorService : Service() {
             context = "UsageMonitorService.showTimerOverlay"
         )
 
-        // Phase 1: Rate limiting check
-        val sessionDuration = System.currentTimeMillis() - sessionState.startTimestamp
-        val rateLimitResult = rateLimiter.canShowIntervention(
-            InterventionRateLimiter.InterventionType.TIMER,
-            sessionDuration
-        )
+        // Build intervention context for JITAI decision making
+        serviceScope.launch {
+            try {
+                val interventionContext = buildInterventionContext(sessionState)
 
-        if (!rateLimitResult.allowed) {
-            ErrorLogger.info(
-                "Skipping timer overlay - rate limit: ${rateLimitResult.reason}",
-                context = "UsageMonitorService.showTimerOverlay"
-            )
-            return
+                // Phase 2 JITAI: Use AdaptiveInterventionRateLimiter with persona and opportunity detection
+                val sessionDuration = System.currentTimeMillis() - sessionState.startTimestamp
+                val adaptiveResult = adaptiveRateLimiter.canShowIntervention(
+                    interventionContext = interventionContext,
+                    interventionType = dev.sadakat.thinkfaster.domain.intervention.InterventionType.TIMER,
+                    sessionDurationMs = sessionDuration,
+                    forceRefreshPersona = false
+                )
+
+                if (!adaptiveResult.allowed) {
+                    ErrorLogger.info(
+                        "Skipping timer overlay - ${adaptiveResult.reason} | " +
+                        "Persona: ${adaptiveResult.persona?.name}, " +
+                        "Opportunity: ${adaptiveResult.opportunityLevel} (${adaptiveResult.opportunityScore}/100)",
+                        context = "UsageMonitorService.showTimerOverlay"
+                    )
+                    return@launch
+                }
+
+                // Store JITAI context for overlay to retrieve via JitaiContextHolder
+                adaptiveResult.persona?.let { persona ->
+                    adaptiveResult.personaConfidence?.let { confidence ->
+                        adaptiveResult.opportunityScore?.let { score ->
+                            adaptiveResult.opportunityLevel?.let { level ->
+                                adaptiveResult.decision?.let { decision ->
+                                    val jitaiContext = dev.sadakat.thinkfaster.domain.intervention.JitaiContext(
+                                        persona = persona,
+                                        personaConfidence = confidence,
+                                        opportunityScore = score,
+                                        opportunityLevel = level,
+                                        decision = decision,
+                                        decisionSource = adaptiveResult.decisionSource
+                                    )
+                                    dev.sadakat.thinkfaster.domain.intervention.JitaiContextHolder.setContext(jitaiContext)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check if interventions are snoozed
+                val interventionPrefs = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences.getInstance(this@UsageMonitorService)
+                if (interventionPrefs.isSnoozed()) {
+                    val remainingMinutes = interventionPrefs.getSnoozeRemainingMinutes()
+                    ErrorLogger.info(
+                        "Skipping timer overlay - snoozed for $remainingMinutes more minutes",
+                        context = "UsageMonitorService.showTimerOverlay"
+                    )
+                    return@launch
+                }
+
+                // Check if overlay permission is granted
+                if (!PermissionHelper.hasOverlayPermission(this@UsageMonitorService)) {
+                    ErrorLogger.warning(
+                        "Cannot show timer overlay - overlay permission not granted",
+                        context = "UsageMonitorService.showTimerOverlay"
+                    )
+                    return@launch
+                }
+
+                // Track that timer overlay is being shown
+                timerOverlayShownTime = System.currentTimeMillis()
+
+                // Record that we showed an intervention (for rate limiting)
+                adaptiveRateLimiter.recordIntervention(
+                    dev.sadakat.thinkfaster.domain.intervention.InterventionType.TIMER
+                )
+
+                // Show WindowManager-based overlay via OverlayManager (prevents simultaneity)
+                overlayManager.showTimer(
+                    sessionId = sessionState.sessionId,
+                    targetApp = sessionState.targetApp,
+                    startTime = sessionState.startTimestamp,
+                    duration = sessionState.totalDuration
+                )
+
+                ErrorLogger.info(
+                    "Timer overlay shown with JITAI context: " +
+                    "Persona=${adaptiveResult.persona?.name}, " +
+                    "Opportunity=${adaptiveResult.opportunityLevel}(${adaptiveResult.opportunityScore}/100)",
+                    context = "UsageMonitorService.showTimerOverlay"
+                )
+
+                // Note: Session continues after timer alert dismissal
+                // The alert will show again after another timer duration elapses
+            } catch (e: Exception) {
+                ErrorLogger.error(
+                    e,
+                    message = "Failed to show timer overlay with JITAI",
+                    context = "UsageMonitorService.showTimerOverlay"
+                )
+            }
         }
-
-        // Phase 2: Check if interventions are snoozed
-        val interventionPrefs = dev.sadakat.thinkfaster.data.preferences.InterventionPreferences.getInstance(this)
-        if (interventionPrefs.isSnoozed()) {
-            val remainingMinutes = interventionPrefs.getSnoozeRemainingMinutes()
-            ErrorLogger.info(
-                "Skipping timer overlay - snoozed for $remainingMinutes more minutes",
-                context = "UsageMonitorService.showTimerOverlay"
-            )
-            return
-        }
-
-        // Phase 3: Check context-based conditions
-        val sessionDurationForContext = System.currentTimeMillis() - sessionState.startTimestamp
-        val contextResult = contextDetector.shouldShowInterventionType(
-            ContextDetector.InterventionType.TIMER,
-            sessionDurationForContext
-        )
-        if (!contextResult.shouldShowIntervention) {
-            ErrorLogger.info(
-                "Skipping timer overlay - context check failed: ${contextResult.reason}",
-                context = "UsageMonitorService.showTimerOverlay"
-            )
-            return
-        }
-
-        // Phase 4: Check heuristic-based timing predictions
-        val prediction = checkHeuristicPrediction()
-        if (!prediction.shouldShowIntervention) {
-            ErrorLogger.info(
-                "Skipping timer overlay - heuristic prediction: effectiveness=${prediction.effectivenessScore}, confidence=${prediction.confidence}",
-                context = "UsageMonitorService.showTimerOverlay"
-            )
-            return
-        }
-
-        // Check if overlay permission is granted
-        if (!PermissionHelper.hasOverlayPermission(this)) {
-            ErrorLogger.warning(
-                "Cannot show timer overlay - overlay permission not granted",
-                context = "UsageMonitorService.showTimerOverlay"
-            )
-            return
-        }
-
-        ErrorLogger.info(
-            "Overlay permission granted, showing timer overlay",
-            context = "UsageMonitorService.showTimerOverlay"
-        )
-
-        // Track that timer overlay is being shown
-        timerOverlayShownTime = System.currentTimeMillis()
-
-        // Record that we showed an intervention (for rate limiting)
-        rateLimiter.recordIntervention(InterventionRateLimiter.InterventionType.TIMER)
-
-        // Show WindowManager-based overlay via OverlayManager (prevents simultaneity)
-        overlayManager.showTimer(
-            sessionId = sessionState.sessionId,
-            targetApp = sessionState.targetApp,
-            startTime = sessionState.startTimestamp,
-            duration = sessionState.totalDuration
-        )
-
-        ErrorLogger.info(
-            "Timer overlay shown successfully",
-            context = "UsageMonitorService.showTimerOverlay"
-        )
-
-        // Note: Session continues after timer alert dismissal
-        // The alert will show again after another timer duration elapses
     }
 
     /**

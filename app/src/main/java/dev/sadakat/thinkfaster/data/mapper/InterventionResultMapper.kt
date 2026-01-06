@@ -11,6 +11,7 @@ import dev.sadakat.thinkfaster.domain.model.UserChoice
  * Mapper functions to convert between InterventionResultEntity and InterventionResult
  * Phase G: Effectiveness tracking
  * Phase 1: Added feedback fields
+ * Phase 2: Added persona and opportunity tracking fields
  *
  */
 
@@ -39,6 +40,12 @@ fun InterventionResultEntity.toDomain(): InterventionResult {
         audioActive = audioActive,
         wasSnoozed = wasSnoozed,
         snoozeDurationMs = snoozeDurationMs,
+        // Phase 2: Persona and opportunity tracking
+        userPersona = userPersona,
+        personaConfidence = personaConfidence,
+        opportunityScore = opportunityScore,
+        opportunityLevel = opportunityLevel,
+        decisionSource = decisionSource,
         // Outcome
         finalSessionDurationMs = finalSessionDurationMs,
         sessionEndedNormally = sessionEndedNormally,
@@ -71,6 +78,12 @@ fun InterventionResult.toEntity(): InterventionResultEntity {
         audioActive = audioActive,
         wasSnoozed = wasSnoozed,
         snoozeDurationMs = snoozeDurationMs,
+        // Phase 2: Persona and opportunity tracking
+        userPersona = userPersona,
+        personaConfidence = personaConfidence,
+        opportunityScore = opportunityScore,
+        opportunityLevel = opportunityLevel,
+        decisionSource = decisionSource,
         // Outcome
         finalSessionDurationMs = finalSessionDurationMs,
         sessionEndedNormally = sessionEndedNormally,
