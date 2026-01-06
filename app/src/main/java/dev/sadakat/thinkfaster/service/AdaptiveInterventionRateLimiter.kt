@@ -33,10 +33,11 @@ data class AdaptiveRateLimitResult(
  * Phase 2 JITAI: Smart rate limiting with persona and opportunity awareness
  *
  * Enhances the base InterventionRateLimiter with:
- * 1. Basic rate limit checks (existing logic)
- * 2. Opportunity score calculation (JITAI timing)
- * 3. Persona-specific frequency adjustments
- * 4. Rich decision context for analytics
+ * 1. Persona detection (always runs for analytics)
+ * 2. Opportunity score calculation (always runs for analytics)
+ * 3. Basic rate limit checks (existing logic)
+ * 4. Persona-specific frequency adjustments
+ * 5. Rich decision context for analytics
  *
  * Frequency by Persona:
  * - PROBLEMATIC_PATTERN_USER: MINIMAL - Only EXCELLENT opportunities
@@ -75,11 +76,15 @@ class AdaptiveInterventionRateLimiter(
     /**
      * Check if we can show an intervention with JITAI intelligence
      *
+     * IMPORTANT: This ALWAYS runs persona and opportunity detection, even when
+     * basic rate limit checks fail. This provides rich context for analytics and
+     * better understanding of user behavior.
+     *
      * @param interventionContext Current intervention context
      * @param interventionType Type of intervention (REMINDER or TIMER)
      * @param sessionDurationMs Duration of current session
      * @param forceRefreshPersona Force persona re-detection
-     * @return AdaptiveRateLimitResult with rich JITAI context
+     * @return AdaptiveRateLimitResult with rich JITAI context (always includes persona and opportunity)
      */
     suspend fun canShowIntervention(
         interventionContext: InterventionContext,
@@ -88,7 +93,20 @@ class AdaptiveInterventionRateLimiter(
         forceRefreshPersona: Boolean = false
     ): AdaptiveRateLimitResult = withContext(Dispatchers.IO) {
 
-        // Step 1: Basic rate limit checks (existing logic)
+        // Step 1: Always detect user persona (for analytics and better context)
+        val detectedPersona = personaDetector.detectPersona(forceRefreshPersona)
+        val persona = detectedPersona.persona
+        val personaConfidence = detectedPersona.confidence
+
+        // Step 2: Always calculate opportunity score (for analytics and better context)
+        val opportunityDetection = opportunityDetector.detectOpportunity(
+            context = interventionContext
+        )
+        val opportunityScore = opportunityDetection.score
+        val opportunityLevel = opportunityDetection.level
+        val jitaiDecision = opportunityDetection.decision
+
+        // Step 3: Basic rate limit checks (existing logic)
         val basicResult = baseRateLimiter.canShowIntervention(
             interventionType = when (interventionType) {
                 dev.sadakat.thinkfaster.domain.intervention.InterventionType.REMINDER ->
@@ -101,35 +119,29 @@ class AdaptiveInterventionRateLimiter(
             sessionDurationMs = sessionDurationMs
         )
 
-        // If basic checks fail, return early
+        // If basic checks fail, return with JITAI context for analytics
         if (!basicResult.allowed) {
             return@withContext AdaptiveRateLimitResult(
                 allowed = false,
                 reason = basicResult.reason,
                 cooldownRemainingMs = basicResult.cooldownRemainingMs,
+                persona = persona,
+                personaConfidence = personaConfidence,
+                opportunityScore = opportunityScore,
+                opportunityLevel = opportunityLevel,
+                decision = jitaiDecision,
                 decisionSource = "BASIC_RATE_LIMIT"
             )
         }
 
-        // Step 2: Detect user persona
-        val detectedPersona = personaDetector.detectPersona(forceRefreshPersona)
-        val persona = detectedPersona.persona
-        val personaConfidence = detectedPersona.confidence
-
-        // Step 3: Calculate opportunity score
-        val opportunityDetection = opportunityDetector.detectOpportunity(
-            context = interventionContext
-        )
-        val opportunityScore = opportunityDetection.score
-        val opportunityLevel = opportunityDetection.level
-        val jitaiDecision = opportunityDetection.decision
-
         // Step 4: Apply persona-specific frequency rules
+        // Extended "daytime" window to 6 AM - 11 PM (from 6 AM - 8 PM)
+        // This accommodates evening usage while avoiding late-night/early-morning hours
         val personaAllowed = checkPersonaFrequencyRules(
             persona = persona,
             opportunityScore = opportunityScore,
             opportunityLevel = opportunityLevel,
-            isDaytime = interventionContext.timeOfDay in 6..20
+            isDaytime = interventionContext.timeOfDay in 6..23
         )
 
         if (!personaAllowed) {
@@ -235,7 +247,8 @@ class AdaptiveInterventionRateLimiter(
                 }
             }
 
-            // ONBOARDING: Moderate+, daytime only
+            // ONBOARDING: Moderate+, daytime only (6 AM - 11 PM)
+            // Extended from 8 PM to 11 PM to accommodate evening usage while avoiding late-night disruptions
             InterventionFrequency.ONBOARDING -> {
                 isDaytime && (opportunityScore >= 30)
             }

@@ -685,6 +685,63 @@ private fun InterventionSettingsBottomSheet(
             }
         }
 
+        // Always Show Reminder on App Launch
+        // NOTE: This feature does NOT work when snooze is active - snooze takes precedence
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = Shapes.button,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.md),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "🔔",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Show Reminder on Launch",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = when {
+                            uiState.snoozeActive -> "Snooze is active - reminders are paused"
+                            uiState.appSettings.alwaysShowReminder -> "Show intervention every time you open the app"
+                            else -> "Show intervention every time you open the app"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (uiState.snoozeActive) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
+
+                Switch(
+                    checked = uiState.appSettings.alwaysShowReminder,
+                    onCheckedChange = { viewModel.setAlwaysShowReminder(it) },
+                    enabled = !uiState.snoozeActive  // Disable when snooze is active (snooze takes precedence)
+                )
+            }
+        }
+
         // Overlay Style
         Card(
             modifier = Modifier.fillMaxWidth(),

@@ -363,6 +363,7 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         }
 
         // Step 1: Create the new table with all columns including the new ones
+        // IMPORTANT: Column order MUST match InterventionResultEntity field order exactly
         database.execSQL(
             """
             CREATE TABLE intervention_results_new (
@@ -385,23 +386,24 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                 audio_active INTEGER NOT NULL DEFAULT 0,
                 was_snoozed INTEGER NOT NULL DEFAULT 0,
                 snooze_duration_ms INTEGER,
+                user_persona TEXT,
+                persona_confidence TEXT,
+                opportunity_score INTEGER,
+                opportunity_level TEXT,
+                decision_source TEXT,
                 finalSessionDurationMs INTEGER,
                 sessionEndedNormally INTEGER,
                 timestamp INTEGER NOT NULL,
                 user_id TEXT DEFAULT NULL,
                 sync_status TEXT NOT NULL DEFAULT 'PENDING',
                 last_modified INTEGER NOT NULL DEFAULT 0,
-                cloud_id TEXT DEFAULT NULL,
-                user_persona TEXT,
-                persona_confidence TEXT,
-                opportunity_score INTEGER,
-                opportunity_level TEXT,
-                decision_source TEXT
+                cloud_id TEXT DEFAULT NULL
             )
             """.trimIndent()
         )
 
         // Step 2: Copy data from old table to new table
+        // IMPORTANT: Column order MUST match the CREATE TABLE order above
         database.execSQL(
             """
             INSERT INTO intervention_results_new (
@@ -409,7 +411,9 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                 hourOfDay, dayOfWeek, isWeekend, isLateNight, sessionCount,
                 quickReopen, currentSessionDurationMs, userChoice, timeToShowDecisionMs,
                 user_feedback, feedback_timestamp, audio_active, was_snoozed,
-                snooze_duration_ms, finalSessionDurationMs, sessionEndedNormally,
+                snooze_duration_ms,
+                user_persona, persona_confidence, opportunity_score, opportunity_level, decision_source,
+                finalSessionDurationMs, sessionEndedNormally,
                 timestamp, user_id, sync_status, last_modified, cloud_id
             )
             SELECT
@@ -417,7 +421,9 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                 hourOfDay, dayOfWeek, isWeekend, isLateNight, sessionCount,
                 quickReopen, currentSessionDurationMs, userChoice, timeToShowDecisionMs,
                 user_feedback, feedback_timestamp, audio_active, was_snoozed,
-                snooze_duration_ms, finalSessionDurationMs, sessionEndedNormally,
+                snooze_duration_ms,
+                NULL, NULL, NULL, NULL, NULL,
+                finalSessionDurationMs, sessionEndedNormally,
                 timestamp, user_id, sync_status, last_modified, cloud_id
             FROM intervention_results
             """.trimIndent()
@@ -506,23 +512,24 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
                     audio_active INTEGER NOT NULL DEFAULT 0,
                     was_snoozed INTEGER NOT NULL DEFAULT 0,
                     snooze_duration_ms INTEGER,
+                    user_persona TEXT,
+                    persona_confidence TEXT,
+                    opportunity_score INTEGER,
+                    opportunity_level TEXT,
+                    decision_source TEXT,
                     finalSessionDurationMs INTEGER,
                     sessionEndedNormally INTEGER,
                     timestamp INTEGER NOT NULL,
                     user_id TEXT DEFAULT NULL,
                     sync_status TEXT NOT NULL DEFAULT 'PENDING',
                     last_modified INTEGER NOT NULL DEFAULT 0,
-                    cloud_id TEXT DEFAULT NULL,
-                    user_persona TEXT,
-                    persona_confidence TEXT,
-                    opportunity_score INTEGER,
-                    opportunity_level TEXT,
-                    decision_source TEXT
+                    cloud_id TEXT DEFAULT NULL
                 )
                 """.trimIndent()
             )
 
             // Step 2: Copy all data - must explicitly map columns due to different order
+            // IMPORTANT: Column order MUST match the CREATE TABLE order above
             database.execSQL(
                 """
                 INSERT INTO intervention_results_new (
@@ -530,18 +537,20 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
                     hourOfDay, dayOfWeek, isWeekend, isLateNight, sessionCount,
                     quickReopen, currentSessionDurationMs, userChoice, timeToShowDecisionMs,
                     user_feedback, feedback_timestamp, audio_active, was_snoozed,
-                    snooze_duration_ms, finalSessionDurationMs, sessionEndedNormally,
-                    timestamp, user_id, sync_status, last_modified, cloud_id,
-                    user_persona, persona_confidence, opportunity_score, opportunity_level, decision_source
+                    snooze_duration_ms,
+                    user_persona, persona_confidence, opportunity_score, opportunity_level, decision_source,
+                    finalSessionDurationMs, sessionEndedNormally,
+                    timestamp, user_id, sync_status, last_modified, cloud_id
                 )
                 SELECT
                     id, sessionId, targetApp, interventionType, contentType,
                     hourOfDay, dayOfWeek, isWeekend, isLateNight, sessionCount,
                     quickReopen, currentSessionDurationMs, userChoice, timeToShowDecisionMs,
                     user_feedback, feedback_timestamp, audio_active, was_snoozed,
-                    snooze_duration_ms, finalSessionDurationMs, sessionEndedNormally,
-                    timestamp, user_id, sync_status, last_modified, cloud_id,
-                    user_persona, persona_confidence, opportunity_score, opportunity_level, decision_source
+                    snooze_duration_ms,
+                    user_persona, persona_confidence, opportunity_score, opportunity_level, decision_source,
+                    finalSessionDurationMs, sessionEndedNormally,
+                    timestamp, user_id, sync_status, last_modified, cloud_id
                 FROM intervention_results
                 """.trimIndent()
             )
