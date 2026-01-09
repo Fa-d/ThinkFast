@@ -54,8 +54,7 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun OnboardingPermissionOverlayScreen(
-    navController: NavController,
-    contentPadding: PaddingValues = PaddingValues()
+    navController: NavController, contentPadding: PaddingValues = PaddingValues()
 ) {
     val context = LocalContext.current
     var hasPermission by remember {
@@ -93,8 +92,7 @@ fun OnboardingPermissionOverlayScreen(
         color = MaterialTheme.colorScheme.background
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
         ) {
             val maxWidth = getMaxContentWidth()
             Column(
@@ -102,204 +100,143 @@ fun OnboardingPermissionOverlayScreen(
                     .widthIn(max = maxWidth)
                     .padding(24.dp)
             ) {
-            // Progress indicator: Step 4 of 6
-            OnboardingProgressIndicator(
-                currentStep = 4,
-                totalSteps = 6,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
+                // Progress indicator: Step 4 of 6
+                OnboardingProgressIndicator(
+                    currentStep = 4,
+                    totalSteps = 6,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            // Permission primer content
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                // Icon with checkmark overlay
-                Box(
-                    contentAlignment = Alignment.Center
+                // Permission primer content
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    // Main icon
+                    // Icon with checkmark overlay
                     Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "🔔",
-                            fontSize = 54.sp
-                        )
+                        // Main icon
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "🔔", fontSize = 54.sp
+                            )
+                        }
                     }
 
-                    // Checkmark overlay (when granted)
-                    if (showCheckmark) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Permission granted",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(48.dp)
-                        )
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // Title
+                    Text(
+                        text = "Get Mindful Reminders",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+
+                    // Social proof card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                        ), shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "\"89% of users say overlays help them stay mindful\"",
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                ),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                // Title
-                Text(
-                    text = "Get Mindful Reminders",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Description
-                Text(
-                    text = "When you open social media, we'll show a gentle reminder to help you pause and reflect before scrolling.",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        textAlign = TextAlign.Center,
-                        lineHeight = 24.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Social proof card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    // Essential badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "\"89% of users say overlays help them stay mindful\"",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center,
-                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                            ),
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                            text = "ESSENTIAL", style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            ), color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Example preview hint
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Example reminder:",
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface
+                // Grant button
+                if (hasPermission) {
+                    // Permission granted - show continue button
+                    Button(
+                        onClick = {
+                            navController.navigate(Screen.OnboardingPermissionNotification.route)
+                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                    ) {
                         Text(
-                            text = "\"Taking a mindful break?\"",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            text = "Continue", fontSize = 16.sp, fontWeight = FontWeight.SemiBold
                         )
                     }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Essential badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "ESSENTIAL",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Grant button
-            if (hasPermission) {
-                // Permission granted - show continue button
-                Button(
-                    onClick = {
-                        navController.navigate(Screen.OnboardingPermissionNotification.route)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text(
-                        text = "Continue",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            } else {
-                // Permission not granted - show grant button
-                Button(
-                    onClick = {
-                        // Launch overlay permission settings
-                        val intent = Intent(
-                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                            Uri.parse("package:${context.packageName}")
+                } else {
+                    // Permission not granted - show grant button
+                    Button(
+                        onClick = {
+                            // Launch overlay permission settings
+                            val intent = Intent(
+                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.parse("package:${context.packageName}")
+                            )
+                            context.startActivity(intent)
+                        }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
+                    ) {
+                        Text(
+                            text = "Enable Overlays",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Helper text
                     Text(
-                        text = "Enable Overlays",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        text = "Toggle 'Permit drawing over other apps' ON for ThinkFast.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Helper text
-                Text(
-                    text = "Toggle 'Permit drawing over other apps' ON for ThinkFast.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
             }
         }
     }

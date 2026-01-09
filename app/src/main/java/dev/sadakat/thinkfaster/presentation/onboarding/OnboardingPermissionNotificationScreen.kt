@@ -141,18 +141,6 @@ fun OnboardingPermissionNotificationScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Description
-                Text(
-                    text = "Get daily progress updates and celebration messages to help you stay motivated and on track.",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        textAlign = TextAlign.Center,
-                        lineHeight = 24.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
-
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // Benefits card

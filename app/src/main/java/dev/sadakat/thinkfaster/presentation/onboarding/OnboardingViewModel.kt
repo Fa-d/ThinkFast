@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import dev.sadakat.thinkfaster.analytics.AnalyticsManager
 import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 import dev.sadakat.thinkfaster.domain.model.Goal
+import dev.sadakat.thinkfaster.domain.model.InstalledAppInfo
 import dev.sadakat.thinkfaster.domain.repository.GoalRepository
+import dev.sadakat.thinkfaster.domain.usecase.apps.GetInstalledAppsUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -86,6 +88,7 @@ class OnboardingViewModel(
 
     /**
      * Complete onboarding with goal setup
+     * Creates goals for all selected apps
      */
     fun completeOnboarding(context: Context, goalMinutes: Int = DEFAULT_GOAL_MINUTES) {
         viewModelScope.launch {
@@ -93,27 +96,25 @@ class OnboardingViewModel(
             val today = dateFormat.format(Date())
             val now = System.currentTimeMillis()
 
-            // Set default goals for Facebook and Instagram
-            val facebookGoal = Goal(
-                targetApp = "com.facebook.katana",
-                dailyLimitMinutes = goalMinutes,
-                startDate = today,
-                currentStreak = 0,
-                longestStreak = 0,
-                lastUpdated = now
-            )
+            // Create goals for all selected apps
+            // If no apps were selected (edge case), fallback to Facebook and Instagram
+            val appsToCreateGoalsFor = if (_uiState.value.selectedApps.isEmpty()) {
+                listOf("com.facebook.katana", "com.instagram.android")
+            } else {
+                _uiState.value.selectedApps.toList()
+            }
 
-            val instagramGoal = Goal(
-                targetApp = "com.instagram.android",
-                dailyLimitMinutes = goalMinutes,
-                startDate = today,
-                currentStreak = 0,
-                longestStreak = 0,
-                lastUpdated = now
-            )
-
-            goalRepository.upsertGoal(facebookGoal)
-            goalRepository.upsertGoal(instagramGoal)
+            appsToCreateGoalsFor.forEach { packageName ->
+                val goal = Goal(
+                    targetApp = packageName,
+                    dailyLimitMinutes = goalMinutes,
+                    startDate = today,
+                    currentStreak = 0,
+                    longestStreak = 0,
+                    lastUpdated = now
+                )
+                goalRepository.upsertGoal(goal)
+            }
 
             // Track analytics
             val interventionPrefs = InterventionPreferences(context)
@@ -168,6 +169,114 @@ class OnboardingViewModel(
             SampleUsageDay(dayLabel = "Sun", facebookMinutes = 41, instagramMinutes = 32)
         )
     }
+
+    /**
+     * Load installed apps in the background
+     * Pre-selects popular social apps if available
+     */
+    fun loadInstalledApps(context: Context) {
+        if (_uiState.value.hasLoadedApps) return // Prevent reload
+
+        android.util.Log.d("OnboardingViewModel", "Loading installed apps...")
+        _uiState.value = _uiState.value.copy(isLoadingApps = true, appsLoadError = null)
+
+        viewModelScope.launch {
+            try {
+                val getAppsUseCase = GetInstalledAppsUseCase(context)
+                val apps = getAppsUseCase()
+
+                android.util.Log.d("OnboardingViewModel", "Loaded ${apps.size} apps")
+
+                _uiState.value = _uiState.value.copy(
+                    installedApps = apps,
+                    selectedApps = getPreselectedApps(apps),
+                    isLoadingApps = false,
+                    hasLoadedApps = true
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("OnboardingViewModel", "Failed to load apps", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoadingApps = false,
+                    appsLoadError = e.message ?: "Failed to load apps: ${e.javaClass.simpleName}"
+                )
+            }
+        }
+    }
+
+    /**
+     * Get pre-selected apps based on popular social media apps
+     */
+    private fun getPreselectedApps(apps: List<InstalledAppInfo>): Set<String> {
+        val popularPackages = setOf(
+            "com.instagram.android",      // Instagram
+            "com.facebook.katana",         // Facebook
+            "com.zhiliaoapp.musically",    // TikTok
+            "com.twitter.android"          // Twitter/X
+        )
+
+        // Find which popular apps are installed
+        val installedPopular = apps
+            .map { it.packageName }
+            .filter { it in popularPackages }
+
+        // Pre-select up to 3 most popular social apps
+        return installedPopular.take(3).toSet()
+    }
+
+    /**
+     * Toggle app selection (add/remove from selected set)
+     */
+    fun toggleAppSelection(packageName: String) {
+        val currentSelected = _uiState.value.selectedApps
+        val newSelected = if (packageName in currentSelected) {
+            currentSelected - packageName
+        } else {
+            currentSelected + packageName
+        }
+
+        _uiState.value = _uiState.value.copy(selectedApps = newSelected)
+    }
+
+    /**
+     * Validate that at least 1 app is selected
+     */
+    fun validateAppSelection(): Boolean {
+        return _uiState.value.selectedApps.isNotEmpty()
+    }
+
+    /**
+     * Create goals for all selected apps
+     * Called during onboarding completion
+     */
+    suspend fun createGoalsForSelectedApps(
+        context: Context,
+        goalMinutes: Int = _uiState.value.selectedGoalMinutes
+    ) {
+        val selectedApps = _uiState.value.selectedApps
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val today = dateFormat.format(Date())
+        val now = System.currentTimeMillis()
+
+        selectedApps.forEach { packageName ->
+            val goal = Goal(
+                targetApp = packageName,
+                dailyLimitMinutes = goalMinutes,
+                startDate = today,
+                currentStreak = 0,
+                longestStreak = 0,
+                lastUpdated = now
+            )
+            goalRepository.upsertGoal(goal)
+        }
+    }
+
+    /**
+     * Retry loading apps
+     */
+    fun retryLoadApps(context: Context) {
+        _uiState.value = _uiState.value.copy(hasLoadedApps = false)
+        loadInstalledApps(context)
+    }
 }
 
 /**
@@ -177,7 +286,13 @@ class OnboardingViewModel(
 data class OnboardingState(
     val currentPage: Int = 0, // For old flow: 0 = Welcome, 1 = Permissions, 2 = Goals
     val selectedGoalMinutes: Int = 60, // Default: 60 minutes/day (user-selectable: 15-180)
-    val isCompleted: Boolean = false // Set to true when onboarding is fully complete
+    val isCompleted: Boolean = false, // Set to true when onboarding is fully complete
+    // App selection properties
+    val installedApps: List<InstalledAppInfo> = emptyList(),
+    val selectedApps: Set<String> = emptySet(), // Package names of selected apps
+    val isLoadingApps: Boolean = false,
+    val appsLoadError: String? = null,
+    val hasLoadedApps: Boolean = false
 )
 
 /**

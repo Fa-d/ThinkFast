@@ -101,181 +101,171 @@ fun OnboardingPermissionUsageScreen(
                     .widthIn(max = maxWidth)
                     .padding(24.dp)
             ) {
-            // Progress indicator: Step 3 of 6
-            OnboardingProgressIndicator(
-                currentStep = 3,
-                totalSteps = 6,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
+                // Progress indicator: Step 3 of 6
+                OnboardingProgressIndicator(
+                    currentStep = 3,
+                    totalSteps = 6,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            // Permission primer content
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                // Icon with checkmark overlay
-                Box(
-                    contentAlignment = Alignment.Center
+                // Permission primer content
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    // Main icon
+                    // Icon with checkmark overlay
                     Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "📊",
-                            fontSize = 54.sp
-                        )
+                        // Main icon
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "📊",
+                                fontSize = 54.sp
+                            )
+                        }
+
+                        // Checkmark overlay (when granted)
+                        if (showCheckmark) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Permission granted",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
                     }
 
-                    // Checkmark overlay (when granted)
-                    if (showCheckmark) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Permission granted",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(48.dp)
-                        )
-                    }
-                }
+                    Spacer(modifier = Modifier.height(32.dp))
 
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Title
-                Text(
-                    text = "Track Your Social Media Usage",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Description
-                Text(
-                    text = "ThinkFast needs to see when you open Facebook and Instagram to track your usage and show you insights.",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        textAlign = TextAlign.Center,
-                        lineHeight = 24.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Benefits list
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            text = "This lets you:",
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        BenefitItem("📈 See your daily usage trends")
-                        BenefitItem("💡 Get insights into your habits")
-                        BenefitItem("🎯 Track progress toward your goals")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Essential badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
+                    // Title
                     Text(
-                        text = "ESSENTIAL",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold
+                        text = "Track Your Social Media Usage",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
                         ),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onBackground
                     )
-                }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                // Privacy note
-                Text(
-                    text = "✓ All data stays private on your device",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center
-                )
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                    // Benefits list
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            Text(
+                                text = "This lets you:",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            BenefitItem("📈 See your daily usage trends")
+                            BenefitItem("💡 Get insights into your habits")
+                            BenefitItem("🎯 Track progress toward your goals")
+                        }
+                    }
 
-            // Grant button
-            if (hasPermission) {
-                // Permission granted - show continue button
-                Button(
-                    onClick = {
-                        navController.navigate(Screen.OnboardingPermissionOverlay.route)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Essential badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "ESSENTIAL",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Privacy note
                     Text(
-                        text = "Continue",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        text = "✓ All data stays private on your device",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center
                     )
                 }
-            } else {
-                // Permission not granted - show grant button
-                Button(
-                    onClick = {
-                        // Launch usage stats settings
-                        val intent = android.content.Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Grant button
+                if (hasPermission) {
+                    // Permission granted - show continue button
+                    Button(
+                        onClick = {
+                            navController.navigate(Screen.OnboardingPermissionOverlay.route)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(
+                            text = "Continue",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                } else {
+                    // Permission not granted - show grant button
+                    Button(
+                        onClick = {
+                            // Launch usage stats settings
+                            val intent =
+                                android.content.Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(
+                            text = "Grant Usage Access",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Helper text
                     Text(
-                        text = "Grant Usage Access",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        text = "You'll be taken to Settings. Find 'ThinkFast' and toggle it ON.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Helper text
-                Text(
-                    text = "You'll be taken to Settings. Find 'ThinkFast' and toggle it ON.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
             }
         }
     }

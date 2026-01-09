@@ -19,27 +19,42 @@ class GetInstalledAppsUseCase(
         try {
             val pm = context.packageManager
 
-            pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            // Popular apps that should appear first (in order of priority)
+            val popularApps = listOf(
+                "com.instagram.android",         // Instagram
+                "com.zhiliaoapp.musically.go",   // TikTok
+                "com.zhiliaoapp.musically",      // TikTok (old)
+                "com.facebook.katana",           // Facebook
+                "com.twitter.android",           // Twitter/X
+                "com.snapchat.android",          // Snapchat
+                "com.reddit.frontpage",          // Reddit
+                "com.linkedin.android",          // LinkedIn
+                "com.whatsapp",                  // WhatsApp
+                "com.google.android.youtube",    // YouTube
+                "com.pinterest",                 // Pinterest
+                "com.discord",                   // Discord
+                "org.telegram.messenger",        // Telegram
+                "com.tiktok.users",              // TikTok (variant)
+            )
+
+            // Get all installed apps
+            val allApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            android.util.Log.d("GetInstalledAppsUseCase", "Total apps found: ${allApps.size}")
+
+            val filteredApps = allApps
                 .filter { appInfo ->
                     // Exclude ThinkFast itself
                     if (appInfo.packageName == context.packageName) {
                         return@filter false
                     }
 
-                    // Filter out system apps
-                    // A system app typically:
-                    // 1. Has FLAG_SYSTEM flag set
-                    // 2. Does NOT have FLAG_UPDATED_SYSTEM_APP (not updated by user)
-                    // 3. Has no launcher intent (not a user-facing app)
-                    val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                    val isUpdatedSystemApp = (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
-                    val hasLauncherIntent = pm.getLaunchIntentForPackage(appInfo.packageName) != null
+                    // Only include apps that have a launcher intent (appear in app drawer)
+                    val hasLauncher = pm.getLaunchIntentForPackage(appInfo.packageName) != null
+                    if (!hasLauncher) {
+                        return@filter false
+                    }
 
-                    // Exclude if: it's a system app AND not updated by user AND has no launcher
-                    // This keeps: user apps, updated system apps, and system apps with launchers
-                    val shouldExclude = isSystemApp && !isUpdatedSystemApp && !hasLauncherIntent
-
-                    !shouldExclude
+                    true
                 }
                 .mapNotNull { appInfo ->
                     try {
@@ -51,17 +66,29 @@ class GetInstalledAppsUseCase(
                             isInstalled = true
                         )
                     } catch (e: Exception) {
+                        android.util.Log.e("GetInstalledAppsUseCase",
+                            "Error loading app ${appInfo.packageName}: ${e.message}")
                         // Skip apps we can't load info for (e.g., no icon, no label)
                         null
                     }
                 }
-                .sortedBy { it.appName.lowercase() }
-        } catch (e: SecurityException) {
-            // Permission denied - return empty list
-            emptyList()
+                .sortedWith(compareBy(
+                    // First: Popular apps get priority (lower index = higher priority)
+                    { app ->
+                        val index = popularApps.indexOf(app.packageName)
+                        if (index >= 0) index else Int.MAX_VALUE
+                    },
+                    // Second: Sort by category (Social Media first, then Entertainment, etc.)
+                    { app -> app.category.ordinal },
+                    // Third: Alphabetically within same priority
+                    { app -> app.appName.lowercase() }
+                ))
+
+            android.util.Log.d("GetInstalledAppsUseCase", "Filtered apps count: ${filteredApps.size}")
+            filteredApps
         } catch (e: Exception) {
-            // Other errors - return empty list
-            emptyList()
+            android.util.Log.e("GetInstalledAppsUseCase", "Error getting apps: ${e.message}", e)
+            throw e
         }
     }
 
