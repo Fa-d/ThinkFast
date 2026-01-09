@@ -17,6 +17,7 @@ import dev.sadakat.thinkfaster.data.preferences.NotificationPreferences
 import dev.sadakat.thinkfaster.data.sync.supabase.SupabaseClientProvider
 import dev.sadakat.thinkfaster.di.analyticsModule
 import dev.sadakat.thinkfaster.di.databaseModule
+import dev.sadakat.thinkfaster.di.interventionModule
 import dev.sadakat.thinkfaster.di.repositoryModule
 import dev.sadakat.thinkfaster.di.useCaseModule
 import dev.sadakat.thinkfaster.di.viewModelModule
@@ -50,7 +51,8 @@ class ThinkFasterApplication : Application(), KoinComponent {
                 repositoryModule,
                 useCaseModule,
                 viewModelModule,
-                analyticsModule
+                analyticsModule,
+                interventionModule  // Phase 1: Intervention tracking components
             )
         }
 
@@ -212,6 +214,10 @@ class ThinkFasterApplication : Application(), KoinComponent {
         if (syncPrefs.isAutoSyncEnabled() && syncPrefs.isAuthenticated()) {
             dev.sadakat.thinkfaster.util.SyncScheduler.schedulePeriodicSync(this)
         }
+
+        // Schedule Phase 1 outcome collection workers
+        // These run automatically to collect intervention outcomes at different time windows
+        WorkManagerHelper.scheduleAllOutcomeCollectionWorkers(this)
     }
 
     /**

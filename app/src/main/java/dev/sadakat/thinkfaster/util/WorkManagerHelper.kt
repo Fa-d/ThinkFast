@@ -7,7 +7,10 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dev.sadakat.thinkfaster.data.preferences.NotificationPreferences
 import dev.sadakat.thinkfaster.worker.EveningNotificationWorker
+import dev.sadakat.thinkfaster.worker.LongTermOutcomeCollectionWorker
+import dev.sadakat.thinkfaster.worker.MediumTermOutcomeCollectionWorker
 import dev.sadakat.thinkfaster.worker.MorningNotificationWorker
+import dev.sadakat.thinkfaster.worker.ShortTermOutcomeCollectionWorker
 import dev.sadakat.thinkfaster.worker.StreakMonitorWorker
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -139,5 +142,105 @@ object WorkManagerHelper {
         }
 
         return targetTime.timeInMillis - currentTime.timeInMillis
+    }
+
+    // ========== Phase 1: Outcome Collection Workers ==========
+
+    /**
+     * Schedule short-term outcome collection worker
+     * Runs every 30 minutes to collect outcomes 5-30 min after interventions
+     *
+     * Phase 1: Collects proximal and short-term intervention outcomes
+     */
+    fun scheduleShortTermOutcomeCollection(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+
+        // Create periodic work request (runs every 30 minutes)
+        val request = PeriodicWorkRequestBuilder<ShortTermOutcomeCollectionWorker>(
+            repeatInterval = 30,
+            repeatIntervalTimeUnit = TimeUnit.MINUTES
+        )
+            .setConstraints(Constraints.NONE)
+            .build()
+
+        // Use KEEP policy to avoid rescheduling unnecessarily
+        workManager.enqueueUniquePeriodicWork(
+            ShortTermOutcomeCollectionWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    /**
+     * Schedule medium-term outcome collection worker
+     * Runs every 6 hours to collect outcomes from earlier the same day
+     *
+     * Phase 1: Collects same-day intervention outcomes
+     */
+    fun scheduleMediumTermOutcomeCollection(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+
+        // Create periodic work request (runs every 6 hours)
+        val request = PeriodicWorkRequestBuilder<MediumTermOutcomeCollectionWorker>(
+            repeatInterval = 6,
+            repeatIntervalTimeUnit = TimeUnit.HOURS
+        )
+            .setConstraints(Constraints.NONE)
+            .build()
+
+        // Use KEEP policy to avoid rescheduling unnecessarily
+        workManager.enqueueUniquePeriodicWork(
+            MediumTermOutcomeCollectionWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    /**
+     * Schedule long-term outcome collection worker
+     * Runs daily to collect outcomes 7-30 days after interventions
+     *
+     * Phase 1: Collects long-term behavior change data and calculates reward scores
+     */
+    fun scheduleLongTermOutcomeCollection(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+
+        // Create periodic work request (runs daily at 3 AM)
+        val initialDelay = calculateDelayToTime(targetHour = 3, targetMinute = 0)
+        val request = PeriodicWorkRequestBuilder<LongTermOutcomeCollectionWorker>(
+            repeatInterval = 1,
+            repeatIntervalTimeUnit = TimeUnit.DAYS
+        )
+            .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+            .setConstraints(Constraints.NONE)
+            .build()
+
+        // Use KEEP policy to avoid rescheduling unnecessarily
+        workManager.enqueueUniquePeriodicWork(
+            LongTermOutcomeCollectionWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    /**
+     * Schedule all Phase 1 outcome collection workers
+     * Call this once on app initialization
+     */
+    fun scheduleAllOutcomeCollectionWorkers(context: Context) {
+        scheduleShortTermOutcomeCollection(context)
+        scheduleMediumTermOutcomeCollection(context)
+        scheduleLongTermOutcomeCollection(context)
+    }
+
+    /**
+     * Cancel all Phase 1 outcome collection workers
+     * Useful for testing or disabling the feature
+     */
+    fun cancelAllOutcomeCollectionWorkers(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+        workManager.cancelUniqueWork(ShortTermOutcomeCollectionWorker.WORK_NAME)
+        workManager.cancelUniqueWork(MediumTermOutcomeCollectionWorker.WORK_NAME)
+        workManager.cancelUniqueWork(LongTermOutcomeCollectionWorker.WORK_NAME)
     }
 }

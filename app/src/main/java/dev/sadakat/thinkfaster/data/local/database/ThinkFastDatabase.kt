@@ -4,14 +4,18 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import dev.sadakat.thinkfaster.data.local.database.dao.ComprehensiveOutcomeDao
 import dev.sadakat.thinkfaster.data.local.database.dao.DailyStatsDao
+import dev.sadakat.thinkfaster.data.local.database.dao.DecisionExplanationDao
 import dev.sadakat.thinkfaster.data.local.database.dao.GoalDao
 import dev.sadakat.thinkfaster.data.local.database.dao.InterventionResultDao
 import dev.sadakat.thinkfaster.data.local.database.dao.StreakRecoveryDao
 import dev.sadakat.thinkfaster.data.local.database.dao.UserBaselineDao
 import dev.sadakat.thinkfaster.data.local.database.dao.UsageEventDao
 import dev.sadakat.thinkfaster.data.local.database.dao.UsageSessionDao
+import dev.sadakat.thinkfaster.data.local.database.entities.ComprehensiveOutcomeEntity
 import dev.sadakat.thinkfaster.data.local.database.entities.DailyStatsEntity
+import dev.sadakat.thinkfaster.data.local.database.entities.DecisionExplanationEntity
 import dev.sadakat.thinkfaster.data.local.database.entities.GoalEntity
 import dev.sadakat.thinkfaster.data.local.database.entities.InterventionResultEntity
 import dev.sadakat.thinkfaster.data.local.database.entities.StreakRecoveryEntity
@@ -27,9 +31,11 @@ import dev.sadakat.thinkfaster.data.local.database.entities.UsageSessionEntity
         GoalEntity::class,
         InterventionResultEntity::class,  // Phase G: Added for effectiveness tracking
         StreakRecoveryEntity::class,  // Broken Streak Recovery feature
-        UserBaselineEntity::class  // First-Week Retention feature
+        UserBaselineEntity::class,  // First-Week Retention feature
+        ComprehensiveOutcomeEntity::class,  // Phase 1: Comprehensive outcome tracking
+        DecisionExplanationEntity::class  // Phase 1: Decision explanation logging
     ],
-    version = 8,  // Phase 2 JITAI: Bumped for performance optimization indexes
+    version = 9,  // Phase 1: Added comprehensive outcome and decision explanation tracking
     exportSchema = true
 )
 abstract class ThinkFastDatabase : RoomDatabase() {
@@ -40,6 +46,8 @@ abstract class ThinkFastDatabase : RoomDatabase() {
     abstract fun interventionResultDao(): InterventionResultDao  // Phase G
     abstract fun streakRecoveryDao(): StreakRecoveryDao  // Broken Streak Recovery
     abstract fun userBaselineDao(): UserBaselineDao  // First-Week Retention
+    abstract fun comprehensiveOutcomeDao(): ComprehensiveOutcomeDao  // Phase 1
+    abstract fun decisionExplanationDao(): DecisionExplanationDao  // Phase 1
 }
 
 /**
@@ -606,6 +614,173 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
             // Re-enable foreign keys
             database.execSQL("PRAGMA foreign_keys = ON")
         }
+    }
+}
+
+/**
+ * Migration from version 8 to 9
+ * Phase 1: Adds comprehensive outcome tracking and decision explanation logging
+ *
+ * New tables:
+ * - comprehensive_outcomes: Tracks proximal, short-term, medium-term, and long-term intervention outcomes
+ * - decision_explanations: Records complete rationale for every intervention decision
+ *
+ * These tables enable:
+ * - Reinforcement learning (using comprehensive rewards)
+ * - Intervention burden monitoring
+ * - Algorithm transparency and debugging
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // ========== Create comprehensive_outcomes table ==========
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS comprehensive_outcomes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                intervention_id INTEGER NOT NULL,
+                session_id INTEGER NOT NULL,
+                target_app TEXT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                immediate_choice TEXT NOT NULL,
+                response_time INTEGER NOT NULL,
+                interaction_depth TEXT NOT NULL,
+                session_continued INTEGER,
+                session_duration_after INTEGER,
+                quick_reopen INTEGER,
+                switched_to_productive_app INTEGER,
+                reopen_count_30min INTEGER,
+                total_usage_reduction_today INTEGER,
+                goal_met_today INTEGER,
+                additional_sessions_today INTEGER,
+                total_screen_time_today INTEGER,
+                weekly_usage_change TEXT,
+                streak_maintained INTEGER,
+                app_uninstalled INTEGER,
+                user_retention INTEGER,
+                avg_daily_usage_next_7days INTEGER,
+                last_updated INTEGER NOT NULL,
+                proximal_collected INTEGER NOT NULL DEFAULT 0,
+                short_term_collected INTEGER NOT NULL DEFAULT 0,
+                medium_term_collected INTEGER NOT NULL DEFAULT 0,
+                long_term_collected INTEGER NOT NULL DEFAULT 0,
+                reward_score REAL,
+                FOREIGN KEY (intervention_id) REFERENCES intervention_results(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+
+        // Create indexes for comprehensive_outcomes
+        database.execSQL(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS index_comprehensive_outcomes_intervention_id
+            ON comprehensive_outcomes(intervention_id)
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_comprehensive_outcomes_target_app
+            ON comprehensive_outcomes(target_app)
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_comprehensive_outcomes_timestamp
+            ON comprehensive_outcomes(timestamp)
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_comprehensive_outcomes_collection_status
+            ON comprehensive_outcomes(proximal_collected, short_term_collected)
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_comprehensive_outcomes_reward_score
+            ON comprehensive_outcomes(reward_score)
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_comprehensive_outcomes_immediate_choice
+            ON comprehensive_outcomes(immediate_choice)
+            """.trimIndent()
+        )
+
+        // ========== Create decision_explanations table ==========
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS decision_explanations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                target_app TEXT NOT NULL,
+                decision TEXT NOT NULL,
+                blocking_reason TEXT,
+                intervention_id INTEGER,
+                opportunity_score INTEGER NOT NULL,
+                opportunity_level TEXT NOT NULL,
+                opportunity_breakdown TEXT NOT NULL,
+                persona_detected TEXT NOT NULL,
+                persona_confidence TEXT NOT NULL,
+                passed_basic_rate_limit INTEGER NOT NULL,
+                time_since_last_intervention INTEGER,
+                passed_persona_frequency INTEGER NOT NULL,
+                persona_frequency_rule TEXT,
+                passed_jitai_filter INTEGER NOT NULL,
+                jitai_decision TEXT,
+                burden_level TEXT,
+                burden_score INTEGER,
+                burden_mitigation_applied INTEGER NOT NULL,
+                burden_cooldown_multiplier REAL,
+                content_type_selected TEXT,
+                content_weights TEXT,
+                content_selection_reason TEXT,
+                rl_predicted_reward REAL,
+                rl_exploration_vs_exploitation TEXT,
+                context_snapshot TEXT NOT NULL,
+                explanation TEXT NOT NULL,
+                detailed_explanation TEXT NOT NULL
+            )
+            """.trimIndent()
+        )
+
+        // Create indexes for decision_explanations
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_decision_explanations_timestamp
+            ON decision_explanations(timestamp)
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_decision_explanations_target_app
+            ON decision_explanations(target_app)
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_decision_explanations_decision
+            ON decision_explanations(decision)
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_decision_explanations_blocking_reason
+            ON decision_explanations(blocking_reason)
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_decision_explanations_opportunity_level
+            ON decision_explanations(opportunity_level)
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_decision_explanations_intervention_id
+            ON decision_explanations(intervention_id)
+            """.trimIndent()
+        )
     }
 }
 

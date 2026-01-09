@@ -9,6 +9,7 @@ import dev.sadakat.thinkfaster.data.local.database.MIGRATION_4_5
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_5_6
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_6_7
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_7_8
+import dev.sadakat.thinkfaster.data.local.database.MIGRATION_8_9
 import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
 import dev.sadakat.thinkfaster.data.seed.callback.SeedDatabaseCallback
 import dev.sadakat.thinkfaster.util.Constants
@@ -26,7 +27,8 @@ val databaseModule = module {
             MIGRATION_4_5,  // Phase 1: Add feedback and context fields for ML training
             MIGRATION_5_6,  // Phase 2: Add sync metadata columns for multi-device sync
             MIGRATION_6_7,  // Phase 2 JITAI: Add persona and opportunity tracking columns
-            MIGRATION_7_8   // Phase 2 JITAI: Add performance optimization indexes
+            MIGRATION_7_8,  // Phase 2 JITAI: Add performance optimization indexes
+            MIGRATION_8_9   // Phase 1: Add comprehensive outcomes and decision explanations
         ).fallbackToDestructiveMigrationOnDowngrade()  // Production-safe: only fallback on downgrade
 
         // Only add seed callback for non-production builds
@@ -44,4 +46,6 @@ val databaseModule = module {
     single { get<ThinkFastDatabase>().interventionResultDao() }  // Phase G
     single { get<ThinkFastDatabase>().streakRecoveryDao() }  // Broken Streak Recovery
     single { get<ThinkFastDatabase>().userBaselineDao() }  // First-Week Retention
+    single { get<ThinkFastDatabase>().comprehensiveOutcomeDao() }  // Phase 1
+    single { get<ThinkFastDatabase>().decisionExplanationDao() }  // Phase 1
 }
