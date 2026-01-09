@@ -190,6 +190,7 @@ enum class BlockingReason {
     PERSONA_FREQUENCY_LIMIT,       // Persona-specific frequency rule
     JITAI_POOR_OPPORTUNITY,        // JITAI scored opportunity as poor
     BURDEN_MITIGATION,             // User experiencing high burden
+    POOR_TIMING,                   // Phase 3: Learned timing suggests delay
     SNOOZE_ACTIVE,                 // User has snoozed interventions
     PERMISSION_DENIED,             // Overlay permission not granted
     ALWAYS_SHOW_DISABLED,          // User disabled "always show" setting

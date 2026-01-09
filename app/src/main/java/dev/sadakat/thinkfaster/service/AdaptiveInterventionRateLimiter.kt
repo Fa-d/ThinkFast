@@ -4,6 +4,7 @@ import android.content.Context
 import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 import dev.sadakat.thinkfaster.domain.intervention.BlockingReason
 import dev.sadakat.thinkfaster.domain.intervention.BurdenLevel
+import dev.sadakat.thinkfaster.domain.intervention.ContextualTimingOptimizer
 import dev.sadakat.thinkfaster.domain.intervention.DecisionLogger
 import dev.sadakat.thinkfaster.domain.intervention.InterventionBurdenTracker
 import dev.sadakat.thinkfaster.domain.intervention.InterventionDecisionExplanation
@@ -11,6 +12,8 @@ import dev.sadakat.thinkfaster.domain.intervention.InterventionOutcome
 import dev.sadakat.thinkfaster.domain.intervention.InterventionType
 import dev.sadakat.thinkfaster.domain.intervention.OpportunityDetector
 import dev.sadakat.thinkfaster.domain.intervention.PersonaDetector
+import dev.sadakat.thinkfaster.domain.intervention.TimingConfidence
+import dev.sadakat.thinkfaster.domain.intervention.TimingRecommendation
 import dev.sadakat.thinkfaster.domain.intervention.calculateBurdenLevel
 import dev.sadakat.thinkfaster.domain.intervention.calculateBurdenScore
 import dev.sadakat.thinkfaster.domain.intervention.isReliable
@@ -47,6 +50,7 @@ data class AdaptiveRateLimitResult(
 /**
  * Adaptive Intervention Rate Limiter
  * Phase 2 JITAI: Smart rate limiting with persona and opportunity awareness
+ * Phase 3: Context-aware timing optimization
  *
  * Enhances the base InterventionRateLimiter with:
  * 1. Persona detection (always runs for analytics)
@@ -54,6 +58,7 @@ data class AdaptiveRateLimitResult(
  * 3. Basic rate limit checks (existing logic)
  * 4. Persona-specific frequency adjustments
  * 5. Rich decision context for analytics
+ * 6. Phase 3: Context-aware timing optimization
  *
  * Frequency by Persona:
  * - PROBLEMATIC_PATTERN_USER: MINIMAL - Only EXCELLENT opportunities
@@ -66,6 +71,7 @@ data class AdaptiveRateLimitResult(
  * Cooldown Adjustments:
  * - Applies persona-specific multiplier (0.5x to 2.0x)
  * - Adjusts based on feedback (HELPFUL = -10%, DISRUPTIVE = +20%)
+ * - Phase 3: Adjusts based on learned timing effectiveness
  */
 class AdaptiveInterventionRateLimiter(
     private val context: Context,
@@ -74,7 +80,8 @@ class AdaptiveInterventionRateLimiter(
     private val personaDetector: PersonaDetector,
     private val opportunityDetector: OpportunityDetector,
     private val decisionLogger: DecisionLogger,
-    private val burdenTracker: InterventionBurdenTracker
+    private val burdenTracker: InterventionBurdenTracker,
+    private val timingOptimizer: ContextualTimingOptimizer? = null  // Phase 3: Optional for gradual rollout
 ) {
 
     companion object {
@@ -126,10 +133,101 @@ class AdaptiveInterventionRateLimiter(
 
         // Step 3: Get burden metrics for cooldown adjustment
         val burdenMetrics = burdenTracker.calculateCurrentBurdenMetrics()
+        val burdenLevel = burdenMetrics.calculateBurdenLevel()
         val burdenCooldownMultiplier = if (burdenMetrics.isReliable()) {
             burdenTracker.getRecommendedCooldownAdjustment()
         } else {
             1.0f  // No adjustment if insufficient data
+        }
+
+        // Phase 2: CRITICAL burden blocking - skip interventions entirely
+        if (burdenLevel == BurdenLevel.CRITICAL && burdenMetrics.isReliable()) {
+            val explanation = buildDecisionExplanation(
+                targetApp = interventionContext.targetApp,
+                decision = InterventionOutcome.SKIP_INTERVENTION,
+                blockingReason = BlockingReason.BURDEN_MITIGATION,
+                opportunityScore = opportunityScore,
+                opportunityLevel = opportunityLevel,
+                opportunityBreakdown = opportunityDetection.breakdown.toMap(),
+                persona = persona,
+                personaConfidence = personaConfidence,
+                passedBasicRateLimit = true,
+                timeSinceLastIntervention = null,
+                passedPersonaFrequency = true,
+                passedJitaiFilter = true,
+                jitaiDecision = jitaiDecision.name,
+                burdenLevel = burdenLevel,
+                burdenScore = burdenMetrics.calculateBurdenScore(),
+                burdenMitigationApplied = true,
+                burdenCooldownMultiplier = burdenCooldownMultiplier,
+                interventionContext = interventionContext,
+                interventionType = interventionType
+            )
+            logDecisionAsync(explanation)
+
+            return@withContext AdaptiveRateLimitResult(
+                allowed = false,
+                reason = "CRITICAL burden detected - intervention paused for user wellbeing",
+                cooldownRemainingMs = (30 * 60 * 1000L), // 30 min pause
+                persona = persona,
+                personaConfidence = personaConfidence,
+                opportunityScore = opportunityScore,
+                opportunityLevel = opportunityLevel,
+                decision = dev.sadakat.thinkfaster.domain.model.InterventionDecision.SKIP_INTERVENTION,
+                decisionSource = "CRITICAL_BURDEN"
+            )
+        }
+
+        // Phase 3: Context-aware timing optimization
+        // Check if timing is optimal and consider delaying if needed
+        var timingRecommendation: TimingRecommendation? = null
+        if (timingOptimizer != null) {
+            timingRecommendation = timingOptimizer.getOptimalTiming(
+                targetApp = interventionContext.targetApp,
+                currentHour = interventionContext.timeOfDay,
+                isWeekend = interventionContext.isWeekend
+            )
+
+            // If timing is very poor and we have high confidence, consider blocking
+            if (!timingRecommendation.shouldInterveneNow &&
+                timingRecommendation.confidence == TimingConfidence.HIGH &&
+                timingRecommendation.shouldDelay) {
+
+                val explanation = buildDecisionExplanation(
+                    targetApp = interventionContext.targetApp,
+                    decision = InterventionOutcome.SKIP_INTERVENTION,
+                    blockingReason = BlockingReason.POOR_TIMING,
+                    opportunityScore = opportunityScore,
+                    opportunityLevel = opportunityLevel,
+                    opportunityBreakdown = opportunityDetection.breakdown.toMap(),
+                    persona = persona,
+                    personaConfidence = personaConfidence,
+                    passedBasicRateLimit = true,
+                    timeSinceLastIntervention = null,
+                    passedPersonaFrequency = true,
+                    passedJitaiFilter = false,
+                    jitaiDecision = "DELAY_FOR_BETTER_TIMING",
+                    burdenLevel = burdenLevel,
+                    burdenScore = burdenMetrics.calculateBurdenScore(),
+                    burdenMitigationApplied = false,
+                    burdenCooldownMultiplier = burdenCooldownMultiplier,
+                    interventionContext = interventionContext,
+                    interventionType = interventionType
+                )
+                logDecisionAsync(explanation)
+
+                return@withContext AdaptiveRateLimitResult(
+                    allowed = false,
+                    reason = timingRecommendation.reason,
+                    cooldownRemainingMs = timingRecommendation.recommendedDelayMs.coerceAtMost(60 * 60 * 1000L), // Max 1 hour
+                    persona = persona,
+                    personaConfidence = personaConfidence,
+                    opportunityScore = opportunityScore,
+                    opportunityLevel = opportunityLevel,
+                    decision = dev.sadakat.thinkfaster.domain.model.InterventionDecision.WAIT_FOR_BETTER_OPPORTUNITY,
+                    decisionSource = "PHASE3_TIMING_OPTIMIZATION"
+                )
+            }
         }
 
         // Step 4: Basic rate limit checks (existing logic)

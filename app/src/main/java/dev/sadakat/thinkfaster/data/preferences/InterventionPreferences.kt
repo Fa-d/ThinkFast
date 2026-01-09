@@ -528,6 +528,24 @@ class InterventionPreferences(context: Context) {
         return prefs.getInt(KEY_SNOOZE_COUNT_HOUR, 0)
     }
 
+    // ========== PHASE 2: GENERIC HELPERS ==========
+
+    /**
+     * Get string value from preferences
+     * Phase 2: Used by BurdenTrendMonitor and other components
+     */
+    fun getString(key: String, defaultValue: String): String {
+        return prefs.getString(key, defaultValue) ?: defaultValue
+    }
+
+    /**
+     * Set string value in preferences
+     * Phase 2: Used by BurdenTrendMonitor and other components
+     */
+    fun setString(key: String, value: String) {
+        prefs.edit().putString(key, value).apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "intervention_preferences"
         private const val KEY_FRICTION_OVERRIDE = "friction_level_override"

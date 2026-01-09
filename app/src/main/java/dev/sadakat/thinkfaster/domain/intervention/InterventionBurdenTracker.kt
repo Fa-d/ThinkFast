@@ -10,9 +10,15 @@ import kotlin.math.abs
 
 /**
  * Phase 1: Intervention Burden Tracker
+ * Phase 2: Enhanced with Fatigue Recovery and Trend Monitoring
  *
  * Calculates and monitors intervention burden metrics to detect user fatigue.
  * Provides methods to query burden levels and make adaptive frequency adjustments.
+ *
+ * Phase 2 Enhancements:
+ * - Fatigue recovery tracking
+ * - Burden trend analysis
+ * - Proactive warnings
  *
  * Usage:
  * ```
@@ -24,7 +30,9 @@ import kotlin.math.abs
  */
 @Singleton
 class InterventionBurdenTracker @Inject constructor(
-    private val interventionResultDao: InterventionResultDao
+    private val interventionResultDao: InterventionResultDao,
+    private val fatigueRecoveryTracker: FatigueRecoveryTracker,
+    private val burdenTrendMonitor: BurdenTrendMonitor
 ) {
 
     // Cache for burden metrics (invalidated every 10 minutes)
@@ -98,6 +106,52 @@ class InterventionBurdenTracker @Inject constructor(
      */
     fun invalidateCache() {
         cachedMetrics = null
+    }
+
+    // ========== PHASE 2: ENHANCED BURDEN TRACKING ==========
+
+    /**
+     * Calculate burden with recovery credit applied
+     * Phase 2: Gives users credit for healthy breaks
+     */
+    suspend fun calculateBurdenWithRecovery(): Int {
+        val metrics = calculateCurrentBurdenMetrics()
+        val baseScore = metrics.calculateBurdenScore()
+
+        // Apply recovery credit if user took a break
+        val recoveryCredit = fatigueRecoveryTracker.calculateRecoveryCredit()
+        val adjustedScore = fatigueRecoveryTracker.applyRecoveryCredit(baseScore, recoveryCredit)
+
+        // Record burden score for trend analysis
+        burdenTrendMonitor.recordBurdenScore(adjustedScore)
+
+        return adjustedScore
+    }
+
+    /**
+     * Get burden trend analysis
+     * Phase 2: Track if burden is increasing/decreasing
+     */
+    suspend fun getBurdenTrend(): BurdenTrendMonitor.BurdenTrend {
+        val currentScore = calculateBurdenWithRecovery()
+        return burdenTrendMonitor.analyzeTrend(currentScore)
+    }
+
+    /**
+     * Check if user should see burden warning
+     * Phase 2: Proactive warnings when burden escalates
+     */
+    suspend fun shouldShowBurdenWarning(): Boolean {
+        val trend = getBurdenTrend()
+        return burdenTrendMonitor.shouldShowBurdenWarning(trend)
+    }
+
+    /**
+     * Check if user deserves burden relief
+     * Phase 2: Positive reinforcement for good behavior
+     */
+    suspend fun shouldGrantBurdenRelief(): Boolean {
+        return fatigueRecoveryTracker.shouldGrantBurdenRelief()
     }
 
     // ========== PRIVATE CALCULATION METHODS ==========
