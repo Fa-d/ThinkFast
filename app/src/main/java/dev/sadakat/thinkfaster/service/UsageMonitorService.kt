@@ -56,6 +56,10 @@ class UsageMonitorService : Service() {
     private val opportunityDetector: dev.sadakat.thinkfaster.domain.intervention.OpportunityDetector by inject()
     private val personaAwareContentSelector: dev.sadakat.thinkfaster.domain.intervention.PersonaAwareContentSelector by inject()
 
+    // Phase 1 dependencies - Outcome tracking and decision logging
+    private val decisionLogger: dev.sadakat.thinkfaster.domain.intervention.DecisionLogger by inject()
+    private val burdenTracker: dev.sadakat.thinkfaster.domain.intervention.InterventionBurdenTracker by inject()
+
     private lateinit var appLaunchDetector: AppLaunchDetector
     private lateinit var sessionDetector: SessionDetector
     private lateinit var contextDetector: ContextDetector
@@ -167,7 +171,9 @@ class UsageMonitorService : Service() {
             interventionPreferences = interventionPrefs,
             baseRateLimiter = rateLimiter,
             personaDetector = personaDetector,
-            opportunityDetector = opportunityDetector
+            opportunityDetector = opportunityDetector,
+            decisionLogger = decisionLogger,
+            burdenTracker = burdenTracker
         )
 
         // Initialize WindowManager-based overlays (full-screen and compact)

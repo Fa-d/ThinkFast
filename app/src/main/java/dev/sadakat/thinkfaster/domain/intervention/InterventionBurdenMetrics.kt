@@ -145,9 +145,10 @@ enum class BurdenLevel {
 }
 
 /**
- * Extension function to calculate overall burden level
+ * Extension function to calculate burden score
+ * Returns raw numeric score for more granular analysis
  */
-fun InterventionBurdenMetrics.calculateBurdenLevel(): BurdenLevel {
+fun InterventionBurdenMetrics.calculateBurdenScore(): Int {
     var burdenScore = 0
 
     // Dismissal indicators (+3 points each)
@@ -173,6 +174,15 @@ fun InterventionBurdenMetrics.calculateBurdenLevel(): BurdenLevel {
 
     // Snooze indicator (+2 points)
     if (snoozeFrequency > 5) burdenScore += 2
+
+    return burdenScore
+}
+
+/**
+ * Extension function to calculate overall burden level
+ */
+fun InterventionBurdenMetrics.calculateBurdenLevel(): BurdenLevel {
+    val burdenScore = calculateBurdenScore()
 
     return when {
         burdenScore >= 15 -> BurdenLevel.CRITICAL

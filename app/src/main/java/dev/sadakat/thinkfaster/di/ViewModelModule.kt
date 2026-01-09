@@ -43,8 +43,8 @@ val viewModelModule = module {
         )
     }
     viewModel { OnboardingViewModel(goalRepository = get(), analyticsManager = get()) }
-    viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), interventionPreferences = get(), rateLimiter = get(), settingsRepository = get()) }
-    viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), settingsRepository = get(), interventionPreferences = get(), rateLimiter = get()) }
+    viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), interventionPreferences = get(), rateLimiter = get(), settingsRepository = get(), comprehensiveOutcomeTracker = get()) }
+    viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), settingsRepository = get(), interventionPreferences = get(), rateLimiter = get(), comprehensiveOutcomeTracker = get()) }
     viewModel { AnalyticsViewModel(resultRepository = get()) }
     viewModel {
         StatsViewModel(

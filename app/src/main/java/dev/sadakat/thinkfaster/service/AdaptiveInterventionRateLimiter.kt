@@ -2,13 +2,29 @@ package dev.sadakat.thinkfaster.service
 
 import android.content.Context
 import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
-import dev.sadakat.thinkfaster.domain.intervention.InterventionContext
-import dev.sadakat.thinkfaster.domain.intervention.OpportunityDetection
+import dev.sadakat.thinkfaster.domain.intervention.BlockingReason
+import dev.sadakat.thinkfaster.domain.intervention.BurdenLevel
+import dev.sadakat.thinkfaster.domain.intervention.DecisionLogger
+import dev.sadakat.thinkfaster.domain.intervention.InterventionBurdenTracker
+import dev.sadakat.thinkfaster.domain.intervention.InterventionDecisionExplanation
+import dev.sadakat.thinkfaster.domain.intervention.InterventionOutcome
+import dev.sadakat.thinkfaster.domain.intervention.InterventionType
 import dev.sadakat.thinkfaster.domain.intervention.OpportunityDetector
 import dev.sadakat.thinkfaster.domain.intervention.PersonaDetector
-import dev.sadakat.thinkfaster.domain.model.*
+import dev.sadakat.thinkfaster.domain.intervention.calculateBurdenLevel
+import dev.sadakat.thinkfaster.domain.intervention.calculateBurdenScore
+import dev.sadakat.thinkfaster.domain.intervention.isReliable
+import dev.sadakat.thinkfaster.domain.intervention.getRecommendedCooldownMultiplier
+import dev.sadakat.thinkfaster.domain.intervention.InterventionContext
+import dev.sadakat.thinkfaster.domain.model.ConfidenceLevel
+import dev.sadakat.thinkfaster.domain.model.InterventionDecision
+import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
+import dev.sadakat.thinkfaster.domain.model.InterventionFrequency
+import dev.sadakat.thinkfaster.domain.model.OpportunityLevel
+import dev.sadakat.thinkfaster.domain.model.UserPersona
 import dev.sadakat.thinkfaster.util.ErrorLogger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -56,7 +72,9 @@ class AdaptiveInterventionRateLimiter(
     private val interventionPreferences: InterventionPreferences,
     private val baseRateLimiter: InterventionRateLimiter,
     private val personaDetector: PersonaDetector,
-    private val opportunityDetector: OpportunityDetector
+    private val opportunityDetector: OpportunityDetector,
+    private val decisionLogger: DecisionLogger,
+    private val burdenTracker: InterventionBurdenTracker
 ) {
 
     companion object {
@@ -106,7 +124,15 @@ class AdaptiveInterventionRateLimiter(
         val opportunityLevel = opportunityDetection.level
         val jitaiDecision = opportunityDetection.decision
 
-        // Step 3: Basic rate limit checks (existing logic)
+        // Step 3: Get burden metrics for cooldown adjustment
+        val burdenMetrics = burdenTracker.calculateCurrentBurdenMetrics()
+        val burdenCooldownMultiplier = if (burdenMetrics.isReliable()) {
+            burdenTracker.getRecommendedCooldownAdjustment()
+        } else {
+            1.0f  // No adjustment if insufficient data
+        }
+
+        // Step 4: Basic rate limit checks (existing logic)
         val basicResult = baseRateLimiter.canShowIntervention(
             interventionType = when (interventionType) {
                 dev.sadakat.thinkfaster.domain.intervention.InterventionType.REMINDER ->
@@ -119,8 +145,31 @@ class AdaptiveInterventionRateLimiter(
             sessionDurationMs = sessionDurationMs
         )
 
-        // If basic checks fail, return with JITAI context for analytics
+        // If basic checks fail, log decision and return with JITAI context
         if (!basicResult.allowed) {
+            val explanation = buildDecisionExplanation(
+                targetApp = interventionContext.targetApp,
+                decision = InterventionOutcome.SKIP_INTERVENTION,
+                blockingReason = BlockingReason.BASIC_RATE_LIMIT,
+                opportunityScore = opportunityScore,
+                opportunityLevel = opportunityLevel,
+                opportunityBreakdown = opportunityDetection.breakdown.toMap(),
+                persona = persona,
+                personaConfidence = personaConfidence,
+                passedBasicRateLimit = false,
+                timeSinceLastIntervention = basicResult.cooldownRemainingMs,
+                passedPersonaFrequency = true,
+                passedJitaiFilter = true,
+                jitaiDecision = jitaiDecision.name,
+                burdenLevel = burdenMetrics.calculateBurdenLevel(),
+                burdenScore = burdenMetrics.calculateBurdenScore(),
+                burdenMitigationApplied = false,
+                burdenCooldownMultiplier = null,
+                interventionContext = interventionContext,
+                interventionType = interventionType
+            )
+            logDecisionAsync(explanation)
+
             return@withContext AdaptiveRateLimitResult(
                 allowed = false,
                 reason = basicResult.reason,
@@ -134,7 +183,7 @@ class AdaptiveInterventionRateLimiter(
             )
         }
 
-        // Step 4: Apply persona-specific frequency rules
+        // Step 5: Apply persona-specific frequency rules
         // Extended "daytime" window to 6 AM - 11 PM (from 6 AM - 8 PM)
         // This accommodates evening usage while avoiding late-night/early-morning hours
         val personaAllowed = checkPersonaFrequencyRules(
@@ -145,35 +194,86 @@ class AdaptiveInterventionRateLimiter(
         )
 
         if (!personaAllowed) {
+            val personaRule = getPersonaFrequencyRule(persona)
             val reason = generatePersonaBlockReason(
                 persona = persona,
                 opportunityScore = opportunityScore,
                 opportunityLevel = opportunityLevel
             )
 
-            // Calculate cooldown based on persona
-            val personaCooldownMs = calculatePersonaCooldown(persona)
+            // Calculate cooldown based on persona AND burden
+            val baseCooldownMs = calculatePersonaCooldown(persona)
+            val adjustedCooldownMs = (baseCooldownMs * burdenCooldownMultiplier).toLong()
+
+            val explanation = buildDecisionExplanation(
+                targetApp = interventionContext.targetApp,
+                decision = InterventionOutcome.SKIP_INTERVENTION,
+                blockingReason = BlockingReason.PERSONA_FREQUENCY_LIMIT,
+                opportunityScore = opportunityScore,
+                opportunityLevel = opportunityLevel,
+                opportunityBreakdown = opportunityDetection.breakdown.toMap(),
+                persona = persona,
+                personaConfidence = personaConfidence,
+                passedBasicRateLimit = true,
+                timeSinceLastIntervention = null,
+                passedPersonaFrequency = false,
+                personaFrequencyRule = personaRule,
+                passedJitaiFilter = true,
+                jitaiDecision = jitaiDecision.name,
+                burdenLevel = burdenMetrics.calculateBurdenLevel(),
+                burdenScore = burdenMetrics.calculateBurdenScore(),
+                burdenMitigationApplied = burdenCooldownMultiplier > 1.0f,
+                burdenCooldownMultiplier = burdenCooldownMultiplier,
+                interventionContext = interventionContext,
+                interventionType = interventionType
+            )
+            logDecisionAsync(explanation)
 
             return@withContext AdaptiveRateLimitResult(
                 allowed = false,
                 reason = reason,
-                cooldownRemainingMs = personaCooldownMs,
+                cooldownRemainingMs = adjustedCooldownMs,
                 persona = persona,
                 personaConfidence = personaConfidence,
                 opportunityScore = opportunityScore,
                 opportunityLevel = opportunityLevel,
-                decision = InterventionDecision.SKIP_INTERVENTION,
+                decision = dev.sadakat.thinkfaster.domain.model.InterventionDecision.SKIP_INTERVENTION,
                 decisionSource = "PERSONA_FREQUENCY"
             )
         }
 
-        // Step 5: Apply JITAI decision filter
+        // Step 6: Apply JITAI decision filter
         val finalDecision = when (jitaiDecision) {
-            InterventionDecision.SKIP_INTERVENTION -> {
+            dev.sadakat.thinkfaster.domain.model.InterventionDecision.SKIP_INTERVENTION -> {
+                val adjustedCooldownMs = (5 * 60 * 1000L * burdenCooldownMultiplier).toLong()
+
+                val explanation = buildDecisionExplanation(
+                    targetApp = interventionContext.targetApp,
+                    decision = InterventionOutcome.SKIP_INTERVENTION,
+                    blockingReason = BlockingReason.JITAI_POOR_OPPORTUNITY,
+                    opportunityScore = opportunityScore,
+                    opportunityLevel = opportunityLevel,
+                    opportunityBreakdown = opportunityDetection.breakdown.toMap(),
+                    persona = persona,
+                    personaConfidence = personaConfidence,
+                    passedBasicRateLimit = true,
+                    timeSinceLastIntervention = null,
+                    passedPersonaFrequency = true,
+                    passedJitaiFilter = false,
+                    jitaiDecision = jitaiDecision.name,
+                    burdenLevel = burdenMetrics.calculateBurdenLevel(),
+                    burdenScore = burdenMetrics.calculateBurdenScore(),
+                    burdenMitigationApplied = burdenCooldownMultiplier > 1.0f,
+                    burdenCooldownMultiplier = burdenCooldownMultiplier,
+                    interventionContext = interventionContext,
+                    interventionType = interventionType
+                )
+                logDecisionAsync(explanation)
+
                 AdaptiveRateLimitResult(
                     allowed = false,
                     reason = "Low opportunity score ($opportunityScore/100)",
-                    cooldownRemainingMs = 5 * 60 * 1000L,  // 5 minutes
+                    cooldownRemainingMs = adjustedCooldownMs,
                     persona = persona,
                     personaConfidence = personaConfidence,
                     opportunityScore = opportunityScore,
@@ -183,6 +283,30 @@ class AdaptiveInterventionRateLimiter(
                 )
             }
             else -> {
+                // All checks passed - log SHOW decision
+                val explanation = buildDecisionExplanation(
+                    targetApp = interventionContext.targetApp,
+                    decision = InterventionOutcome.SHOW_INTERVENTION,
+                    blockingReason = null,
+                    opportunityScore = opportunityScore,
+                    opportunityLevel = opportunityLevel,
+                    opportunityBreakdown = opportunityDetection.breakdown.toMap(),
+                    persona = persona,
+                    personaConfidence = personaConfidence,
+                    passedBasicRateLimit = true,
+                    timeSinceLastIntervention = null,
+                    passedPersonaFrequency = true,
+                    passedJitaiFilter = true,
+                    jitaiDecision = jitaiDecision.name,
+                    burdenLevel = burdenMetrics.calculateBurdenLevel(),
+                    burdenScore = burdenMetrics.calculateBurdenScore(),
+                    burdenMitigationApplied = false,
+                    burdenCooldownMultiplier = null,
+                    interventionContext = interventionContext,
+                    interventionType = interventionType
+                )
+                logDecisionAsync(explanation)
+
                 // All checks passed
                 AdaptiveRateLimitResult(
                     allowed = true,
@@ -203,6 +327,148 @@ class AdaptiveInterventionRateLimiter(
         }
 
         finalDecision
+    }
+
+    /**
+     * Build InterventionDecisionExplanation for decision logging
+     * Phase 1: Captures complete decision rationale
+     */
+    private fun buildDecisionExplanation(
+        targetApp: String,
+        decision: InterventionOutcome,
+        blockingReason: BlockingReason?,
+        opportunityScore: Int,
+        opportunityLevel: OpportunityLevel,
+        opportunityBreakdown: Map<String, Int>,
+        persona: UserPersona,
+        personaConfidence: ConfidenceLevel,
+        passedBasicRateLimit: Boolean,
+        timeSinceLastIntervention: Long?,
+        passedPersonaFrequency: Boolean,
+        passedJitaiFilter: Boolean,
+        jitaiDecision: String,
+        burdenLevel: BurdenLevel?,
+        burdenScore: Int?,
+        burdenMitigationApplied: Boolean,
+        burdenCooldownMultiplier: Float?,
+        interventionContext: InterventionContext,
+        interventionType: dev.sadakat.thinkfaster.domain.intervention.InterventionType,
+        personaFrequencyRule: String? = null
+    ): InterventionDecisionExplanation {
+        // InterventionDecisionExplanation now uses model types directly, no mapping needed
+
+        // Build context snapshot
+        val contextSnapshot = mapOf(
+            "targetApp" to interventionContext.targetApp,
+            "currentSessionMinutes" to interventionContext.currentSessionMinutes,
+            "sessionCount" to interventionContext.sessionCount,
+            "totalUsageToday" to interventionContext.totalUsageToday,
+            "weeklyAverage" to interventionContext.weeklyAverage,
+            "goalMinutes" to (interventionContext.goalMinutes ?: 0),
+            "streakDays" to interventionContext.streakDays,
+            "isWeekend" to interventionContext.isWeekend,
+            "isLateNight" to (interventionContext.timeOfDay < 6 || interventionContext.timeOfDay >= 22),
+            "quickReopen" to interventionContext.quickReopenAttempt,
+            "interventionType" to interventionType.name
+        )
+
+        val explanation = when (decision) {
+            InterventionOutcome.SHOW_INTERVENTION -> {
+                "Showing intervention: $opportunityLevel opportunity ($opportunityScore/100) for $persona user"
+            }
+            InterventionOutcome.SKIP_INTERVENTION -> {
+                "Skipping intervention: ${blockingReason?.name} (opportunity: $opportunityScore/100, persona: $persona)"
+            }
+        }
+
+        val detailedExplanation = buildString {
+            appendLine("=== Intervention Decision ===")
+            appendLine("Decision: ${decision.name}")
+            appendLine("Target App: $targetApp")
+            appendLine("Reason: ${blockingReason?.name ?: "N/A"}")
+            appendLine()
+            appendLine("Persona: $persona ($personaConfidence)")
+            appendLine("Opportunity: $opportunityLevel ($opportunityScore/100)")
+            appendLine("JITAI Decision: $jitaiDecision")
+            appendLine("Basic Rate Limit: ${if (passedBasicRateLimit) "PASS" else "FAIL"}")
+            appendLine("Persona Frequency: ${if (passedPersonaFrequency) "PASS" else "FAIL"}")
+            appendLine("JITAI Filter: ${if (passedJitaiFilter) "PASS" else "FAIL"}")
+            if (burdenLevel != null) {
+                appendLine("Burden Level: $burdenLevel")
+                appendLine("Burden Score: $burdenScore")
+                if (burdenMitigationApplied) {
+                    appendLine("Burden Mitigation: Applied (${burdenCooldownMultiplier}x cooldown)")
+                }
+            }
+        }
+
+        return InterventionDecisionExplanation(
+            timestamp = System.currentTimeMillis(),
+            targetApp = targetApp,
+            decision = decision,
+            blockingReason = blockingReason,
+            opportunityScore = opportunityScore,
+            opportunityLevel = opportunityLevel,
+            opportunityBreakdown = opportunityBreakdown,
+            personaDetected = persona,
+            personaConfidence = personaConfidence,
+            passedBasicRateLimit = passedBasicRateLimit,
+            timeSinceLastIntervention = timeSinceLastIntervention?.div(1000), // Convert to seconds
+            passedPersonaFrequency = passedPersonaFrequency,
+            personaFrequencyRule = personaFrequencyRule,
+            passedJitaiFilter = passedJitaiFilter,
+            jitaiDecision = jitaiDecision,
+            burdenLevel = burdenLevel,
+            burdenScore = burdenScore,
+            burdenMitigationApplied = burdenMitigationApplied,
+            burdenCooldownMultiplier = burdenCooldownMultiplier,
+            contentTypeSelected = null,  // Content selection happens later
+            contentWeights = null,
+            contentSelectionReason = null,
+            rlPredictedReward = null,
+            rlExplorationVsExploitation = null,
+            contextSnapshot = contextSnapshot,
+            explanation = explanation,
+            detailedExplanation = detailedExplanation
+        )
+    }
+
+    /**
+     * Log decision asynchronously (non-blocking)
+     * Phase 1: Logs every intervention decision for transparency and optimization
+     */
+    private fun logDecisionAsync(explanation: InterventionDecisionExplanation) {
+        // Launch in a separate coroutine to avoid blocking the decision flow
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                decisionLogger.logDecision(explanation)
+                ErrorLogger.info(
+                    "Decision logged: ${explanation.decision.name} for ${explanation.targetApp}",
+                    context = "AdaptiveInterventionRateLimiter"
+                )
+            } catch (e: Exception) {
+                // Don't let logging failures affect intervention delivery
+                ErrorLogger.error(
+                    e,
+                    message = "Failed to log decision",
+                    context = "AdaptiveInterventionRateLimiter.logDecisionAsync"
+                )
+            }
+        }
+    }
+
+    /**
+     * Get persona frequency rule description
+     */
+    private fun getPersonaFrequencyRule(persona: UserPersona): String {
+        return when (persona) {
+            UserPersona.PROBLEMATIC_PATTERN_USER -> "MINIMAL - Only EXCELLENT opportunities"
+            UserPersona.HEAVY_COMPULSIVE_USER -> "CONSERVATIVE - Only GOOD or EXCELLENT"
+            UserPersona.HEAVY_BINGE_USER -> "MODERATE - Score >= 25"
+            UserPersona.MODERATE_BALANCED_USER -> "BALANCED - Anything except POOR"
+            UserPersona.CASUAL_USER -> "ADAPTIVE - Context-dependent"
+            UserPersona.NEW_USER -> "ONBOARDING - Moderate+, daytime only"
+        }
     }
 
     /**
@@ -385,4 +651,17 @@ class AdaptiveInterventionRateLimiter(
     fun resetCooldown() {
         baseRateLimiter.resetCooldown()
     }
+}
+
+/**
+ * Extension function to convert OpportunityBreakdown to Map<String, Int>
+ */
+private fun dev.sadakat.thinkfaster.domain.intervention.OpportunityBreakdown.toMap(): Map<String, Int> {
+    return mapOf(
+        "timeReceptiveness" to timeReceptiveness,
+        "sessionPattern" to sessionPattern,
+        "cognitiveLoad" to cognitiveLoad,
+        "historicalSuccess" to historicalSuccess,
+        "userState" to userState
+    )
 }

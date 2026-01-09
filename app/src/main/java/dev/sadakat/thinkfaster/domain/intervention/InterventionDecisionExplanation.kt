@@ -1,5 +1,10 @@
 package dev.sadakat.thinkfaster.domain.intervention
 
+import dev.sadakat.thinkfaster.domain.model.OpportunityLevel
+import dev.sadakat.thinkfaster.domain.model.UserPersona
+import dev.sadakat.thinkfaster.domain.model.ConfidenceLevel
+import dev.sadakat.thinkfaster.domain.intervention.ContentType
+
 /**
  * Phase 1: Intervention Decision Explanation
  *
@@ -22,7 +27,7 @@ data class InterventionDecisionExplanation(
     /**
      * Final decision: SHOW or SKIP
      */
-    val decision: InterventionDecision,
+    val decision: InterventionOutcome,
 
     /**
      * If SKIP, what was the blocking reason?
@@ -52,12 +57,12 @@ data class InterventionDecisionExplanation(
     /**
      * Detected user persona at time of decision
      */
-    val personaDetected: Persona,
+    val personaDetected: UserPersona,
 
     /**
      * Confidence in persona detection
      */
-    val personaConfidence: PersonaConfidence,
+    val personaConfidence: ConfidenceLevel,
 
     // ========== RATE LIMITING FACTORS ==========
 
@@ -169,11 +174,12 @@ data class InterventionDecisionExplanation(
 )
 
 /**
- * Final intervention decision
+ * Final intervention outcome - whether it was shown or skipped
+ * Different from InterventionDecision (INTERVENE_NOW, etc.) which is the algorithm's recommendation
  */
-enum class InterventionDecision {
-    SHOW,    // Intervention was shown to user
-    SKIP     // Intervention was skipped
+enum class InterventionOutcome {
+    SHOW_INTERVENTION,    // Intervention was shown to user
+    SKIP_INTERVENTION     // Intervention was skipped
 }
 
 /**
@@ -191,57 +197,11 @@ enum class BlockingReason {
 }
 
 /**
- * Opportunity levels for intervention timing
- */
-enum class OpportunityLevel {
-    EXCELLENT,   // Score >= 70
-    GOOD,        // Score >= 50
-    MODERATE,    // Score >= 30
-    POOR         // Score < 30
-}
-
-/**
- * User personas
- */
-enum class Persona {
-    NEW_USER,
-    PROBLEMATIC_PATTERN_USER,
-    HEAVY_COMPULSIVE_USER,
-    HEAVY_BINGE_USER,
-    MODERATE_BALANCED_USER,
-    CASUAL_USER,
-    UNKNOWN
-}
-
-/**
- * Persona detection confidence
- */
-enum class PersonaConfidence {
-    LOW,      // < 7 days of data
-    MEDIUM,   // 7-13 days of data
-    HIGH      // 14+ days of data
-}
-
-/**
- * Content types for interventions
- */
-enum class ContentType {
-    REFLECTION,
-    TIME_ALTERNATIVE,
-    BREATHING,
-    STATS,
-    EMOTIONAL_APPEAL,
-    QUOTE,
-    GAMIFICATION,
-    ACTIVITY_SUGGESTION
-}
-
-/**
  * Extension function to generate human-readable explanation
  */
 fun InterventionDecisionExplanation.generateExplanation(): String {
     return when (decision) {
-        InterventionDecision.SKIP -> {
+        InterventionOutcome.SKIP_INTERVENTION -> {
             when (blockingReason) {
                 BlockingReason.BASIC_RATE_LIMIT -> {
                     "SKIPPED: Cooldown period active (${timeSinceLastIntervention}s since last intervention)"
@@ -262,7 +222,7 @@ fun InterventionDecisionExplanation.generateExplanation(): String {
             }
         }
 
-        InterventionDecision.SHOW -> {
+        InterventionOutcome.SHOW_INTERVENTION -> {
             buildString {
                 append("SHOWN: Opportunity score $opportunityScore ($opportunityLevel) ")
                 append("for $personaDetected user. ")
@@ -378,13 +338,13 @@ fun InterventionDecisionExplanation.generateDetailedExplanation(): String {
  * Extension function to check if decision was optimal
  * (For post-hoc analysis)
  */
-fun InterventionDecisionExplanation.wasDecisionOptimal(actualOutcome: UserChoice): Boolean {
+fun InterventionDecisionExplanation.wasDecisionOptimal(actualOutcome: InterventionUserChoice): Boolean {
     return when (decision) {
-        InterventionDecision.SHOW -> {
+        InterventionOutcome.SHOW_INTERVENTION -> {
             // Good decision if user went back
-            actualOutcome == UserChoice.GO_BACK
+            actualOutcome == InterventionUserChoice.GO_BACK
         }
-        InterventionDecision.SKIP -> {
+        InterventionOutcome.SKIP_INTERVENTION -> {
             // Always hard to judge skips, but if opportunity was poor, likely correct
             opportunityLevel == OpportunityLevel.POOR
         }

@@ -2,9 +2,12 @@ package dev.sadakat.thinkfaster.presentation.overlay
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.sadakat.thinkfaster.domain.intervention.ComprehensiveOutcomeTracker
 import dev.sadakat.thinkfaster.domain.intervention.ContentSelector
+import dev.sadakat.thinkfaster.domain.intervention.InteractionDepth
 import dev.sadakat.thinkfaster.domain.intervention.InterventionContext
 import dev.sadakat.thinkfaster.domain.intervention.InterventionType
+import dev.sadakat.thinkfaster.domain.intervention.InterventionUserChoice
 import dev.sadakat.thinkfaster.domain.model.InterventionContent
 import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.domain.model.InterventionResult
@@ -33,7 +36,8 @@ class ReminderOverlayViewModel(
     private val analyticsManager: AnalyticsManager,
     private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences,
     private val rateLimiter: InterventionRateLimiter,
-    private val settingsRepository: dev.sadakat.thinkfaster.domain.repository.SettingsRepository
+    private val settingsRepository: dev.sadakat.thinkfaster.domain.repository.SettingsRepository,
+    private val comprehensiveOutcomeTracker: ComprehensiveOutcomeTracker
 ) : ViewModel() {
 
     private val contentSelector = ContentSelector()
@@ -222,6 +226,7 @@ class ReminderOverlayViewModel(
     /**
      * Phase G: Records the intervention result for effectiveness tracking
      * Skips database operations for debug sessions (sessionId == -1)
+     * Phase 1: Also records proximal outcome to ComprehensiveOutcomeTracker
      */
     private suspend fun recordInterventionResult(
         sessionId: Long,
@@ -270,10 +275,80 @@ class ReminderOverlayViewModel(
             timestamp = interventionShownTime
         )
 
-        resultRepository.recordResult(result)
+        val resultId = resultRepository.recordResult(result)
+
+        // Phase 1: Record proximal outcome to ComprehensiveOutcomeTracker
+        try {
+            val interventionUserChoice = when (userChoice) {
+                UserChoice.GO_BACK -> InterventionUserChoice.GO_BACK
+                UserChoice.PROCEED -> InterventionUserChoice.CONTINUE
+                UserChoice.DISMISSED -> InterventionUserChoice.DISMISS
+            }
+            val interactionDepth = calculateInteractionDepth(decisionTimeMs, content)
+
+            comprehensiveOutcomeTracker.recordProximalOutcome(
+                interventionId = resultId,
+                sessionId = sessionId,
+                targetApp = targetApp,
+                userChoice = interventionUserChoice,
+                responseTime = decisionTimeMs,
+                interactionDepth = interactionDepth
+            )
+
+            dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                "Proximal outcome recorded: interventionId=$resultId, choice=$interventionUserChoice, depth=$interactionDepth",
+                context = "ReminderOverlayViewModel.recordInterventionResult"
+            )
+        } catch (e: Exception) {
+            dev.sadakat.thinkfaster.util.ErrorLogger.error(
+                e,
+                message = "Failed to record proximal outcome",
+                context = "ReminderOverlayViewModel.recordInterventionResult"
+            )
+        }
 
         // Track to analytics (privacy-safe, aggregated only)
         analyticsManager.trackIntervention(result)
+    }
+
+    /**
+     * Calculate interaction depth based on response time and content type
+     * Phase 1: Helps understand user engagement levels
+     */
+    private fun calculateInteractionDepth(
+        responseTimeMs: Long,
+        content: InterventionContent?
+    ): InteractionDepth {
+        val responseTimeSeconds = responseTimeMs / 1000.0
+
+        return when {
+            // User dismissed immediately without reading
+            responseTimeSeconds < 2.0 -> InteractionDepth.DISMISSED
+
+            // User viewed but minimal interaction
+            responseTimeSeconds < 5.0 -> InteractionDepth.VIEWED
+
+            // Check if content type indicates deeper interaction
+            responseTimeSeconds >= 5.0 && isInteractiveContent(content) -> InteractionDepth.INTERACTED
+
+            // User read and engaged with content
+            responseTimeSeconds >= 5.0 -> InteractionDepth.ENGAGED
+
+            // Default fallback
+            else -> InteractionDepth.VIEWED
+        }
+    }
+
+    /**
+     * Determine if content type involves user interaction beyond just reading
+     */
+    private fun isInteractiveContent(content: InterventionContent?): Boolean {
+        return when (content) {
+            is dev.sadakat.thinkfaster.domain.model.InterventionContent.BreathingExercise -> true
+            is dev.sadakat.thinkfaster.domain.model.InterventionContent.UsageStats -> true
+            is dev.sadakat.thinkfaster.domain.model.InterventionContent.ActivitySuggestion -> true
+            else -> false
+        }
     }
 
     /**

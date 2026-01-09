@@ -22,7 +22,7 @@ data class ComprehensiveInterventionOutcome(
      * User's immediate choice when shown the intervention
      * "GO_BACK", "CONTINUE", "SNOOZE", "DISMISS", "TIMEOUT"
      */
-    val immediateChoice: UserChoice,
+    val immediateChoice: InterventionUserChoice,
 
     /**
      * How quickly the user responded to the intervention (milliseconds)
@@ -139,9 +139,10 @@ data class ComprehensiveInterventionOutcome(
 )
 
 /**
- * User's immediate choice when shown an intervention
+ * User's immediate choice when shown an intervention (for outcome tracking)
+ * More detailed than the simple UserChoice enum in InterventionResult
  */
-enum class UserChoice {
+enum class InterventionUserChoice {
     GO_BACK,        // User chose to close the app (desired outcome)
     CONTINUE,       // User chose to continue using app (undesired outcome)
     SNOOZE,         // User snoozed the intervention (neutral outcome)
@@ -187,11 +188,11 @@ fun ComprehensiveInterventionOutcome.calculateReward(): Double {
 
     // Immediate outcomes (weight: 30%)
     reward += when (immediateChoice) {
-        UserChoice.GO_BACK -> 10.0
-        UserChoice.CONTINUE -> -5.0
-        UserChoice.SNOOZE -> 0.0
-        UserChoice.DISMISS -> -3.0
-        UserChoice.TIMEOUT -> -8.0
+        InterventionUserChoice.GO_BACK -> 10.0
+        InterventionUserChoice.CONTINUE -> -5.0
+        InterventionUserChoice.SNOOZE -> 0.0
+        InterventionUserChoice.DISMISS -> -3.0
+        InterventionUserChoice.TIMEOUT -> -8.0
     }
 
     // Interaction depth bonus
