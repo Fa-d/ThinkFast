@@ -102,6 +102,9 @@ import dev.sadakat.thinkfaster.ui.theme.adaptiveAnimationSpec
 import dev.sadakat.thinkfaster.ui.theme.isLandscape
 import dev.sadakat.thinkfaster.ui.theme.adaptiveColumnCount
 import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
+import dev.sadakat.thinkfaster.ui.theme.rememberScreenSize
+import dev.sadakat.thinkfaster.ui.theme.ScreenSize
+import dev.sadakat.thinkfaster.presentation.overlay.components.SmallScreenInterventionOverlay
 import dev.sadakat.thinkfaster.util.InterventionStyling
 import dev.sadakat.thinkfaster.util.ErrorLogger
 import androidx.compose.ui.semantics.semantics
@@ -243,37 +246,72 @@ class ReminderOverlayWindow(
                                         LoadingScreen()
                                     }
                                     OverlayScreenState.CONTENT -> {
-                                        ReminderOverlayContent(
-                                            targetApp = targetApp,
-                                            context = context,
-                                            interventionContent = uiState.interventionContent,
-                                            frictionLevel = uiState.interventionContext?.userFrictionLevel
-                                                ?: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
-                                            showFeedbackPrompt = uiState.showFeedbackPrompt,
-                                            snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),
-                                            onGoBackClick = {
-                                                handleGoBackClick(sessionId)
-                                            },
-                                            onProceedClick = {
-                                                handleProceedClick(sessionId)
-                                            },
-                                            onSnoozeClick = {  // Phase 2: Snooze callback
-                                                overlayView?.performHapticFeedback(
-                                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
-                                                )
-                                                viewModel.onSnoozeClicked()
-                                            },
-                                            onFeedbackReceived = { feedback ->
-                                                // Phase 1.2: Haptic feedback on thumbs up/down
-                                                overlayView?.performHapticFeedback(
-                                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
-                                                )
-                                                viewModel.onFeedbackReceived(feedback)
-                                            },
-                                            onSkipFeedback = {
-                                                viewModel.onSkipFeedback()
-                                            }
-                                        )
+                                        // Route to small screen optimized overlay for narrow devices
+                                        val screenSize = rememberScreenSize()
+                                        if (screenSize == ScreenSize.SMALL) {
+                                            SmallScreenInterventionOverlay(
+                                                targetApp = targetApp,
+                                                context = context,
+                                                interventionContent = uiState.interventionContent,
+                                                frictionLevel = uiState.interventionContext?.userFrictionLevel
+                                                    ?: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
+                                                showFeedbackPrompt = uiState.showFeedbackPrompt,
+                                                snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),
+                                                onGoBackClick = {
+                                                    handleGoBackClick(sessionId)
+                                                },
+                                                onProceedClick = {
+                                                    handleProceedClick(sessionId)
+                                                },
+                                                onSnoozeClick = {
+                                                    overlayView?.performHapticFeedback(
+                                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                                    )
+                                                    viewModel.onSnoozeClicked()
+                                                },
+                                                onFeedbackReceived = { feedback ->
+                                                    overlayView?.performHapticFeedback(
+                                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                                    )
+                                                    viewModel.onFeedbackReceived(feedback)
+                                                },
+                                                onSkipFeedback = {
+                                                    viewModel.onSkipFeedback()
+                                                }
+                                            )
+                                        } else {
+                                            ReminderOverlayContent(
+                                                targetApp = targetApp,
+                                                context = context,
+                                                interventionContent = uiState.interventionContent,
+                                                frictionLevel = uiState.interventionContext?.userFrictionLevel
+                                                    ?: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
+                                                showFeedbackPrompt = uiState.showFeedbackPrompt,
+                                                snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),
+                                                onGoBackClick = {
+                                                    handleGoBackClick(sessionId)
+                                                },
+                                                onProceedClick = {
+                                                    handleProceedClick(sessionId)
+                                                },
+                                                onSnoozeClick = {  // Phase 2: Snooze callback
+                                                    overlayView?.performHapticFeedback(
+                                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                                    )
+                                                    viewModel.onSnoozeClicked()
+                                                },
+                                                onFeedbackReceived = { feedback ->
+                                                    // Phase 1.2: Haptic feedback on thumbs up/down
+                                                    overlayView?.performHapticFeedback(
+                                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                                    )
+                                                    viewModel.onFeedbackReceived(feedback)
+                                                },
+                                                onSkipFeedback = {
+                                                    viewModel.onSkipFeedback()
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }

@@ -60,6 +60,9 @@ import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionGradients
 import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
 import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
+import dev.sadakat.thinkfaster.ui.theme.rememberScreenSize
+import dev.sadakat.thinkfaster.ui.theme.ScreenSize
+import dev.sadakat.thinkfaster.presentation.overlay.components.SmallScreenInterventionOverlay
 import dev.sadakat.thinkfaster.util.ErrorLogger
 import dev.sadakat.thinkfaster.util.InterventionStyling
 import android.os.Handler
@@ -164,38 +167,73 @@ class CompactReminderOverlayWindow(
                             }
                         )
                     } else {
-                        CompactOverlayContent(
-                            targetApp = targetApp,
-                            interventionContent = uiState.interventionContent,
-                            frictionLevel = uiState.interventionContext?.userFrictionLevel
-                                ?: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
-                            showFeedbackPrompt = uiState.showFeedbackPrompt,
-                            snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),
-                            onGoBackClick = {
-                                handleGoBackClick(sessionId)
-                            },
-                            onProceedClick = {
-                                handleProceedClick(sessionId)
-                            },
-                            onSnoozeClick = {
-                                overlayView?.performHapticFeedback(
-                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
-                                )
-                                viewModel.onSnoozeClicked()
-                            },
-                            onFeedbackReceived = { feedback ->
-                                overlayView?.performHapticFeedback(
-                                    android.view.HapticFeedbackConstants.VIRTUAL_KEY
-                                )
-                                viewModel.onFeedbackReceived(feedback)
-                            },
-                            onSkipFeedback = {
-                                viewModel.onSkipFeedback()
-                            },
-                            onDismiss = {
-                                dismiss()
-                            }
-                        )
+                        // Route to small screen optimized overlay for narrow devices
+                        val screenSize = rememberScreenSize()
+                        if (screenSize == ScreenSize.SMALL) {
+                            SmallScreenInterventionOverlay(
+                                targetApp = targetApp,
+                                context = context,
+                                interventionContent = uiState.interventionContent,
+                                frictionLevel = uiState.interventionContext?.userFrictionLevel
+                                    ?: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
+                                showFeedbackPrompt = uiState.showFeedbackPrompt,
+                                snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),
+                                onGoBackClick = {
+                                    handleGoBackClick(sessionId)
+                                },
+                                onProceedClick = {
+                                    handleProceedClick(sessionId)
+                                },
+                                onSnoozeClick = {
+                                    overlayView?.performHapticFeedback(
+                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                    )
+                                    viewModel.onSnoozeClicked()
+                                },
+                                onFeedbackReceived = { feedback ->
+                                    overlayView?.performHapticFeedback(
+                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                    )
+                                    viewModel.onFeedbackReceived(feedback)
+                                },
+                                onSkipFeedback = {
+                                    viewModel.onSkipFeedback()
+                                }
+                            )
+                        } else {
+                            CompactOverlayContent(
+                                targetApp = targetApp,
+                                interventionContent = uiState.interventionContent,
+                                frictionLevel = uiState.interventionContext?.userFrictionLevel
+                                    ?: dev.sadakat.thinkfaster.domain.intervention.FrictionLevel.GENTLE,
+                                showFeedbackPrompt = uiState.showFeedbackPrompt,
+                                snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),
+                                onGoBackClick = {
+                                    handleGoBackClick(sessionId)
+                                },
+                                onProceedClick = {
+                                    handleProceedClick(sessionId)
+                                },
+                                onSnoozeClick = {
+                                    overlayView?.performHapticFeedback(
+                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                    )
+                                    viewModel.onSnoozeClicked()
+                                },
+                                onFeedbackReceived = { feedback ->
+                                    overlayView?.performHapticFeedback(
+                                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                                    )
+                                    viewModel.onFeedbackReceived(feedback)
+                                },
+                                onSkipFeedback = {
+                                    viewModel.onSkipFeedback()
+                                },
+                                onDismiss = {
+                                    dismiss()
+                                }
+                            )
+                        }
                     }
                 }
             }

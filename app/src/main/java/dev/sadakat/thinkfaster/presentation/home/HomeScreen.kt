@@ -64,6 +64,9 @@ import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.theme.AppColors
 import dev.sadakat.thinkfaster.ui.theme.ProgressColors
 import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
+import dev.sadakat.thinkfaster.ui.theme.rememberScreenSize
+import dev.sadakat.thinkfaster.ui.theme.ScreenSize
+import dev.sadakat.thinkfaster.presentation.home.components.SmallScreenTodayAtAGlanceCard
 import dev.sadakat.thinkfaster.util.HapticFeedback
 import dev.sadakat.thinkfaster.util.PermissionHelper
 import kotlinx.coroutines.delay
@@ -468,6 +471,26 @@ private fun TodayAtAGlanceCard(
     onStopService: () -> Unit
 ) {
     val alpha = rememberFadeInAnimation(durationMillis = 600)
+    val screenSize = rememberScreenSize()
+    val useSmallScreenLayout = screenSize == ScreenSize.SMALL
+
+    // Route to small screen optimized layout for narrow devices
+    if (useSmallScreenLayout && uiState.hasGoalsSet) {
+        SmallScreenTodayAtAGlanceCard(
+            totalUsageMinutes = uiState.totalUsageMinutes,
+            todaySessionsCount = uiState.todaySessionsCount,
+            progressPercentage = uiState.progressPercentage,
+            currentStreak = uiState.currentStreak,
+            goalMinutes = uiState.goalMinutes,
+            isServiceRunning = uiState.isServiceRunning,
+            hasPermissions = hasPermissions,
+            context = context,
+            onStartService = onStartService,
+            onStopService = onStopService
+        )
+        return
+    }
+
     val useTwoColumns = shouldUseTwoColumnLayout()
 
     Column(
