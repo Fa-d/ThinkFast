@@ -37,7 +37,14 @@ data class InterventionContext(
     val daysSinceInstall: Int,              // Days since app installed
 
     // Best records
-    val bestSessionMinutes: Int             // Shortest session ever
+    val bestSessionMinutes: Int,            // Shortest session ever
+
+    // Phase 3: Enhanced behavioral cues
+    val rapidAppSwitching: Boolean = false,        // 3+ app switches in 30 sec
+    val compulsiveBehaviorDetected: Boolean = false, // Multiple quick reopens in 5 min
+    val unusualUsageTime: Boolean = false,         // Usage at atypical hours
+    val screenOnDuration: Long = 0L,               // Continuous screen-on time (ms)
+    val unlockFrequency: Int = 0                   // # of unlocks in last hour
 ) {
     companion object {
         /**
@@ -55,7 +62,13 @@ data class InterventionContext(
             streakDays: Int,
             userFrictionLevel: FrictionLevel,
             installDate: Long,
-            bestSessionMinutes: Int
+            bestSessionMinutes: Int,
+            // Phase 3: Enhanced behavioral cues
+            rapidAppSwitching: Boolean = false,
+            compulsiveBehaviorDetected: Boolean = false,
+            unusualUsageTime: Boolean = false,
+            screenOnDuration: Long = 0L,
+            unlockFrequency: Int = 0
         ): InterventionContext {
             val calendar = Calendar.getInstance()
             val timeOfDay = calendar.get(Calendar.HOUR_OF_DAY)
@@ -96,7 +109,13 @@ data class InterventionContext(
                 streakDays = streakDays,
                 userFrictionLevel = userFrictionLevel,
                 daysSinceInstall = daysSinceInstall,
-                bestSessionMinutes = bestSessionMinutes
+                bestSessionMinutes = bestSessionMinutes,
+                // Phase 3: Enhanced behavioral cues
+                rapidAppSwitching = rapidAppSwitching,
+                compulsiveBehaviorDetected = compulsiveBehaviorDetected,
+                unusualUsageTime = unusualUsageTime,
+                screenOnDuration = screenOnDuration,
+                unlockFrequency = unlockFrequency
             )
         }
     }
@@ -134,6 +153,16 @@ data class InterventionContext(
             totalUsageToday > weeklyAverage -> UsageComparison.MORE
             else -> UsageComparison.SAME
         }
+
+    // Phase 3: Enhanced behavioral cue helpers
+    val isLongScreenSession: Boolean
+        get() = screenOnDuration > 45 * 60 * 1000L  // 45+ minutes
+
+    val isExcessiveUnlocking: Boolean
+        get() = unlockFrequency > 20  // 20+ unlocks in last hour
+
+    val hasDistressSignals: Boolean
+        get() = rapidAppSwitching || compulsiveBehaviorDetected || isExcessiveUnlocking
 }
 
 /**

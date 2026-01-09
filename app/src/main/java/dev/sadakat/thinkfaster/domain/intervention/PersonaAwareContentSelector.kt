@@ -24,6 +24,7 @@ data class PersonaAwareContentSelection(
 /**
  * Persona-Aware Content Selector
  * Phase 2 JITAI: Personalized intervention content based on behavioral persona
+ * Phase 4: Parallel deployment with RL predictions logging
  *
  * This class enhances content selection by:
  * 1. Detecting user persona (cached if recent)
@@ -33,12 +34,15 @@ data class PersonaAwareContentSelection(
  * 5. Selecting content type using weighted randomization
  * 6. Generating content with persona awareness
  * 7. Tracking selection for analytics
+ * 8. (Phase 4) Logging RL predictions for comparison
  *
  * Caching: Persona detection is cached for 6 hours in PersonaDetector
  */
 class PersonaAwareContentSelector(
     private val personaDetector: PersonaDetector,
-    private val baseContentSelector: ContentSelector
+    private val baseContentSelector: ContentSelector,
+    private val adaptiveContentSelector: AdaptiveContentSelector? = null,  // Phase 4: Optional RL selector
+    private val opportunityDetector: OpportunityDetection? = null  // Phase 4: For RL context
 ) {
 
     companion object {
@@ -52,16 +56,41 @@ class PersonaAwareContentSelector(
 
     /**
      * Select content with persona awareness
+     * Phase 4: Also logs RL predictions in parallel for comparison
+     *
      * @param context Current intervention context
      * @param interventionType REMINDER or TIMER
      * @param effectivenessData Optional historical effectiveness data
+     * @param logRLPrediction Whether to log RL prediction (Phase 4 parallel deployment)
      * @return Persona-aware content selection with metadata
      */
     suspend fun selectContent(
         context: InterventionContext,
         interventionType: InterventionType,
-        effectivenessData: List<dev.sadakat.thinkfaster.domain.model.ContentEffectivenessStats> = emptyList()
+        effectivenessData: List<dev.sadakat.thinkfaster.domain.model.ContentEffectivenessStats> = emptyList(),
+        logRLPrediction: Boolean = false  // Phase 4: Parallel deployment flag
     ): PersonaAwareContentSelection = withContext(Dispatchers.IO) {
+
+        // Phase 4: Log RL prediction in parallel (passive learning)
+        if (logRLPrediction && adaptiveContentSelector != null) {
+            try {
+                val rlSelection = adaptiveContentSelector.selectContentType(
+                    context = context,
+                    persona = null,  // Will be detected inside
+                    opportunity = null  // Will use context
+                )
+
+                ErrorLogger.debug(
+                    message = "RL prediction: ${rlSelection.contentType} (confidence: ${rlSelection.confidence})",
+                    context = "PersonaAwareContentSelector[Parallel]"
+                )
+            } catch (e: Exception) {
+                ErrorLogger.warning(
+                    message = "RL prediction failed: ${e.message}",
+                    context = "PersonaAwareContentSelector[Parallel]"
+                )
+            }
+        }
 
         // Step 1: Detect user persona (cached if recent)
         val detectedPersona = personaDetector.detectPersona()

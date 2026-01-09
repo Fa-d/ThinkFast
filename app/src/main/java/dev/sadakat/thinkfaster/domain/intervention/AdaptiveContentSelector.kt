@@ -13,12 +13,16 @@ import javax.inject.Singleton
  * that maximize user engagement. Learns from each intervention to improve
  * content selection over time.
  *
+ * Phase 4 Expansion: Also supports timing and frequency optimization
+ *
  * Key Features:
  * - Reinforcement learning with Thompson Sampling
  * - Automatic exploration vs exploitation
  * - Context-aware content filtering
  * - Gradual learning from zero data
  * - Reward feedback integration
+ * - Timing optimization (when to intervene)
+ * - Frequency optimization (how often to intervene)
  *
  * Content Selection Strategy:
  * 1. Apply context-based filters (time of day, persona, opportunity)
@@ -26,25 +30,46 @@ import javax.inject.Singleton
  * 3. Return selected content type ID
  * 4. Later: Update with reward based on outcome
  *
+ * Timing Strategy:
+ * 1. Learn which hours yield best outcomes
+ * 2. Recommend delays if current time is suboptimal
+ *
+ * Frequency Strategy:
+ * 1. Learn optimal intervention rate per user
+ * 2. Adjust cooldowns based on recent effectiveness
+ *
  * Usage:
  * ```
  * // Select content type
  * val selection = selector.selectContentType(context, persona)
  *
+ * // Get timing recommendation
+ * val timing = selector.recommendTiming(currentHour, context)
+ *
+ * // Get frequency adjustment
+ * val frequencyMultiplier = selector.getFrequencyMultiplier()
+ *
  * // After intervention completes
- * selector.recordOutcome(interventionId, reward)
+ * selector.recordOutcome(interventionId, reward, ...)
  * ```
  */
 @Singleton
 class AdaptiveContentSelector @Inject constructor(
     private val thompsonSampling: ThompsonSamplingEngine,
     private val rewardCalculator: RewardCalculator,
-    private val interventionResultDao: InterventionResultDao
+    private val interventionResultDao: InterventionResultDao,
+    private val timingPatternLearner: TimingPatternLearner? = null,  // Phase 3: Optional timing learning
+    private val contextualTimingOptimizer: ContextualTimingOptimizer? = null  // Phase 4: Timing optimization
 ) {
 
     companion object {
         // Tracking map: interventionId -> selected armId
         private val interventionArmMap = mutableMapOf<Long, String>()
+
+        // Phase 4: Frequency learning
+        private const val PREF_RECENT_EFFECTIVENESS = "rl_recent_effectiveness"
+        private const val PREF_INTERVENTIONS_COUNT = "rl_intervention_count"
+        private const val MIN_DATA_FOR_FREQUENCY = 20  // Minimum interventions before adjusting frequency
     }
 
     /**
@@ -79,6 +104,7 @@ class AdaptiveContentSelector @Inject constructor(
 
     /**
      * Update Thompson Sampling with outcome reward
+     * Phase 3: Also records timing pattern for learning
      */
     suspend fun recordOutcome(
         interventionId: Long,
@@ -86,7 +112,10 @@ class AdaptiveContentSelector @Inject constructor(
         feedback: String? = null,
         sessionContinued: Boolean? = null,
         sessionDurationAfter: Long? = null,
-        quickReopen: Boolean? = null
+        quickReopen: Boolean? = null,
+        targetApp: String? = null,     // Phase 3: For timing learning
+        hourOfDay: Int? = null,        // Phase 3: For timing learning
+        isWeekend: Boolean? = null     // Phase 3: For timing learning
     ) = withContext(Dispatchers.IO) {
         // Get the arm that was used for this intervention
         val armId = interventionArmMap[interventionId] ?: return@withContext
@@ -102,6 +131,12 @@ class AdaptiveContentSelector @Inject constructor(
 
         // Update Thompson Sampling
         thompsonSampling.updateArm(armId, reward)
+
+        // Phase 3: Record timing pattern for learning
+        if (timingPatternLearner != null && targetApp != null && hourOfDay != null && isWeekend != null) {
+            val wasSuccessful = rewardCalculator.isSuccessfulOutcome(userChoice, feedback)
+            timingPatternLearner.recordTimingOutcome(hourOfDay, wasSuccessful, targetApp, isWeekend)
+        }
 
         // Clean up tracking
         interventionArmMap.remove(interventionId)
@@ -138,6 +173,84 @@ class AdaptiveContentSelector @Inject constructor(
     suspend fun resetLearning() {
         thompsonSampling.resetAllArms()
         interventionArmMap.clear()
+    }
+
+    // ========== PHASE 4: TIMING & FREQUENCY OPTIMIZATION ==========
+
+    /**
+     * Phase 4: Recommend optimal intervention timing
+     * Uses contextual timing optimizer to suggest when to intervene
+     */
+    suspend fun recommendTiming(
+        targetApp: String,
+        currentHour: Int,
+        isWeekend: Boolean
+    ): TimingRecommendation? = withContext(Dispatchers.IO) {
+        contextualTimingOptimizer?.getOptimalTiming(targetApp, currentHour, isWeekend)
+    }
+
+    /**
+     * Phase 4: Get frequency multiplier based on recent effectiveness
+     * Returns a multiplier for cooldown periods
+     * - <1.0 = increase frequency (shorter cooldowns)
+     * - 1.0 = normal frequency
+     * - >1.0 = decrease frequency (longer cooldowns)
+     */
+    suspend fun getFrequencyMultiplier(): Float = withContext(Dispatchers.IO) {
+        // Check if we have sufficient data
+        val interventionCount = getInterventionCount()
+        if (interventionCount < MIN_DATA_FOR_FREQUENCY) {
+            return@withContext 1.0f  // Normal frequency until we have data
+        }
+
+        // Get recent effectiveness from Thompson Sampling
+        val recentEffectiveness = calculateRecentEffectiveness()
+
+        // Adjust frequency based on effectiveness
+        when {
+            recentEffectiveness >= 0.60f -> 0.8f   // High success: intervene more (20% shorter cooldowns)
+            recentEffectiveness >= 0.45f -> 1.0f   // Moderate success: normal frequency
+            recentEffectiveness >= 0.30f -> 1.3f   // Low success: intervene less (30% longer cooldowns)
+            else -> 1.5f                           // Very low success: reduce significantly (50% longer)
+        }
+    }
+
+    /**
+     * Phase 4: Calculate recent effectiveness across all arms
+     */
+    private suspend fun calculateRecentEffectiveness(): Float = withContext(Dispatchers.IO) {
+        val armStats = thompsonSampling.getAllArmStats()
+        if (armStats.isEmpty()) return@withContext 0.5f
+
+        // Calculate weighted average success rate
+        val totalPulls = armStats.sumOf { it.totalPulls }
+        if (totalPulls == 0) return@withContext 0.5f
+
+        val weightedSum = armStats.sumOf { (it.estimatedSuccessRate * it.totalPulls).toDouble() }
+        (weightedSum / totalPulls.toDouble()).toFloat()
+    }
+
+    /**
+     * Phase 4: Get total intervention count
+     */
+    private suspend fun getInterventionCount(): Int = withContext(Dispatchers.IO) {
+        val armStats = thompsonSampling.getAllArmStats()
+        armStats.sumOf { it.totalPulls }
+    }
+
+    /**
+     * Phase 4: Get timing effectiveness summary
+     * Shows which hours work best for interventions
+     */
+    suspend fun getTimingEffectiveness(): Map<Int, Float>? = withContext(Dispatchers.IO) {
+        timingPatternLearner?.getEffectivenessSummary()
+    }
+
+    /**
+     * Phase 4: Check if timing has reliable data
+     */
+    suspend fun hasReliableTimingData(): Boolean = withContext(Dispatchers.IO) {
+        timingPatternLearner?.hasReliableData() ?: false
     }
 
     // ========== PRIVATE HELPER METHODS ==========

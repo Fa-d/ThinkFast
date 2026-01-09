@@ -66,19 +66,24 @@ val repositoryModule = module {
         )
     }
 
-    // OpportunityDetector (singleton) - Phase 2 JITAI: Smart intervention timing
+    // OpportunityDetector (singleton) - Phase 2 & 3 JITAI: Smart intervention timing with personalized learning
     single {
         OpportunityDetector(
             interventionRepository = get(),
-            preferences = get()
+            preferences = get(),
+            contextualTimingOptimizer = get(),  // Phase 3: Personalized timing
+            timingPatternLearner = get()        // Phase 3: Continuous learning
         )
     }
 
     // PersonaAwareContentSelector (singleton) - Phase 2 JITAI: Personalized content selection
+    // Phase 4: Enhanced with RL parallel deployment
     single {
         PersonaAwareContentSelector(
             personaDetector = get(),
-            baseContentSelector = ContentSelector()
+            baseContentSelector = ContentSelector(),
+            adaptiveContentSelector = getOrNull(),  // Phase 4: RL selector for parallel predictions (optional)
+            opportunityDetector = null              // Phase 4: Optional opportunity detector
         )
     }
 

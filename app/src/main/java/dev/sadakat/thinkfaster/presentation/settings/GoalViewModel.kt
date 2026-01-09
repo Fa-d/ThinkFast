@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel for managing goals and app settings in the settings screen
+ * Phase 4: Added RL rollout controller for A/B testing management
  */
 class GoalViewModel(
     private val setGoalUseCase: SetGoalUseCase,
@@ -30,7 +31,8 @@ class GoalViewModel(
     private val getTrackedAppsWithDetailsUseCase: GetTrackedAppsWithDetailsUseCase,
     private val goalRepository: dev.sadakat.thinkfaster.domain.repository.GoalRepository,
     private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences,
-    private val analyticsManager: AnalyticsManager
+    private val analyticsManager: AnalyticsManager,
+    private val rlRolloutController: dev.sadakat.thinkfaster.domain.intervention.RLRolloutController? = null  // Phase 4: Optional RL controller
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GoalUiState())
@@ -588,6 +590,91 @@ class GoalViewModel(
             settingsRepository = settingsRepository
         )
     }
+
+    // ========== PHASE 4: RL A/B TESTING CONTROLS ==========
+
+    /**
+     * Phase 4: Get current RL A/B test metrics
+     */
+    fun loadRLMetrics() {
+        viewModelScope.launch {
+            try {
+                val metrics = rlRolloutController?.getEffectivenessMetrics()
+                val variant = rlRolloutController?.getUserVariant()
+                _uiState.value = _uiState.value.copy(
+                    rlMetrics = metrics,
+                    rlCurrentVariant = variant
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Failed to load RL metrics: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /**
+     * Phase 4: Force specific RL variant for testing
+     */
+    fun forceRLVariant(variant: dev.sadakat.thinkfaster.domain.intervention.RLVariant) {
+        viewModelScope.launch {
+            try {
+                rlRolloutController?.forceVariant(variant)
+                _uiState.value = _uiState.value.copy(
+                    rlCurrentVariant = variant,
+                    successMessage = "Forced variant to: ${variant.name}"
+                )
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Failed to force variant: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /**
+     * Phase 4: Reset RL metrics
+     */
+    fun resetRLMetrics() {
+        viewModelScope.launch {
+            try {
+                rlRolloutController?.resetMetrics()
+                loadRLMetrics()  // Reload to show reset state
+                _uiState.value = _uiState.value.copy(
+                    successMessage = "RL metrics reset successfully"
+                )
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Failed to reset metrics: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /**
+     * Phase 4: Set RL rollout percentage
+     */
+    fun setRLRolloutPercentage(percentage: Int) {
+        viewModelScope.launch {
+            try {
+                rlRolloutController?.setRolloutPercentage(percentage)
+                loadRLMetrics()  // Reload to show updated percentage
+                _uiState.value = _uiState.value.copy(
+                    successMessage = "Rollout percentage set to $percentage%"
+                )
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = _uiState.value.copy(successMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Failed to set rollout percentage: ${e.message}"
+                )
+            }
+        }
+    }
 }
 
 /**
@@ -609,5 +696,8 @@ data class GoalUiState(
     val snoozeActive: Boolean = false,  // Snooze toggle state
     val snoozeRemainingMinutes: Int = 0,  // Remaining snooze minutes
     val error: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    // Phase 4: RL A/B testing state
+    val rlMetrics: dev.sadakat.thinkfaster.domain.intervention.RLEffectivenessMetrics? = null,
+    val rlCurrentVariant: dev.sadakat.thinkfaster.domain.intervention.RLVariant? = null
 )

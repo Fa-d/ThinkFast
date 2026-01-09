@@ -24,6 +24,7 @@ data class OpportunityDetection(
 /**
  * Detailed breakdown of opportunity scoring
  * Phase 2 JITAI: Shows how each factor contributed to the score
+ * Phase 3: Added behavioral cues factor
  */
 data class OpportunityBreakdown(
     val timeReceptiveness: Int,          // 0-25
@@ -31,25 +32,30 @@ data class OpportunityBreakdown(
     val cognitiveLoad: Int,              // 0-15
     val historicalSuccess: Int,          // 0-20
     val userState: Int,                  // 0-20
+    val behavioralCues: Int = 0,         // 0-15 (Phase 3)
     val factors: Map<String, String>     // Human-readable factor descriptions
 )
 
 /**
  * Opportunity Detector
  * Phase 2 JITAI: Determines optimal moments for interventions
+ * Phase 3: Personalized timing and behavioral cues
  *
- * Calculates a 0-100 opportunity score based on five factors:
- * 1. Time Receptiveness (25 pts): Optimal intervention times
+ * Calculates a 0-115 opportunity score based on six factors:
+ * 1. Time Receptiveness (25 pts): Personalized optimal intervention times
  * 2. Session Pattern (20 pts): Quick reopen, first session, extended
  * 3. Cognitive Load (15 pts): Lower cognitive load = better reception
  * 4. Historical Success (20 pts): Past success in similar contexts
  * 5. User State (20 pts): Positive state, on streak
+ * 6. Behavioral Cues (15 pts): Immediate behavioral signals (Phase 3)
  *
  * Caching: Results are cached for 5 minutes within a session
  */
 class OpportunityDetector(
     private val interventionRepository: InterventionResultRepository,
-    private val preferences: InterventionPreferences
+    private val preferences: InterventionPreferences,
+    private val contextualTimingOptimizer: ContextualTimingOptimizer? = null,  // Phase 3: Optional personalized timing
+    private val timingPatternLearner: TimingPatternLearner? = null  // Phase 3: Optional timing learning
 ) {
 
     companion object {
@@ -103,7 +109,8 @@ class OpportunityDetector(
                     breakdown.sessionPattern +
                     breakdown.cognitiveLoad +
                     breakdown.historicalSuccess +
-                    breakdown.userState
+                    breakdown.userState +
+                    breakdown.behavioralCues  // Phase 3
 
         val level = when {
             score >= 70 -> OpportunityLevel.EXCELLENT
@@ -149,6 +156,7 @@ class OpportunityDetector(
         val cognitiveScore = calculateCognitiveLoad(context)
         val historicalScore = calculateHistoricalSuccess(context)
         val userStateScore = calculateUserState(context)
+        val behavioralScore = calculateBehavioralCues(context)  // Phase 3
 
         val factors = mutableMapOf<String, String>()
         factors["time"] = getTimeDescription(context.timeOfDay, context.dayOfWeek)
@@ -156,6 +164,7 @@ class OpportunityDetector(
         factors["cognitive"] = getCognitiveLoadDescription(context)
         factors["historical"] = getHistoricalSuccessDescription(historicalScore)
         factors["user_state"] = getUserStateDescription(context)
+        factors["behavioral"] = getBehavioralCuesDescription(context)  // Phase 3
 
         return OpportunityBreakdown(
             timeReceptiveness = timeScore,
@@ -163,18 +172,35 @@ class OpportunityDetector(
             cognitiveLoad = cognitiveScore,
             historicalSuccess = historicalScore,
             userState = userStateScore,
+            behavioralCues = behavioralScore,  // Phase 3
             factors = factors
         )
     }
 
     /**
      * Time Receptiveness (25 points)
-     * Optimal intervention times based on hour of day and day of week
+     * Phase 3: Uses personalized timing when available, falls back to population defaults
      */
-    private fun calculateTimeReceptiveness(context: InterventionContext): Int {
+    private suspend fun calculateTimeReceptiveness(context: InterventionContext): Int {
         val hour = context.timeOfDay
         val isWeekend = context.isWeekend
 
+        // Phase 3: Try personalized timing first
+        timingPatternLearner?.let { learner ->
+            val pattern = learner.getTimingPattern(hour, context.targetApp, isWeekend)
+            if (pattern != null && pattern.isReliable) {
+                // Convert success rate to 0-25 points
+                return when {
+                    pattern.successRate >= 0.70f -> 25  // Excellent
+                    pattern.successRate >= 0.55f -> 20  // Good
+                    pattern.successRate >= 0.40f -> 15  // Moderate
+                    pattern.successRate >= 0.25f -> 10  // Below average
+                    else -> 5  // Poor
+                }
+            }
+        }
+
+        // Fall back to population-level defaults
         return when {
             // Late night (22:00-02:00) - high receptiveness if over goal
             (hour >= LATE_NIGHT_START || hour <= LATE_NIGHT_END) -> {
@@ -371,6 +397,25 @@ class OpportunityDetector(
         return score.coerceIn(0, 20)
     }
 
+    /**
+     * Behavioral Cues (15 points)
+     * Phase 3: Immediate behavioral signals for intervention readiness
+     */
+    private fun calculateBehavioralCues(context: InterventionContext): Int {
+        var score = 0
+
+        // High-priority intervention signals
+        if (context.compulsiveBehaviorDetected) score += 15  // Immediate intervention needed
+        if (context.rapidAppSwitching) score += 10           // User is distracted/anxious
+        if (context.unusualUsageTime) score += 8             // Breaking normal patterns
+
+        // Environmental factors
+        if (context.isLongScreenSession) score += 6          // 45+ min continuous
+        if (context.isExcessiveUnlocking) score += 5         // Excessive phone checking
+
+        return score.coerceIn(0, 15)
+    }
+
     // ========== Helper functions for factor descriptions ==========
 
     private fun getTimeDescription(hour: Int, dayOfWeek: Int): String {
@@ -426,6 +471,16 @@ class OpportunityDetector(
         if (context.isOverGoal) parts.add("Over goal")
         if (context.isLateNight) parts.add("Late night")
         return if (parts.isNotEmpty()) parts.joinToString(", ") else "Normal state"
+    }
+
+    private fun getBehavioralCuesDescription(context: InterventionContext): String {
+        val cues = mutableListOf<String>()
+        if (context.compulsiveBehaviorDetected) cues.add("Compulsive")
+        if (context.rapidAppSwitching) cues.add("Rapid switching")
+        if (context.unusualUsageTime) cues.add("Unusual time")
+        if (context.isLongScreenSession) cues.add("Long screen")
+        if (context.isExcessiveUnlocking) cues.add("Excessive unlocks")
+        return if (cues.isNotEmpty()) cues.joinToString(", ") else "Normal behavior"
     }
 
     /**

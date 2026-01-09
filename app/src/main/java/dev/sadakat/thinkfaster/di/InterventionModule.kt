@@ -8,8 +8,10 @@ import dev.sadakat.thinkfaster.domain.intervention.DecisionLogger
 import dev.sadakat.thinkfaster.domain.intervention.FatigueRecoveryTracker
 import dev.sadakat.thinkfaster.domain.intervention.InterventionBurdenTracker
 import dev.sadakat.thinkfaster.domain.intervention.RewardCalculator
+import dev.sadakat.thinkfaster.domain.intervention.RLRolloutController
 import dev.sadakat.thinkfaster.domain.intervention.ThompsonSamplingEngine
 import dev.sadakat.thinkfaster.domain.intervention.TimingPatternLearner
+import dev.sadakat.thinkfaster.domain.intervention.UnifiedContentSelector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -107,12 +109,30 @@ val interventionModule = module {
         RewardCalculator()
     }
 
-    // Phase 4: Adaptive content selector
+    // Phase 4: Adaptive content selector (Phase 3 & 4 integrated)
     single {
         AdaptiveContentSelector(
             thompsonSampling = get(),
             rewardCalculator = get(),
-            interventionResultDao = get()
+            interventionResultDao = get(),
+            timingPatternLearner = get(),       // Phase 3: Timing learning integration
+            contextualTimingOptimizer = get()   // Phase 4: Timing optimization
+        )
+    }
+
+    // Phase 4: RL Rollout controller
+    single {
+        RLRolloutController(
+            preferences = get()
+        )
+    }
+
+    // Phase 4: Unified Content Selector - Orchestrates A/B testing between rule-based and RL
+    single {
+        UnifiedContentSelector(
+            personaAwareSelector = get(),
+            adaptiveSelector = get(),
+            rolloutController = get()
         )
     }
 }

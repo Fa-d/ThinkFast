@@ -177,6 +177,23 @@ private fun SuccessView(
             SuccessMetricsCard(analytics = state.analytics)
         }
 
+        // Phase 4: RL A/B Testing Metrics
+        state.rlMetrics?.let { metrics ->
+            item {
+                RLMetricsCard(metrics = metrics)
+            }
+        }
+
+        // Phase 4: Timing Effectiveness (Personalized Timing)
+        if (state.hasReliableTimingData && state.timingEffectiveness != null) {
+            item {
+                TimingEffectivenessCard(
+                    timingData = state.timingEffectiveness,
+                    hasReliableData = state.hasReliableTimingData
+                )
+            }
+        }
+
         // Underperforming Content (Phase G)
         if (state.underperformingContent.isNotEmpty()) {
             item {
@@ -599,5 +616,265 @@ private fun AnonymousAnalyticsCard() {
                 }
             )
         }
+    }
+}
+
+/**
+ * Phase 4: RL A/B Testing Metrics Card
+ * Shows performance comparison between Control (rule-based) and RL Treatment (Thompson Sampling)
+ */
+@Composable
+private fun RLMetricsCard(metrics: dev.sadakat.thinkfaster.domain.intervention.RLEffectivenessMetrics) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (metrics.shouldRollback) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.secondaryContainer
+            }
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "🧪 A/B Test: RL vs Control",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (metrics.shouldRollback) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    }
+                )
+                Text(
+                    text = if (metrics.isEnabled) "Active" else "Disabled",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (metrics.isEnabled) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Effectiveness scores
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "RL Treatment",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = "${(metrics.rlScore * 100).toInt()}%",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Control",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = "${(metrics.controlScore * 100).toInt()}%",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Rollout",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = "${metrics.rolloutPercentage}%",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Performance summary
+            Text(
+                text = metrics.rlPerformance,
+                fontSize = 14.sp,
+                color = when {
+                    metrics.shouldRollback -> MaterialTheme.colorScheme.error
+                    metrics.rlScore > metrics.controlScore -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.onSecondaryContainer
+                },
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            if (metrics.shouldRollback) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "⚠️ RL underperforming - automatic rollback triggered",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Phase 4: Timing Effectiveness Card
+ * Shows which hours of day are most effective for interventions (Personalized Timing learning)
+ */
+@Composable
+private fun TimingEffectivenessCard(
+    timingData: Map<Int, Float>,
+    hasReliableData: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "⏰ Optimal Intervention Times",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+                if (hasReliableData) {
+                    Text(
+                        text = "Reliable",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .background(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Based on your personal response patterns",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Sort by hour and display top effective hours
+            val sortedTiming = timingData.entries.sortedByDescending { it.value }.take(8)
+
+            if (sortedTiming.isNotEmpty()) {
+                // Show top 4 in grid
+                val topTiming = sortedTiming.take(4)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    topTiming.forEach { (hour, effectiveness) ->
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = formatHour(hour),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "${(effectiveness * 100).toInt()}%",
+                                fontSize = 14.sp,
+                                color = when {
+                                    effectiveness >= 0.70f -> MaterialTheme.colorScheme.primary
+                                    effectiveness >= 0.55f -> MaterialTheme.colorScheme.secondary
+                                    else -> MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.6f)
+                                },
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Summary text
+                val bestHour = sortedTiming.first()
+                val worstHour = timingData.entries.minByOrNull { it.value }
+                Text(
+                    text = "Best time: ${formatHour(bestHour.key)} (${(bestHour.value * 100).toInt()}% success rate)",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+
+                worstHour?.let {
+                    if (it.value < 0.40f) {
+                        Text(
+                            text = "Avoid: ${formatHour(it.key)} (${(it.value * 100).toInt()}% success rate)",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "No timing data available yet",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Format hour (0-23) to 12-hour format with AM/PM
+ */
+private fun formatHour(hour: Int): String {
+    return when {
+        hour == 0 -> "12 AM"
+        hour < 12 -> "$hour AM"
+        hour == 12 -> "12 PM"
+        else -> "${hour - 12} PM"
     }
 }

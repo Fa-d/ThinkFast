@@ -3,7 +3,7 @@ package dev.sadakat.thinkfaster.presentation.overlay
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.sadakat.thinkfaster.domain.intervention.ComprehensiveOutcomeTracker
-import dev.sadakat.thinkfaster.domain.intervention.ContentSelector
+import dev.sadakat.thinkfaster.domain.intervention.UnifiedContentSelector
 import dev.sadakat.thinkfaster.domain.intervention.FrictionLevel
 import dev.sadakat.thinkfaster.domain.intervention.InteractionDepth
 import dev.sadakat.thinkfaster.domain.intervention.InterventionContext
@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit
  * ViewModel for TimerOverlayWindow
  * Manages the timer alert overlay state and usage statistics (duration configurable in settings)
  * Phase G: Now tracks intervention effectiveness
+ * Phase 4: Uses UnifiedContentSelector for A/B testing RL vs Control
  */
 class TimerOverlayViewModel(
     private val usageRepository: UsageRepository,
@@ -42,16 +43,14 @@ class TimerOverlayViewModel(
     private val settingsRepository: SettingsRepository,
     private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences,
     private val rateLimiter: dev.sadakat.thinkfaster.service.InterventionRateLimiter,
-    private val comprehensiveOutcomeTracker: ComprehensiveOutcomeTracker
+    private val comprehensiveOutcomeTracker: ComprehensiveOutcomeTracker,
+    private val unifiedContentSelector: UnifiedContentSelector  // Phase 4: A/B testing content selector
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerOverlayState())
     val uiState: StateFlow<TimerOverlayState> = _uiState.asStateFlow()
 
     private val timeFormatter = SimpleDateFormat("HH:mm", Locale.US)
-
-    // Content selector for dynamic interventions
-    private val contentSelector = ContentSelector()
 
     // Phase G: Track intervention shown time for measuring decision time
     private var interventionShownTime: Long = 0L
@@ -114,27 +113,17 @@ class TimerOverlayViewModel(
             val debugForceType = settingsRepository.getDebugForceInterventionType()
 
             val interventionContent = if (debugForceType != null) {
-                // Debug: Use forced content type
-                contentSelector.generateContentByType(debugForceType, context)
+                // Debug: Use forced content type (bypass A/B testing)
+                dev.sadakat.thinkfaster.domain.intervention.ContentSelector().generateContentByType(debugForceType, context)
             } else {
-                // Phase G: Use effectiveness-based content selection if we have enough data
+                // Phase 4: Use UnifiedContentSelector for A/B testing (Control vs RL Treatment)
                 val effectivenessData = resultRepository.getEffectivenessByContentType()
-                val totalInterventions = effectivenessData.sumOf { it.total }
-
-                if (totalInterventions >= 50) {
-                    // Use effectiveness-weighted selection when we have sufficient data
-                    contentSelector.selectContentWithEffectiveness(
-                        context = context,
-                        interventionType = InterventionType.TIMER,
-                        effectivenessData = effectivenessData
-                    )
-                } else {
-                    // Use basic selection for new users
-                    contentSelector.selectContent(
-                        context = context,
-                        interventionType = InterventionType.TIMER
-                    )
-                }
+                val unifiedSelection = unifiedContentSelector.selectContent(
+                    context = context,
+                    interventionType = DomainInterventionType.TIMER,  // Use domain.model.InterventionType
+                    effectivenessData = effectivenessData
+                )
+                unifiedSelection.content
             }
 
             // Format times for display

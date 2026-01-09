@@ -1012,6 +1012,108 @@ private fun InterventionSettingsBottomSheet(
             }
         }
 
+        // Phase 4: RL A/B Testing Debug Controls
+        if (BuildConfig.DEBUG && uiState.rlMetrics != null) {
+            LaunchedEffect(Unit) {
+                viewModel.loadRLMetrics()
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = Shapes.button,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(Spacing.md)) {
+                    // Header
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "🧪",
+                            fontSize = 20.sp
+                        )
+                        Text(
+                            text = "Debug: RL A/B Testing",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+
+                    // Current variant
+                    uiState.rlCurrentVariant?.let { variant ->
+                        Text(
+                            text = "Current Variant: ${variant.name}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+
+                    // Metrics
+                    uiState.rlMetrics?.let { metrics ->
+                        Spacer(modifier = Modifier.height(Spacing.xs))
+                        Text(
+                            text = "RL: ${(metrics.rlScore * 100).toInt()}% | Control: ${(metrics.controlScore * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.md))
+
+                    // Force variant buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                viewModel.forceRLVariant(dev.sadakat.thinkfaster.domain.intervention.RLVariant.CONTROL)
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary
+                            )
+                        ) {
+                            Text("Force Control")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.forceRLVariant(dev.sadakat.thinkfaster.domain.intervention.RLVariant.RL_TREATMENT)
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary
+                            )
+                        ) {
+                            Text("Force RL")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+
+                    // Reset metrics button
+                    OutlinedButton(
+                        onClick = { viewModel.resetRLMetrics() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.secondary
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text("Reset RL Metrics")
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 

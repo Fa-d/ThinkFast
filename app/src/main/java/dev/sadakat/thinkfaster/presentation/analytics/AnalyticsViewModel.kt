@@ -13,9 +13,12 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel for the Analytics debug screen
  * Phase G: Effectiveness tracking
+ * Phase 4: RL A/B testing metrics & timing optimization
  */
 class AnalyticsViewModel(
-    private val resultRepository: InterventionResultRepository
+    private val resultRepository: InterventionResultRepository,
+    private val rlRolloutController: dev.sadakat.thinkfaster.domain.intervention.RLRolloutController? = null,  // Phase 4: Optional RL controller
+    private val adaptiveContentSelector: dev.sadakat.thinkfaster.domain.intervention.AdaptiveContentSelector? = null  // Phase 4: Timing effectiveness
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AnalyticsUiState>(AnalyticsUiState.Loading)
@@ -39,11 +42,21 @@ class AnalyticsViewModel(
                     effectivenessData = contentEffectiveness
                 )
 
+                // Phase 4: Load RL A/B testing metrics
+                val rlMetrics = rlRolloutController?.getEffectivenessMetrics()
+
+                // Phase 4: Load timing effectiveness data
+                val timingEffectiveness = adaptiveContentSelector?.getTimingEffectiveness()
+                val hasReliableTimingData = adaptiveContentSelector?.hasReliableTimingData() ?: false
+
                 _uiState.value = AnalyticsUiState.Success(
                     analytics = analytics,
                     contentEffectiveness = contentEffectiveness,
                     appStats = appStats,
-                    underperformingContent = underperformingContent
+                    underperformingContent = underperformingContent,
+                    rlMetrics = rlMetrics,  // Phase 4: Include RL metrics
+                    timingEffectiveness = timingEffectiveness,  // Phase 4: Timing effectiveness
+                    hasReliableTimingData = hasReliableTimingData  // Phase 4: Data reliability flag
                 )
             } catch (e: Exception) {
                 _uiState.value = AnalyticsUiState.Error(
@@ -63,7 +76,10 @@ sealed class AnalyticsUiState {
         val analytics: dev.sadakat.thinkfaster.domain.model.OverallAnalytics,
         val contentEffectiveness: List<dev.sadakat.thinkfaster.domain.model.ContentEffectivenessStats>,
         val appStats: Map<String, AppInterventionStats>,
-        val underperformingContent: List<String> = emptyList()
+        val underperformingContent: List<String> = emptyList(),
+        val rlMetrics: dev.sadakat.thinkfaster.domain.intervention.RLEffectivenessMetrics? = null,  // Phase 4: RL A/B testing metrics
+        val timingEffectiveness: Map<Int, Float>? = null,  // Phase 4: Hour -> effectiveness score (0.0-1.0)
+        val hasReliableTimingData: Boolean = false  // Phase 4: Whether timing data is reliable enough
     ) : AnalyticsUiState()
     data class Error(val message: String) : AnalyticsUiState()
 }

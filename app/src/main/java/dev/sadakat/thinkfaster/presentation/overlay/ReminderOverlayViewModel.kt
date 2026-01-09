@@ -3,7 +3,7 @@ package dev.sadakat.thinkfaster.presentation.overlay
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.sadakat.thinkfaster.domain.intervention.ComprehensiveOutcomeTracker
-import dev.sadakat.thinkfaster.domain.intervention.ContentSelector
+import dev.sadakat.thinkfaster.domain.intervention.UnifiedContentSelector
 import dev.sadakat.thinkfaster.domain.intervention.InteractionDepth
 import dev.sadakat.thinkfaster.domain.intervention.InterventionContext
 import dev.sadakat.thinkfaster.domain.intervention.InterventionType
@@ -29,6 +29,7 @@ import java.util.Calendar
  * ViewModel for ReminderOverlayActivity
  * Manages the reminder overlay state and event logging
  * Phase G: Now tracks intervention effectiveness
+ * Phase 4: Uses UnifiedContentSelector for A/B testing RL vs Control
  */
 class ReminderOverlayViewModel(
     private val usageRepository: UsageRepository,
@@ -37,10 +38,9 @@ class ReminderOverlayViewModel(
     private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences,
     private val rateLimiter: InterventionRateLimiter,
     private val settingsRepository: dev.sadakat.thinkfaster.domain.repository.SettingsRepository,
-    private val comprehensiveOutcomeTracker: ComprehensiveOutcomeTracker
+    private val comprehensiveOutcomeTracker: ComprehensiveOutcomeTracker,
+    private val unifiedContentSelector: UnifiedContentSelector  // Phase 4: A/B testing content selector
 ) : ViewModel() {
-
-    private val contentSelector = ContentSelector()
 
     private val _uiState = MutableStateFlow(ReminderOverlayState())
     val uiState: StateFlow<ReminderOverlayState> = _uiState.asStateFlow()
@@ -77,27 +77,17 @@ class ReminderOverlayViewModel(
             val debugForceType: String? = settingsRepository.getDebugForceInterventionType()
 
             val content = if (debugForceType != null) {
-                // Debug: Use forced content type
-                contentSelector.generateContentByType(debugForceType, context)
+                // Debug: Use forced content type (bypass A/B testing)
+                dev.sadakat.thinkfaster.domain.intervention.ContentSelector().generateContentByType(debugForceType, context)
             } else {
-                // Phase G: Use effectiveness-based content selection if we have enough data
+                // Phase 4: Use UnifiedContentSelector for A/B testing (Control vs RL Treatment)
                 val effectivenessData = resultRepository.getEffectivenessByContentType()
-                val totalInterventions = effectivenessData.sumOf { it.total }
-
-                if (totalInterventions >= 50) {
-                    // Use effectiveness-weighted selection when we have sufficient data
-                    contentSelector.selectContentWithEffectiveness(
-                        context = context,
-                        interventionType = InterventionType.REMINDER,
-                        effectivenessData = effectivenessData
-                    )
-                } else {
-                    // Use basic selection for new users
-                    contentSelector.selectContent(
-                        context = context,
-                        interventionType = InterventionType.REMINDER
-                    )
-                }
+                val unifiedSelection = unifiedContentSelector.selectContent(
+                    context = context,
+                    interventionType = DomainInterventionType.REMINDER,  // Use domain.model.InterventionType
+                    effectivenessData = effectivenessData
+                )
+                unifiedSelection.content
             }
 
             _uiState.value = _uiState.value.copy(
