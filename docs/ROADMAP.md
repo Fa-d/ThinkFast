@@ -1,4 +1,4 @@
-# ThinkFast Product Roadmap
+# Intently Product Roadmap
 
 **Mission:** Build a privacy-first digital wellbeing app that users love, then monetize ethically.
 

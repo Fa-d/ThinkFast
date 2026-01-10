@@ -1,6 +1,6 @@
 # Component Library
 
-The ThinkFast component library provides reusable, polished UI components that automatically use the design system tokens. All components follow Material 3 principles with iOS-inspired interactions.
+The Intently component library provides reusable, polished UI components that automatically use the design system tokens. All components follow Material 3 principles with iOS-inspired interactions.
 
 ## Component Principles
 

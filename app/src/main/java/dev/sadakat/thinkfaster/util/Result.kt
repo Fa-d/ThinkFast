@@ -5,7 +5,7 @@ package dev.sadakat.thinkfaster.util
  */
 sealed class Result<out T> {
     data class Success<T>(val data: T) : Result<T>()
-    data class Failure(val exception: ThinkFastException) : Result<Nothing>()
+    data class Failure(val exception: IntentlyException) : Result<Nothing>()
     data class Loading(val message: String? = null) : Result<Nothing>()
 
     val isSuccess: Boolean get() = this is Success
@@ -35,7 +35,7 @@ sealed class Result<out T> {
         is Loading -> this
     }
 
-    fun onError(action: (ThinkFastException) -> Unit): Result<T> {
+    fun onError(action: (IntentlyException) -> Unit): Result<T> {
         if (this is Failure) {
             action(exception)
         }
@@ -44,12 +44,12 @@ sealed class Result<out T> {
 
     companion object {
         fun <T> success(data: T): Result<T> = Success(data)
-        fun <T> failure(exception: ThinkFastException): Result<T> = Failure(exception)
+        fun <T> failure(exception: IntentlyException): Result<T> = Failure(exception)
         fun <T> loading(message: String? = null): Result<T> = Loading(message)
 
         fun <T> catch(block: () -> T): Result<T> = try {
             Success(block())
-        } catch (e: ThinkFastException) {
+        } catch (e: IntentlyException) {
             Failure(e)
         } catch (e: Exception) {
             Failure(DataAccessException(e.message ?: "Unknown error", e))
@@ -58,7 +58,7 @@ sealed class Result<out T> {
 
     fun <T> catchAndReturn(block: () -> Result<T>): Result<T> = try {
         block()
-    } catch (e: ThinkFastException) {
+    } catch (e: IntentlyException) {
         Failure(e)
     } catch (e: Exception) {
         Failure(DataAccessException(e.message ?: "Unknown error", e))
@@ -70,7 +70,7 @@ sealed class Result<out T> {
  */
 suspend fun <T> resultOf(block: suspend () -> T): Result<T> = try {
     Result.Success(block())
-} catch (e: ThinkFastException) {
+} catch (e: IntentlyException) {
     Result.Failure(e)
 } catch (e: Exception) {
     Result.Failure(DataAccessException(e.message ?: "Unknown error", e))

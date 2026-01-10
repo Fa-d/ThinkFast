@@ -58,7 +58,7 @@ import dev.sadakat.thinkfaster.presentation.overlay.components.InterventionConte
 import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionGradients
-import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
+import dev.sadakat.thinkfaster.ui.theme.IntentlyerTheme
 import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import dev.sadakat.thinkfaster.util.ErrorLogger
 import dev.sadakat.thinkfaster.util.InterventionStyling
@@ -136,7 +136,7 @@ class CompactTimerOverlayWindow(
             setViewTreeSavedStateRegistryOwner(this@CompactTimerOverlayWindow)
 
             setContent {
-                ThinkFasterTheme {
+                IntentlyerTheme {
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     var showCelebration by remember { mutableStateOf(false) }
 
@@ -524,7 +524,7 @@ private fun CompactTimerContent(
 
                             // App name
                             Text(
-                                text = "ThinkFaster",
+                                text = "Intentlyer",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = style.textColor.copy(alpha = 0.9f),
@@ -646,7 +646,7 @@ private fun CompactTimerContent(
 
                             // App name
                             Text(
-                                text = "ThinkFaster",
+                                text = "Intentlyer",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = style.textColor.copy(alpha = 0.9f),

@@ -10,7 +10,7 @@ import dev.sadakat.thinkfaster.data.local.database.MIGRATION_5_6
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_6_7
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_7_8
 import dev.sadakat.thinkfaster.data.local.database.MIGRATION_8_9
-import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
+import dev.sadakat.thinkfaster.data.local.database.IntentlyDatabase
 import dev.sadakat.thinkfaster.data.seed.callback.SeedDatabaseCallback
 import dev.sadakat.thinkfaster.util.Constants
 import org.koin.android.ext.koin.androidContext
@@ -19,7 +19,7 @@ import org.koin.dsl.module
 val databaseModule = module {
     single {
         val builder = Room.databaseBuilder(
-            androidContext(), ThinkFastDatabase::class.java, Constants.DATABASE_NAME
+            androidContext(), IntentlyDatabase::class.java, Constants.DATABASE_NAME
         ).addMigrations(
             MIGRATION_1_2,  // Phase G: Add intervention results table
             MIGRATION_2_3,  // Broken Streak Recovery: Add streak recovery table
@@ -39,13 +39,13 @@ val databaseModule = module {
         builder.build()
     }
 
-    single { get<ThinkFastDatabase>().usageSessionDao() }
-    single { get<ThinkFastDatabase>().usageEventDao() }
-    single { get<ThinkFastDatabase>().dailyStatsDao() }
-    single { get<ThinkFastDatabase>().goalDao() }
-    single { get<ThinkFastDatabase>().interventionResultDao() }  // Phase G
-    single { get<ThinkFastDatabase>().streakRecoveryDao() }  // Broken Streak Recovery
-    single { get<ThinkFastDatabase>().userBaselineDao() }  // First-Week Retention
-    single { get<ThinkFastDatabase>().comprehensiveOutcomeDao() }  // Phase 1
-    single { get<ThinkFastDatabase>().decisionExplanationDao() }  // Phase 1
+    single { get<IntentlyDatabase>().usageSessionDao() }
+    single { get<IntentlyDatabase>().usageEventDao() }
+    single { get<IntentlyDatabase>().dailyStatsDao() }
+    single { get<IntentlyDatabase>().goalDao() }
+    single { get<IntentlyDatabase>().interventionResultDao() }  // Phase G
+    single { get<IntentlyDatabase>().streakRecoveryDao() }  // Broken Streak Recovery
+    single { get<IntentlyDatabase>().userBaselineDao() }  // First-Week Retention
+    single { get<IntentlyDatabase>().comprehensiveOutcomeDao() }  // Phase 1
+    single { get<IntentlyDatabase>().decisionExplanationDao() }  // Phase 1
 }

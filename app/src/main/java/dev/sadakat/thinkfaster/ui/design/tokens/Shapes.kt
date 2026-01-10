@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Shape tokens for ThinkFast design system.
+ * Shape tokens for Intently design system.
  *
  * Based on iOS reference with a consistent corner radius scale.
  * Provides semantic shape values for consistent component styling.

@@ -1,4 +1,4 @@
-# ThinkFast Beta Recruitment Guide
+# Intently Beta Recruitment Guide
 
 **Goal:** Recruit 10-30 high-quality beta testers for Phase 1-2
 **Target:** 3 friends/family + 7-27 from online communities
@@ -49,7 +49,7 @@
 ```
 Hey [Name]!
 
-I've been building an app called ThinkFast to help people reduce mindless social media scrolling, and I need your help.
+I've been building an app called Intently to help people reduce mindless social media scrolling, and I need your help.
 
 Would you be willing to test it for 2-3 weeks and give me brutally honest feedback?
 
@@ -97,9 +97,9 @@ Interested? No pressure if not!
 ```
 Hi r/[subreddit]!
 
-I've been building an Android app called **ThinkFast** to help people reduce mindless social media usage, and I'm looking for 10-15 beta testers.
+I've been building an Android app called **Intently** to help people reduce mindless social media usage, and I'm looking for 10-15 beta testers.
 
-**What ThinkFast Does:**
+**What Intently Does:**
 - Shows intervention screens when you open Facebook/Instagram
 - Tracks your daily usage and streak
 - Helps you set realistic goals
@@ -162,7 +162,7 @@ No worries - thanks for reading! If you know someone who might benefit, feel fre
 
 **Twitter Post Template:**
 ```
-🚀 Looking for beta testers for ThinkFast - an app to help you stop mindless scrolling
+🚀 Looking for beta testers for Intently - an app to help you stop mindless scrolling
 
 Unlike blockers, it uses intervention screens to make you *think* before opening Facebook/Instagram
 
@@ -188,7 +188,7 @@ BETA TESTERS NEEDED
 
 Spend too much time on social media?
 
-Help test ThinkFast - an app that helps you
+Help test Intently - an app that helps you
 reduce mindless scrolling without blocking.
 
 REQUIREMENTS:
@@ -223,7 +223,7 @@ Or email: [YOUR_EMAIL]
 2. **What's your email address?** (Short answer - required)
 
 3. **Do you use Facebook or Instagram regularly?** (Yes/No)
-   - If No: "Thanks for your interest, but ThinkFast currently only supports these apps."
+   - If No: "Thanks for your interest, but Intently currently only supports these apps."
 
 4. **How much time do you estimate you spend on social media per day?**
    - Less than 30 minutes
@@ -237,11 +237,11 @@ Or email: [YOUR_EMAIL]
    - iPhone (iOS 13+)
    - Other (not compatible)
 
-6. **Why do you want to try ThinkFast?** (Paragraph - to filter serious users)
+6. **Why do you want to try Intently?** (Paragraph - to filter serious users)
 
 7. **Are you willing to fill out short surveys and give honest feedback?** (Yes/No)
 
-8. **How did you hear about ThinkFast?** (Multiple choice)
+8. **How did you hear about Intently?** (Multiple choice)
    - Reddit
    - Friend/Family
    - Twitter
@@ -253,7 +253,7 @@ Or email: [YOUR_EMAIL]
 **Accept if:**
 ✅ Uses Facebook/Instagram regularly (30+ min/day)
 ✅ Has compatible device
-✅ Gave thoughtful answer to "Why do you want to try ThinkFast?"
+✅ Gave thoughtful answer to "Why do you want to try Intently?"
 ✅ Willing to provide feedback
 
 **Reject if:**
@@ -263,17 +263,17 @@ Or email: [YOUR_EMAIL]
 
 ### Step 3: Send Acceptance Email
 
-**Subject:** You're in! ThinkFast Beta Access 🎉
+**Subject:** You're in! Intently Beta Access 🎉
 
 **Body:**
 ```
 Hi [Name]!
 
-Thanks for signing up to test ThinkFast! You're in. 🎉
+Thanks for signing up to test Intently! You're in. 🎉
 
 Here's how to get started:
 
-1. **Download ThinkFast:**
+1. **Download Intently:**
    [Android APK link or TestFlight link]
 
 2. **Install & Set Up:**
@@ -389,13 +389,13 @@ Free lifetime premium + Recognition + Early access
 
 ## Sample Rejection Email
 
-**Subject:** Thanks for your interest in ThinkFast
+**Subject:** Thanks for your interest in Intently
 
 **Body:**
 ```
 Hi [Name],
 
-Thanks so much for signing up to test ThinkFast!
+Thanks so much for signing up to test Intently!
 
 Unfortunately, we're currently only accepting testers who [reason: use Facebook/Instagram, have Android devices, etc.].
 

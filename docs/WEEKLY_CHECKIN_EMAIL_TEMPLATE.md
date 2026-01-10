@@ -1,4 +1,4 @@
-# ThinkFast Beta Testing - Weekly Check-In Emails
+# Intently Beta Testing - Weekly Check-In Emails
 
 **Purpose:** Stay engaged with beta testers and collect ongoing feedback
 **Frequency:** Weekly for 3-4 weeks during Phase 1-2
@@ -18,20 +18,20 @@
 
 ## Week 0: Welcome Email (Day 0)
 
-**Subject:** Welcome to ThinkFast Beta! 🚀
+**Subject:** Welcome to Intently Beta! 🚀
 
 **Body:**
 ```
 Hi [Name]!
 
-Welcome to the ThinkFast beta program! 🎉
+Welcome to the Intently beta program! 🎉
 
 You're one of the first people to help us build a better relationship with social media, and we couldn't be more excited to have you.
 
 Here's what to expect:
 
 📱 **Getting Started:**
-1. Download ThinkFast: [LINK TO APK/TESTFLIGHT]
+1. Download Intently: [LINK TO APK/TESTFLIGHT]
 2. Complete the 3-screen onboarding
 3. Set your first goal (we recommend 60 min/day to start)
 4. Grant permissions when prompted
@@ -54,13 +54,13 @@ Reply to this email or report it directly in the app. We fix issues fast!
 🙋 **Questions?**
 Just reply to this email - I read every message personally.
 
-Thanks for being part of this journey. Your feedback will shape ThinkFast into something truly valuable.
+Thanks for being part of this journey. Your feedback will shape Intently into something truly valuable.
 
 Let's take back control together! 💪
 
 Best,
 [Your Name]
-ThinkFast Creator
+Intently Creator
 
 P.S. If you haven't installed yet, here's the link again: [LINK]
 
@@ -75,18 +75,18 @@ P.S. If you haven't installed yet, here's the link again: [LINK]
 
 ## Week 1: First Check-In + Feedback Form (Day 7)
 
-**Subject:** ThinkFast Beta: Week 1 - How's it going?
+**Subject:** Intently Beta: Week 1 - How's it going?
 
 **Body:**
 ```
 Hi [Name],
 
-You've been using ThinkFast for about a week now! 📊
+You've been using Intently for about a week now! 📊
 
 I'd love to hear how it's going. Your feedback at this stage is SUPER valuable because you're experiencing the app with fresh eyes.
 
 **Quick Check-In:**
-- Have you been able to use ThinkFast daily?
+- Have you been able to use Intently daily?
 - Did you hit any roadblocks or confusion?
 - Have you noticed any change in your social media habits?
 
@@ -107,7 +107,7 @@ Reply to this email if:
 - You have questions about a feature
 - You want to suggest an improvement
 
-Thanks for being an early believer in ThinkFast! 🙏
+Thanks for being an early believer in Intently! 🙏
 
 Best,
 [Your Name]
@@ -125,13 +125,13 @@ P.S. Filled out the survey already? You're amazing! Thank you!
 
 ## Week 2: Progress Check-In (Day 14)
 
-**Subject:** ThinkFast Update: You're 2 weeks in! 🔥
+**Subject:** Intently Update: You're 2 weeks in! 🔥
 
 **Body:**
 ```
 Hi [Name],
 
-Two weeks with ThinkFast! How's your streak looking? 🔥
+Two weeks with Intently! How's your streak looking? 🔥
 
 At the 2-week mark, users typically notice:
 - ✅ Opening social media apps less automatically
@@ -143,7 +143,7 @@ How about you?
 **Quick Question:**
 Hit reply and tell me in ONE sentence:
 
-"The best thing about ThinkFast is _______________"
+"The best thing about Intently is _______________"
 
 (Seriously, just one sentence - I read every response!)
 
@@ -186,15 +186,15 @@ P.S. Having issues? Reply to this email and I'll help troubleshoot.
 
 ## Week 3: Feature Focus (Day 21)
 
-**Subject:** ThinkFast Tip: Getting the most out of interventions
+**Subject:** Intently Tip: Getting the most out of interventions
 
 **Body:**
 ```
 Hi [Name],
 
-3 weeks in! You're a ThinkFast veteran now. 🏆
+3 weeks in! You're a Intently veteran now. 🏆
 
-Today I want to share a tip about the feature that makes ThinkFast unique: **intervention screens**.
+Today I want to share a tip about the feature that makes Intently unique: **intervention screens**.
 
 **Did You Know?**
 Those reminder screens when you open Facebook/Instagram aren't just random messages. They're:
@@ -234,7 +234,7 @@ Thanks for being part of this! 💙
 Best,
 [Your Name]
 
-P.S. Still using ThinkFast daily? You're in the top [X%] of beta testers! 🌟
+P.S. Still using Intently daily? You're in the top [X%] of beta testers! 🌟
 
 ---
 
@@ -246,13 +246,13 @@ Reply with "INTERVIEW" if you'd be up for a 30-min chat next week.
 
 ## Week 4: Final Wrap-Up + Interview Invitation (Day 28)
 
-**Subject:** ThinkFast Beta: One month milestone! 🎉
+**Subject:** Intently Beta: One month milestone! 🎉
 
 **Body:**
 ```
 Hi [Name],
 
-Wow - you've been using ThinkFast for a full month! 🎉
+Wow - you've been using Intently for a full month! 🎉
 
 First off: THANK YOU. Your participation has been invaluable.
 
@@ -261,7 +261,7 @@ Here's what we've learned so far (thanks to you and other beta testers):
 **By The Numbers:**
 - [X] beta testers active
 - [Y%] report reduced social media usage
-- [Z%] say they'd recommend ThinkFast
+- [Z%] say they'd recommend Intently
 - [N] bugs fixed based on your feedback
 
 **Top Feedback Themes:**
@@ -277,7 +277,7 @@ We're moving into **Phase 2: User Validation**, and we need YOUR help one more t
 We're looking for 5-10 beta testers to do in-depth interviews about:
 - What's working (and what's not)
 - What you'd pay for (and what should stay free)
-- How ThinkFast fits into your life
+- How Intently fits into your life
 
 **What You Get:**
 - 🎁 Lifetime 50% discount when we launch paid tier
@@ -293,7 +293,7 @@ Slots are limited, so grab one soon!
 **Not Interested in Interview?**
 No problem! You can still help by:
 1. Filling out the final feedback survey: [LINK]
-2. Keep using ThinkFast and reporting bugs
+2. Keep using Intently and reporting bugs
 3. Telling a friend who might benefit
 
 **Looking Ahead:**
@@ -305,7 +305,7 @@ Based on your feedback, here's what we're working on:
 
 **A Personal Note:**
 
-Building ThinkFast has been a journey, and having you along for the ride has made it so much better.
+Building Intently has been a journey, and having you along for the ride has made it so much better.
 
 Whether you've used it every day or just a few times, whether you loved it or found frustrations - your honest feedback has shaped this app into something real.
 
@@ -323,7 +323,7 @@ P.S. Want to stay in the loop? Follow our journey at [SOCIAL/BLOG LINK]
 **Action Items:**
 - [ ] Book interview: [LINK]
 - [ ] Fill out final survey: [LINK]
-- [ ] Share ThinkFast with a friend who needs it
+- [ ] Share Intently with a friend who needs it
 
 **Questions? Bugs? Ideas?**
 Just hit reply - I read every email personally.
@@ -339,7 +339,7 @@ Just hit reply - I read every email personally.
 ```
 Hi [Name],
 
-I noticed you haven't opened ThinkFast in a while, and I wanted to check in.
+I noticed you haven't opened Intently in a while, and I wanted to check in.
 
 **Did something go wrong?**
 - Bug or crash?
@@ -348,7 +348,7 @@ I noticed you haven't opened ThinkFast in a while, and I wanted to check in.
 - Just got busy? (Totally understandable!)
 
 **I'd love to know:**
-What would make ThinkFast valuable enough to use again?
+What would make Intently valuable enough to use again?
 
 Your honest feedback - even if it's "this app isn't for me" - helps us improve.
 
@@ -359,7 +359,7 @@ Here are some tips that helped other users:
 3. Actually read the intervention screens (don't auto-tap)
 
 **No Pressure:**
-If ThinkFast isn't a fit, no hard feelings! I appreciate you giving it a shot.
+If Intently isn't a fit, no hard feelings! I appreciate you giving it a shot.
 
 But if there's something we can fix or improve, I'm all ears.
 

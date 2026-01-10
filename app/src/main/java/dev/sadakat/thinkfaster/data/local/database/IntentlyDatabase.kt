@@ -38,7 +38,7 @@ import dev.sadakat.thinkfaster.data.local.database.entities.UsageSessionEntity
     version = 9,  // Phase 1: Added comprehensive outcome and decision explanation tracking
     exportSchema = true
 )
-abstract class ThinkFastDatabase : RoomDatabase() {
+abstract class IntentlyDatabase : RoomDatabase() {
     abstract fun usageSessionDao(): UsageSessionDao
     abstract fun usageEventDao(): UsageEventDao
     abstract fun dailyStatsDao(): DailyStatsDao

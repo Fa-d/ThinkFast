@@ -384,7 +384,7 @@ fun PermissionPage() {
 
         // Explanation
         Text(
-            text = "To help you mindfully use social media, ThinkFast needs a few permissions:",
+            text = "To help you mindfully use social media, Intently needs a few permissions:",
             style = MaterialTheme.typography.bodyMedium.copy(
                 textAlign = TextAlign.Center,
                 lineHeight = 20.sp

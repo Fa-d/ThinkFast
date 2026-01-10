@@ -1,4 +1,4 @@
-# ThinkFast Beta Testing - Quick Start Guide
+# Intently Beta Testing - Quick Start Guide
 
 **Your complete roadmap to running a successful beta testing program for Phase 1-2**
 
@@ -21,7 +21,7 @@ You now have a complete beta testing kit with 4 documents:
 ### Step 1: Set Up Google Form (10 mins)
 
 1. Go to https://forms.google.com
-2. Create new form: "ThinkFast Beta Feedback - Week 1"
+2. Create new form: "Intently Beta Feedback - Week 1"
 3. Copy questions from `BETA_TESTING_FEEDBACK_FORM.md`
 4. Get shareable link
 5. Test it yourself first
@@ -34,7 +34,7 @@ You now have a complete beta testing kit with 4 documents:
 
 1. Build release APK:
    ```bash
-   cd /Users/fahad/myLab/ThinkFast
+   cd /Users/fahad/myLab/Intently
    ./gradlew assembleRelease
    ```
 

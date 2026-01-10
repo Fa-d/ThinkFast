@@ -56,7 +56,7 @@ import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.design.tokens.Spacing
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionTypography
-import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
+import dev.sadakat.thinkfaster.ui.theme.IntentlyerTheme
 import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import dev.sadakat.thinkfaster.util.ErrorLogger
 import dev.sadakat.thinkfaster.util.InterventionAnimations
@@ -132,7 +132,7 @@ class TimerOverlayWindow(
             setViewTreeSavedStateRegistryOwner(this@TimerOverlayWindow)
 
             setContent {
-                ThinkFasterTheme {
+                IntentlyerTheme {
                     TimerOverlayScreen(
                         viewModel = viewModel,
                         snoozeDurationMinutes = interventionPreferences.getSelectedSnoozeDuration(),

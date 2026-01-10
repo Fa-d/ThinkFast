@@ -259,7 +259,7 @@ fun OnboardingPermissionUsageScreen(
 
                     // Helper text
                     Text(
-                        text = "You'll be taken to Settings. Find 'ThinkFast' and toggle it ON.",
+                        text = "You'll be taken to Settings. Find 'Intently' and toggle it ON.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center,

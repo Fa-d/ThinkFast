@@ -96,7 +96,7 @@ fun PermissionRequestScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "ThinkFast needs a few permissions to monitor your app usage and show helpful reminders.",
+                        text = "Intently needs a few permissions to monitor your app usage and show helpful reminders.",
                         fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,

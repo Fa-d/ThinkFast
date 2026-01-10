@@ -1,6 +1,6 @@
 package dev.sadakat.thinkfaster.seed
 
-import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
+import dev.sadakat.thinkfaster.data.local.database.IntentlyDatabase
 import dev.sadakat.thinkfaster.data.seed.config.PersonaConfigurations
 import dev.sadakat.thinkfaster.data.seed.generator.BaseSeedGenerator
 import dev.sadakat.thinkfaster.data.seed.generator.InterventionResultGenerator
@@ -26,7 +26,7 @@ class OverLimitStrugglerSeedGenerator : BaseSeedGenerator(
     config = PersonaConfigurations.OVER_LIMIT_STRUGGLER
 ) {
 
-    override suspend fun seedDatabase(database: ThinkFastDatabase) {
+    override suspend fun seedDatabase(database: IntentlyDatabase) {
         val targetApps = listOf(FACEBOOK_PACKAGE, INSTAGRAM_PACKAGE)
         val days = 28  // 28 days of data
 

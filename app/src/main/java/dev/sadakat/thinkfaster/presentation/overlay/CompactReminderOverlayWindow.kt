@@ -58,7 +58,7 @@ import dev.sadakat.thinkfaster.presentation.overlay.components.InterventionConte
 import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionGradients
-import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
+import dev.sadakat.thinkfaster.ui.theme.IntentlyerTheme
 import dev.sadakat.thinkfaster.ui.theme.shouldUseTwoColumnLayout
 import dev.sadakat.thinkfaster.ui.theme.rememberScreenSize
 import dev.sadakat.thinkfaster.ui.theme.ScreenSize
@@ -142,7 +142,7 @@ class CompactReminderOverlayWindow(
             setViewTreeSavedStateRegistryOwner(this@CompactReminderOverlayWindow)
 
             setContent {
-                ThinkFasterTheme {
+                IntentlyerTheme {
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     var showCelebration by remember { mutableStateOf(false) }
 
@@ -536,7 +536,7 @@ private fun CompactOverlayContent(
 
                             // App name
                             Text(
-                                text = "ThinkFaster",
+                                text = "Intentlyer",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = style.textColor.copy(alpha = 0.9f),
@@ -634,7 +634,7 @@ private fun CompactOverlayContent(
 
                             // App name
                             Text(
-                                text = "ThinkFaster",
+                                text = "Intentlyer",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = style.textColor.copy(alpha = 0.9f),

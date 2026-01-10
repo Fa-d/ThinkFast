@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Think Fast"
+rootProject.name = "Intently"
 include(":app")

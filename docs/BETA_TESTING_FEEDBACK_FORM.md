@@ -1,4 +1,4 @@
-# ThinkFast Beta Testing Feedback Form
+# Intently Beta Testing Feedback Form
 
 **Purpose:** Collect structured feedback from beta testers after 1 week of usage
 **Distribution:** Send via email to all beta testers after 7 days
@@ -9,7 +9,7 @@
 ## Instructions for Google Form Setup
 
 1. Go to https://forms.google.com
-2. Create a new form titled "ThinkFast Beta Feedback - Week 1"
+2. Create a new form titled "Intently Beta Feedback - Week 1"
 3. Copy each section below as a separate question
 4. Set question types as indicated in brackets
 
@@ -21,7 +21,7 @@
 - [Short Answer]
 - Make this optional
 
-**Question 2:** How many days have you been using ThinkFast?
+**Question 2:** How many days have you been using Intently?
 - [Multiple Choice]
 - Options: 1-3 days, 4-6 days, 7+ days, Less than 1 day
 
@@ -29,13 +29,13 @@
 
 ## Section 2: Core Metrics (Critical for Phase 1 Checkpoint)
 
-**Question 3:** On a scale of 0-10, how likely are you to recommend ThinkFast to a friend?
+**Question 3:** On a scale of 0-10, how likely are you to recommend Intently to a friend?
 - [Linear Scale: 0-10]
 - 0 = Not at all likely
 - 10 = Extremely likely
 - **NOTE:** This is your NPS (Net Promoter Score). Need >40 to pass Phase 1.
 
-**Question 4:** Would you be sad if ThinkFast disappeared tomorrow?
+**Question 4:** Would you be sad if Intently disappeared tomorrow?
 - [Multiple Choice]
 - Options:
   - Yes, very sad - I rely on it
@@ -44,7 +44,7 @@
   - No - I could easily live without it
 - **TARGET:** 70%+ say "Yes, very sad"
 
-**Question 5:** How often have you opened ThinkFast this week?
+**Question 5:** How often have you opened Intently this week?
 - [Multiple Choice]
 - Options:
   - Daily (7+ times this week)
@@ -63,17 +63,17 @@
 
 ## Section 3: Value Validation
 
-**Question 7:** What's the #1 thing you LOVE about ThinkFast?
+**Question 7:** What's the #1 thing you LOVE about Intently?
 - [Paragraph]
 - Required
 - **Look for:** Patterns in what users value most
 
-**Question 8:** What's the most FRUSTRATING part of using ThinkFast?
+**Question 8:** What's the most FRUSTRATING part of using Intently?
 - [Paragraph]
 - Required
 - **Look for:** Common pain points to fix
 
-**Question 9:** Has ThinkFast helped you reduce your social media usage?
+**Question 9:** Has Intently helped you reduce your social media usage?
 - [Multiple Choice]
 - Options:
   - Yes, significantly (reduced by 30%+ I'd estimate)
@@ -138,7 +138,7 @@
 
 ## Section 5: Feature Requests & Improvements
 
-**Question 15:** What ONE feature would make you use ThinkFast MORE?
+**Question 15:** What ONE feature would make you use Intently MORE?
 - [Paragraph]
 - Required
 - **Look for:** Most-requested features for Phase 3
@@ -155,7 +155,7 @@
 
 ## Section 6: Monetization Validation (Phase 2 prep)
 
-**Question 18:** Would you pay for ThinkFast?
+**Question 18:** Would you pay for Intently?
 - [Multiple Choice]
 - Options:
   - Yes, definitely
@@ -177,7 +177,7 @@
   - I wouldn't pay
 - **Look for:** Price sensitivity and willingness to pay
 
-**Question 20:** What feature(s) would make ThinkFast worth paying for?
+**Question 20:** What feature(s) would make Intently worth paying for?
 - [Paragraph]
 - Optional
 - **Look for:** Premium feature ideas
@@ -207,18 +207,18 @@
 
 **Message:**
 ```
-Thank you so much for helping make ThinkFast better!
+Thank you so much for helping make Intently better!
 
 Your feedback is invaluable. We read every single response and use your insights to improve the app.
 
 Next steps:
 - We'll send a quick check-in next week
 - If you opted in for an interview, we'll reach out soon
-- Keep using ThinkFast and watch for updates!
+- Keep using Intently and watch for updates!
 
 Questions? Email: [YOUR_EMAIL]
 
-- The ThinkFast Team
+- The Intently Team
 ```
 
 ---
@@ -259,7 +259,7 @@ After collecting responses, calculate:
 
 1. **Timing:** Send 7 days after user starts beta testing
 2. **Medium:** Email with direct link to form
-3. **Subject:** "ThinkFast Beta: Your feedback matters! (5 min survey)"
+3. **Subject:** "Intently Beta: Your feedback matters! (5 min survey)"
 4. **Incentive:** Consider offering:
    - Early access to premium features
    - Lifetime discount code

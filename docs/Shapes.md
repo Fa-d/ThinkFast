@@ -1,6 +1,6 @@
 # Shape System
 
-The ThinkFast shape system provides consistent corner radius values for all UI components, creating a cohesive and modern aesthetic.
+The Intently shape system provides consistent corner radius values for all UI components, creating a cohesive and modern aesthetic.
 
 ## Corner Radius Scale
 

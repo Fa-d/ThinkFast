@@ -1282,7 +1282,7 @@ class UsageMonitorService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("ThinkFast is monitoring")
+            .setContentTitle("Intently is monitoring")
             .setContentText("Helping you stay mindful of social media usage")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)

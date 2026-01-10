@@ -162,7 +162,7 @@ fun OnboardingCompleteScreen(
 
             // Success message
             Text(
-                text = "ThinkFast is now protecting your time",
+                text = "Intently is now protecting your time",
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = FontWeight.Medium
                 ),

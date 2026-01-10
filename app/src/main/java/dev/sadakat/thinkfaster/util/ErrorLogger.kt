@@ -8,7 +8,7 @@ import dev.sadakat.thinkfaster.BuildConfig
  */
 object ErrorLogger {
 
-    private const val TAG = "ThinkFast"
+    private const val TAG = "Intently"
 
     /**
      * Log an error with exception details
@@ -98,9 +98,9 @@ object ErrorLogger {
     }
 
     /**
-     * Log a ThinkFastException with appropriate context
+     * Log a IntentlyException with appropriate context
      */
-    fun logError(exception: ThinkFastException, context: String? = null) {
+    fun logError(exception: IntentlyException, context: String? = null) {
         val message = when (exception) {
             is PermissionDeniedException -> "Permission denied for ${exception.message}"
             is DataAccessException -> "Data access error: ${exception.message}"
@@ -128,7 +128,7 @@ fun <T> dev.sadakat.thinkfaster.util.Result<T>.logError(context: String? = null)
  * Extension function to log exceptions inline
  */
 fun Throwable.logError(message: String? = null, context: String? = null) {
-    if (this is ThinkFastException) {
+    if (this is IntentlyException) {
         ErrorLogger.logError(this, context)
     } else {
         ErrorLogger.error(this, message, context)

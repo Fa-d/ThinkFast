@@ -1,4 +1,4 @@
-# ThinkFast User Interview Template
+# Intently User Interview Template
 
 **Purpose:** Conduct in-depth 30-45 minute interviews with beta users
 **Target:** 5-10 interviews during Phase 2
@@ -12,7 +12,7 @@
 - [ ] Sent calendar invite with video call link
 - [ ] Prepared note-taking document or recording setup (with permission)
 - [ ] Reviewed user's feedback form responses (if available)
-- [ ] Have ThinkFast app open to reference screens
+- [ ] Have Intently app open to reference screens
 
 ---
 
@@ -24,9 +24,9 @@
 ```
 Hi [Name]! Thanks so much for taking the time to chat with me today.
 
-I'm [Your Name], and I'm building ThinkFast. This conversation will take about 30-45 minutes, and I want to learn about your experience using the app.
+I'm [Your Name], and I'm building Intently. This conversation will take about 30-45 minutes, and I want to learn about your experience using the app.
 
-There are no right or wrong answers - I genuinely want to understand what works, what doesn't, and how we can make ThinkFast better for you.
+There are no right or wrong answers - I genuinely want to understand what works, what doesn't, and how we can make Intently better for you.
 
 Before we start:
 - Is it okay if I record this call for note-taking? (Recording is optional and will only be used internally)
@@ -40,15 +40,15 @@ Great! Let's start.
 
 ## Part 1: Background & Context (5 minutes)
 
-**Goal:** Understand the user's relationship with social media and why they tried ThinkFast.
+**Goal:** Understand the user's relationship with social media and why they tried Intently.
 
 **Q1:** Tell me about your typical day with social media. Which apps do you use most?
 - Listen for: Daily habits, trigger moments, time spent
 
-**Q2:** What made you decide to try ThinkFast? What problem were you hoping it would solve?
+**Q2:** What made you decide to try Intently? What problem were you hoping it would solve?
 - Listen for: Pain points, motivations, expectations
 
-**Q3:** Before ThinkFast, had you tried other screen time apps or techniques?
+**Q3:** Before Intently, had you tried other screen time apps or techniques?
 - If yes: What worked? What didn't?
 - Listen for: Comparison points, unmet needs
 
@@ -58,7 +58,7 @@ Great! Let's start.
 
 **Goal:** Evaluate the onboarding experience.
 
-**Q4:** Walk me through your first time opening ThinkFast. What do you remember?
+**Q4:** Walk me through your first time opening Intently. What do you remember?
 - Listen for: Confusion points, delight moments, friction
 
 **Q5:** Did you set up goals right away, or did you wait?
@@ -74,7 +74,7 @@ Great! Let's start.
 
 **Goal:** Understand what value they're getting and which features matter.
 
-**Q7:** How often do you open ThinkFast? What makes you open it?
+**Q7:** How often do you open Intently? What makes you open it?
 - Listen for: Use cases, trigger moments
 
 **Q8:** Which feature do you use MOST?
@@ -89,16 +89,16 @@ Great! Let's start.
   - Do you notice different messages, or does it feel repetitive?
 - **CRITICAL:** This is the core feature - dig deep here
 
-**Q10:** Tell me about a specific time ThinkFast actually stopped you from mindlessly scrolling.
+**Q10:** Tell me about a specific time Intently actually stopped you from mindlessly scrolling.
 - If none: That's okay - why do you think that is?
 - Listen for: Real behavior change stories
 
-**Q11:** Has ThinkFast helped you reduce your social media usage?
+**Q11:** Has Intently helped you reduce your social media usage?
 - If yes: By how much? How do you know?
 - If no: Why not? What's missing?
 - Listen for: Tangible outcomes
 
-**Q12:** If ThinkFast disappeared tomorrow, what would you miss most?
+**Q12:** If Intently disappeared tomorrow, what would you miss most?
 - Listen for: Core value, indispensability
 
 ---
@@ -107,7 +107,7 @@ Great! Let's start.
 
 **Goal:** Identify what's broken, confusing, or annoying.
 
-**Q13:** What's the most FRUSTRATING thing about ThinkFast?
+**Q13:** What's the most FRUSTRATING thing about Intently?
 - Don't defend - just listen and take notes
 - Probe: Can you give me a specific example?
 
@@ -127,15 +127,15 @@ Great! Let's start.
 
 **Goal:** Discover what users NEED vs WANT.
 
-**Q17:** If you could add ONE feature to ThinkFast, what would it be?
+**Q17:** If you could add ONE feature to Intently, what would it be?
 - Probe: Why is that important to you?
 - Listen for: High-impact features
 
-**Q18:** What would make ThinkFast so good that you'd tell all your friends about it?
+**Q18:** What would make Intently so good that you'd tell all your friends about it?
 - Listen for: Word-of-mouth triggers
 
-**Q19:** Are there any other apps you use alongside ThinkFast?
-- If yes: Why? What do they do that ThinkFast doesn't?
+**Q19:** Are there any other apps you use alongside Intently?
+- If yes: Why? What do they do that Intently doesn't?
 - Listen for: Competitive gaps
 
 ---
@@ -146,12 +146,12 @@ Great! Let's start.
 
 **CRITICAL QUESTIONS - Phase 2 requirement**
 
-**Q20:** Right now, ThinkFast is free. Would you pay for it?
+**Q20:** Right now, Intently is free. Would you pay for it?
 - Don't explain pricing yet - just listen to their gut reaction
 - If "no": What would make it worth paying for?
 - If "yes": Continue to Q21
 
-**Q21:** How much would you pay per month for ThinkFast?
+**Q21:** How much would you pay per month for Intently?
 - Let them answer first without options
 - Then probe: Would you pay $3/month? $5/month?
 - Listen for: Price sensitivity, value perception
@@ -165,25 +165,25 @@ Great! Let's start.
 - What would you PAY for?
 - Listen for: Freemium boundary
 
-**Q24:** Let's say ThinkFast cost $3/month. Would you:
+**Q24:** Let's say Intently cost $3/month. Would you:
 - Definitely pay
 - Probably pay
 - Probably not pay
 - Definitely not pay
 - Why?
 
-**Q25:** Compare ThinkFast to a coffee ($5), a Netflix subscription ($15), or a book ($10-20). What's a fair price?
+**Q25:** Compare Intently to a coffee ($5), a Netflix subscription ($15), or a book ($10-20). What's a fair price?
 - Listen for: Anchoring and value comparison
 
 ---
 
 ## Part 7: Recommendation & Wrap-Up (3 minutes)
 
-**Q26:** On a scale of 0-10, how likely are you to recommend ThinkFast to a friend?
+**Q26:** On a scale of 0-10, how likely are you to recommend Intently to a friend?
 - Why that score?
 - What would make it a 10?
 
-**Q27:** If you were building ThinkFast, what would you focus on next?
+**Q27:** If you were building Intently, what would you focus on next?
 - Listen for: Priorities from user perspective
 
 **Q28:** Any other thoughts, ideas, or feedback you want to share?
@@ -224,7 +224,7 @@ Within 1 hour of the interview:
 
 3. **Send Thank You Email:**
    ```
-   Subject: Thanks for the ThinkFast interview!
+   Subject: Thanks for the Intently interview!
 
    Hi [Name],
 
@@ -294,7 +294,7 @@ After 5-10 interviews, analyze:
 ❌ Explain or justify features
 ❌ Lead the witness ("Don't you think X is great?")
 ❌ Interrupt or talk over them
-❌ Defend ThinkFast when they criticize
+❌ Defend Intently when they criticize
 ❌ Ask hypothetical questions ("Would you use X?")
 ❌ Rush through questions
 ❌ Pitch future features
@@ -316,7 +316,7 @@ After 5-10 interviews, analyze:
 ### Background:
 - Daily social media usage: _____
 - Apps used most: _____
-- Why they tried ThinkFast: _____
+- Why they tried Intently: _____
 
 ### What They Love:
 - _____

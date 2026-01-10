@@ -4,7 +4,7 @@ package dev.sadakat.thinkfaster.domain.model
  * Sealed class representing different types of intervention content
  * that can be shown on reminder and timer overlay screens.
  *
- * These interventions are the CORE of ThinkFast's value proposition.
+ * These interventions are the CORE of Intently's value proposition.
  */
 sealed class InterventionContent {
 

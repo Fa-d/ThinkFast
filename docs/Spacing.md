@@ -1,6 +1,6 @@
 # Spacing System
 
-The ThinkFast spacing system uses a 4dp baseline grid to create consistent rhythm and visual hierarchy throughout the app.
+The Intently spacing system uses a 4dp baseline grid to create consistent rhythm and visual hierarchy throughout the app.
 
 ## 4dp Baseline Grid
 

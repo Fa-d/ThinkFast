@@ -1,6 +1,6 @@
 package dev.sadakat.thinkfaster.data.seed.generator
 
-import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
+import dev.sadakat.thinkfaster.data.local.database.IntentlyDatabase
 import dev.sadakat.thinkfaster.data.seed.config.PersonaConfig
 
 /**
@@ -12,7 +12,7 @@ interface SeedGenerator {
      * Seeds the database with persona-specific data.
      * Called on database onCreate (first install only).
      */
-    suspend fun seedDatabase(database: ThinkFastDatabase)
+    suspend fun seedDatabase(database: IntentlyDatabase)
 
     /**
      * Returns the persona configuration used by this generator.

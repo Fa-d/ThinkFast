@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 import androidx.core.content.edit
 
 /**
- * Privacy-Safe Analytics for ThinkFast
+ * Privacy-Safe Analytics for Intently
  *
  * PRIVACY PROMISE:
  * - All raw data stays on device

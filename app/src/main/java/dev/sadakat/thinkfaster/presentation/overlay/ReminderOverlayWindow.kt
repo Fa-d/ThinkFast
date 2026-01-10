@@ -93,7 +93,7 @@ import dev.sadakat.thinkfaster.ui.design.tokens.Shapes
 import dev.sadakat.thinkfaster.ui.theme.InterventionColors
 import dev.sadakat.thinkfaster.ui.theme.InterventionGradients
 import dev.sadakat.thinkfaster.ui.theme.InterventionTypography
-import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
+import dev.sadakat.thinkfaster.ui.theme.IntentlyerTheme
 import dev.sadakat.thinkfaster.ui.theme.ResponsivePadding
 import dev.sadakat.thinkfaster.ui.theme.ResponsiveFontSize
 import dev.sadakat.thinkfaster.ui.theme.rememberAccessibilityState
@@ -188,7 +188,7 @@ class ReminderOverlayWindow(
             setViewTreeSavedStateRegistryOwner(this@ReminderOverlayWindow)
 
             setContent {
-                ThinkFasterTheme {
+                IntentlyerTheme {
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     var showCelebration by remember { mutableStateOf(false) }
                     val isDarkTheme = isSystemInDarkTheme()

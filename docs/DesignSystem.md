@@ -1,10 +1,10 @@
-# ThinkFast Design System
+# Intently Design System
 
 > **Material 3 foundation + iOS-inspired polish = Best of both worlds**
 
 ## Welcome
 
-This design system provides a comprehensive foundation for building consistent, accessible, and polished user interfaces in the ThinkFast Android app. It combines Material Design 3 principles with iOS-level UX refinement to create an exceptional user experience.
+This design system provides a comprehensive foundation for building consistent, accessible, and polished user interfaces in the Intently Android app. It combines Material Design 3 principles with iOS-level UX refinement to create an exceptional user experience.
 
 ## Design Philosophy
 
@@ -195,4 +195,4 @@ For questions or issues with the design system:
 
 **Version**: 1.0
 **Last Updated**: 2026-01-04
-**Maintained By**: ThinkFast Development Team
+**Maintained By**: Intently Development Team

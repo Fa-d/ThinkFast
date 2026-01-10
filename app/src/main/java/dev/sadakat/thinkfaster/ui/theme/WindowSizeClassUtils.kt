@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 
 /**
- * Material3 WindowSizeClass integration for ThinkFast
+ * Material3 WindowSizeClass integration for Intently
  * Replaces custom ScreenSize enum with industry standard
  */
 

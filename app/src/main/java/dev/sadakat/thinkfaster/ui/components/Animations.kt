@@ -11,7 +11,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.sp
 
 /**
- * Custom animations for ThinkFast
+ * Custom animations for Intently
  * Phase 1.4: Visual Polish - Custom animations
  */
 

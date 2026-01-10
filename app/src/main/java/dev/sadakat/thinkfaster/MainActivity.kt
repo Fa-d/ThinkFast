@@ -62,7 +62,7 @@ import dev.sadakat.thinkfaster.analytics.AnalyticsManager
 import dev.sadakat.thinkfaster.presentation.navigation.NavGraph
 import dev.sadakat.thinkfaster.presentation.navigation.Screen
 import dev.sadakat.thinkfaster.presentation.widget.refreshWidgetData
-import dev.sadakat.thinkfaster.ui.theme.ThinkFasterThemeWithMode
+import dev.sadakat.thinkfaster.ui.theme.IntentlyerThemeWithMode
 import dev.sadakat.thinkfaster.util.PermissionHelper
 import dev.sadakat.thinkfaster.util.ThemePreferences
 import org.koin.compose.koinInject
@@ -80,7 +80,7 @@ data class BottomNavItem(
 )
 
 /**
- * Main activity for ThinkFast app
+ * Main activity for Intently app
  * Contains bottom navigation and hosts all screens
  */
 class MainActivity : ComponentActivity() {
@@ -92,7 +92,7 @@ class MainActivity : ComponentActivity() {
             val dynamicColor = ThemePreferences.getDynamicColor(this)
             val amoledDark = ThemePreferences.getAmoledDark(this)
 
-            ThinkFasterThemeWithMode(
+            IntentlyerThemeWithMode(
                 themeMode = themeMode,
                 dynamicColor = dynamicColor,
                 amoledDark = amoledDark

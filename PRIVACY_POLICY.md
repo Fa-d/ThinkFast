@@ -1,24 +1,24 @@
-# Privacy Policy for ThinkFast
+# Privacy Policy for Intently
 
 **Last Updated:** December 26, 2025
 
 ## Introduction
 
-ThinkFast is a digital wellbeing application designed to help you build mindful social media usage habits. This privacy policy explains how ThinkFast collects, uses, and protects your information.
+Intently is a digital wellbeing application designed to help you build mindful social media usage habits. This privacy policy explains how Intently collects, uses, and protects your information.
 
 ## Developer Information
 
-**App Name:** ThinkFast
+**App Name:** Intently
 **Developer:** MD Sadakat Hussain Fahad
 **Contact Email:** contact@sadakat.dev
 
 ## Our Commitment to Privacy
 
-ThinkFast is built with privacy as a core principle. Your data never leaves your device. We do not collect, transmit, or share any of your personal information with third parties.
+Intently is built with privacy as a core principle. Your data never leaves your device. We do not collect, transmit, or share any of your personal information with third parties.
 
 ## Information We Collect
 
-ThinkFast collects the following information to provide its core functionality:
+Intently collects the following information to provide its core functionality:
 
 ### App Usage Data
 - **Target App Detection:** When you open monitored apps (e.g., Facebook, Instagram)
@@ -50,7 +50,7 @@ All data collected is used exclusively to:
 - All data is stored **locally on your device** using Android's SQLite database
 - Data is stored in your app's private storage directory
 - **No cloud storage** - your data never leaves your device
-- **No internet connection required** - ThinkFast works 100% offline
+- **No internet connection required** - Intently works 100% offline
 
 ### Data Retention
 - Usage sessions older than **90 days** are automatically deleted
@@ -59,7 +59,7 @@ All data collected is used exclusively to:
 
 ### Data Security
 - Data is stored in Android's app-specific storage (protected by Android OS)
-- Only ThinkFast can access its own data
+- Only Intently can access its own data
 - Standard Android security protections apply
 
 ## Data Sharing and Third Parties
@@ -72,11 +72,11 @@ All data collected is used exclusively to:
 - ❌ No external servers
 - ❌ No data brokers
 
-ThinkFast contains zero third-party tracking or analytics libraries.
+Intently contains zero third-party tracking or analytics libraries.
 
 ## Permissions Explained
 
-ThinkFast requires the following Android permissions to function:
+Intently requires the following Android permissions to function:
 
 ### 1. Usage Access (PACKAGE_USAGE_STATS)
 - **Purpose:** Detect when you open Facebook, Instagram, or other configured apps
@@ -91,8 +91,8 @@ ThinkFast requires the following Android permissions to function:
 
 ### 3. Foreground Service - Special Use
 - **Purpose:** Run continuous monitoring in the background
-- **What it does:** Keeps the app running to detect app launches even when you're not actively using ThinkFast
-- **Notification:** Shows a persistent "ThinkFast is monitoring" notification (required by Android)
+- **What it does:** Keeps the app running to detect app launches even when you're not actively using Intently
+- **Notification:** Shows a persistent "Intently is monitoring" notification (required by Android)
 
 ### 4. Post Notifications
 - **Purpose:** Display the persistent foreground service notification
@@ -113,16 +113,16 @@ ThinkFast requires the following Android permissions to function:
 - **Configure Target Apps:** Choose which apps to monitor
 - **Adjust Settings:** Customize timer duration and reminder behavior
 - **View Your Data:** See all collected usage statistics in the Stats screen
-- **Delete All Data:** Uninstalling ThinkFast permanently removes all data
+- **Delete All Data:** Uninstalling Intently permanently removes all data
 
 ### No Account Required:
-- ThinkFast does not require registration or login
+- Intently does not require registration or login
 - No email, username, or password needed
 - No user profile created
 
 ## Children's Privacy
 
-ThinkFast does not knowingly collect information from children under 13. The app is designed for general audiences and does not contain age-restricted content. Since all data is stored locally and no personal information is collected, there is no risk of children's data being transmitted or shared.
+Intently does not knowingly collect information from children under 13. The app is designed for general audiences and does not contain age-restricted content. Since all data is stored locally and no personal information is collected, there is no risk of children's data being transmitted or shared.
 
 ## Changes to This Privacy Policy
 
@@ -146,7 +146,7 @@ Since all data is local and never transmitted, there is no data processing or sh
 
 ## Technical Implementation Details
 
-For transparency, here's how ThinkFast works technically:
+For transparency, here's how Intently works technically:
 
 1. **App Detection:** Uses Android's UsageStatsManager API to detect foreground apps
 2. **Storage:** SQLite database via Android Room library
@@ -157,7 +157,7 @@ For transparency, here's how ThinkFast works technically:
 
 ## Contact Us
 
-If you have questions about this privacy policy or ThinkFast's privacy practices:
+If you have questions about this privacy policy or Intently's privacy practices:
 
 **Email:** contact@sadakat.dev
 **Response Time:** Within 48 hours
@@ -172,4 +172,4 @@ This privacy policy complies with:
 
 ---
 
-**Summary:** ThinkFast is a privacy-first app. Your usage data stays on your device, is never shared with anyone, and is automatically deleted after 90 days. We collect only what's necessary for the app to help you build mindful social media habits.
+**Summary:** Intently is a privacy-first app. Your usage data stays on your device, is never shared with anyone, and is automatically deleted after 90 days. We collect only what's necessary for the app to help you build mindful social media habits.

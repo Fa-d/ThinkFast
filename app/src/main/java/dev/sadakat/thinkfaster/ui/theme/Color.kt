@@ -20,7 +20,7 @@ val Pink40 = Color(0xFF7D5260)
 // ============================================================================
 
 /**
- * Unified color system for ThinkFast
+ * Unified color system for Intently
  *
  * Consolidates all app colors into a single, well-organized structure:
  * - Primary (Blue) - Brand colors

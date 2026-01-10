@@ -4,7 +4,7 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.util.Log
-import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
+import dev.sadakat.thinkfaster.data.local.database.IntentlyDatabase
 import dev.sadakat.thinkfaster.data.seed.config.PersonaConfig
 import dev.sadakat.thinkfaster.data.seed.config.TimeDistribution
 import dev.sadakat.thinkfaster.data.seed.generator.BaseSeedGenerator
@@ -83,7 +83,7 @@ class NewUserSeedGenerator : BaseSeedGenerator(
 
     private val context: Context by inject(Context::class.java)
 
-    override suspend fun seedDatabase(database: ThinkFastDatabase) {
+    override suspend fun seedDatabase(database: IntentlyDatabase) {
         Log.d(TAG, "Starting NewUser seeding...")
 
         // Attempt to extract real usage data

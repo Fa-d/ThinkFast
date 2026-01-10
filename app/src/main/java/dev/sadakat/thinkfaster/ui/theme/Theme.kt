@@ -133,7 +133,7 @@ enum class ThemeMode {
  * @param content The composable content to be themed
  */
 @Composable
-fun ThinkFasterTheme(
+fun IntentlyerTheme(
     darkTheme: Boolean? = null,
     dynamicColor: Boolean = true,
     amoledDark: Boolean = false,
@@ -208,7 +208,7 @@ fun ThinkFasterTheme(
  * Theme with explicit mode selection
  */
 @Composable
-fun ThinkFasterThemeWithMode(
+fun IntentlyerThemeWithMode(
     themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM,
     dynamicColor: Boolean = true,
     amoledDark: Boolean = false,
@@ -220,7 +220,7 @@ fun ThinkFasterThemeWithMode(
         ThemeMode.FOLLOW_SYSTEM -> null
     }
 
-    ThinkFasterTheme(
+    IntentlyerTheme(
         darkTheme = darkTheme,
         dynamicColor = dynamicColor,
         amoledDark = amoledDark,

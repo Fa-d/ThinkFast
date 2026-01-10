@@ -302,7 +302,7 @@ class ComprehensiveOutcomeTracker @Inject constructor(
         // Requires checking if app still exists in tracked apps
         val appUninstalled = false  // Placeholder
 
-        // TODO: Check user retention (still using ThinkFast)
+        // TODO: Check user retention (still using Intently)
         // Requires checking recent app usage
         val userRetention = true  // Assume true for now
 

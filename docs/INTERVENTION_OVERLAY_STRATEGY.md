@@ -1,6 +1,6 @@
-# Intervention Overlay Strategy: The Heart of ThinkFast
+# Intervention Overlay Strategy: The Heart of Intently
 
-**Purpose:** This document outlines the research-backed strategy for making ThinkFast's reminder and timer overlays emotionally engaging, insightful, and effective at changing behavior.
+**Purpose:** This document outlines the research-backed strategy for making Intently's reminder and timer overlays emotionally engaging, insightful, and effective at changing behavior.
 
 **Key Insight:** These two screens are MORE important than the rest of the app combined for retention and behavior change. This is where users make the decision to continue scrolling or choose something better.
 
@@ -35,7 +35,7 @@ When a user tries to open Facebook or Instagram, they're in **autopilot mode** -
 
 ### Why Users Pay for This
 
-Users will pay for ThinkFast IF the intervention screens:
+Users will pay for Intently IF the intervention screens:
 - Actually help them reduce usage (proven effectiveness)
 - Feel fresh and engaging (not repetitive)
 - Provide genuine insights (not generic nagging)
@@ -128,7 +128,7 @@ Notice: "The session will end when you acknowledge this alert"
 - One Sec's breathing exercise: **36% of users chose not to proceed**
 - The "right balance of frustration" is key - too easy = ignored, too hard = uninstalled
 
-**Application to ThinkFast:**
+**Application to Intently:**
 
 **Friction Levels:**
 - **Week 1-2 (Gentle):** Simple message + 0s delay
@@ -151,7 +151,7 @@ Notice: "The session will end when you acknowledge this alert"
 - "What you're missing" > "What you could gain"
 - Present tense losses > future tense losses
 
-**Application to ThinkFast:**
+**Application to Intently:**
 
 **Instead of:** "You could be more productive"
 
@@ -183,7 +183,7 @@ What are you really looking for here?
 - "Now" is weighted 2-10x more than "later"
 - Counter with immediate micro-rewards
 
-**Application to ThinkFast:**
+**Application to Intently:**
 
 **Show immediate costs, not future goals:**
 - ❌ "You'll feel better in a month"
@@ -203,7 +203,7 @@ What are you really looking for here?
 - "How" and "what" questions > "why" (less defensive)
 - Studies show reduced emotional reactivity and psychological symptoms
 
-**Application to ThinkFast:**
+**Application to Intently:**
 
 **Best Reflection Questions:**
 1. "What was happening before you felt the urge to open this?"
@@ -223,7 +223,7 @@ What are you really looking for here?
 
 **Definition:** We overweight immediate costs/benefits at the expense of future outcomes.
 
-**Application to ThinkFast:**
+**Application to Intently:**
 
 **Show present-tense consequences:**
 - "Your eyes are tired RIGHT NOW"
@@ -541,7 +541,7 @@ You're on track! Stay strong.
 ```
 📈 Community Insights
 
-73% of ThinkFast users reduced usage this week
+73% of Intently users reduced usage this week
 Average reduction: 22 min/day
 You're doing better than 68% of users
 
@@ -1397,9 +1397,9 @@ fun DelayedProceedButton(
 7. "Which type of message resonates most: questions, alternatives, or stats?"
 
 **After 1 Month:**
-8. "Would you keep using ThinkFast if it cost $3/month?"
+8. "Would you keep using Intently if it cost $3/month?"
 9. "What would make the intervention screens MORE effective?"
-10. "Have you recommended ThinkFast to anyone? Why or why not?"
+10. "Have you recommended Intently to anyone? Why or why not?"
 
 ---
 
@@ -1434,7 +1434,7 @@ Current Phase 1 tasks:
 
 ## Conclusion
 
-**The intervention screens are THE product.** Everything else in ThinkFast supports these critical moments.
+**The intervention screens are THE product.** Everything else in Intently supports these critical moments.
 
 **Key Principles:**
 1. **Variety prevents habituation** - 50+ unique interventions minimum
@@ -1450,4 +1450,4 @@ Current Phase 1 tasks:
 
 **Last Updated:** December 27, 2024
 **Next Review:** After Phase 1 implementation complete
-**Owner:** ThinkFast Development Team
+**Owner:** Intently Development Team

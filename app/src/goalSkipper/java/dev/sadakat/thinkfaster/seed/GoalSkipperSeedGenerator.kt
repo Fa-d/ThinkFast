@@ -1,6 +1,6 @@
 package dev.sadakat.thinkfast.seed
 
-import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
+import dev.sadakat.thinkfaster.data.local.database.IntentlyDatabase
 import dev.sadakat.thinkfaster.data.seed.config.PersonaConfigurations
 import dev.sadakat.thinkfaster.data.seed.generator.BaseSeedGenerator
 import dev.sadakat.thinkfaster.data.seed.generator.InterventionResultGenerator
@@ -26,7 +26,7 @@ class GoalSkipperSeedGenerator : BaseSeedGenerator(
     config = PersonaConfigurations.GOAL_SKIPPER
 ) {
 
-    override suspend fun seedDatabase(database: ThinkFastDatabase) {
+    override suspend fun seedDatabase(database: IntentlyDatabase) {
         val targetApps = listOf(FACEBOOK_PACKAGE, INSTAGRAM_PACKAGE)
         val days = 22  // 22 days of data
 

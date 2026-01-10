@@ -11,7 +11,7 @@ import android.util.Log
  * - App foreground (session start)
  * - App background (session end)
  *
- * Registered in ThinkFasterApplication.onCreate()
+ * Registered in IntentlyApplication.onCreate()
  */
 class AppLifecycleObserver(
     private val analyticsManager: AnalyticsManager

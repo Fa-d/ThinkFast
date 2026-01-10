@@ -1,8 +1,8 @@
-# ThinkFast Market Analysis Report 2025
+# Intently Market Analysis Report 2025
 
 ## Executive Summary
 
-ThinkFast is entering the **Digital Wellbeing / Productivity app market**, which is part of the broader wellness and digital health space. This report analyzes market size, marketing costs, user acquisition benchmarks, and realistic growth expectations.
+Intently is entering the **Digital Wellbeing / Productivity app market**, which is part of the broader wellness and digital health space. This report analyzes market size, marketing costs, user acquisition benchmarks, and realistic growth expectations.
 
 ---
 
@@ -118,7 +118,7 @@ Many indie developers succeed with $0 paid marketing using:
 
 ---
 
-## 5. Monetization Potential for ThinkFast
+## 5. Monetization Potential for Intently
 
 ### Recommended Pricing Model
 

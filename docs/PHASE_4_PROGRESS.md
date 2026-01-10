@@ -81,7 +81,7 @@ Before implementing ANY paywall:
 
 ### 4.4 Pricing Research
 - [ ] Survey 20+ beta users with pricing questions:
-  - "Would you pay for ThinkFast?"
+  - "Would you pay for Intently?"
   - "How much would you pay?" (multiple choice)
   - "One-time or subscription?" (preference)
   - "What features would justify payment?"
@@ -165,7 +165,7 @@ Before implementing ANY paywall:
 
 ### Survey Questions
 
-**Q1: After using ThinkFast, would you consider paying for premium features?**
+**Q1: After using Intently, would you consider paying for premium features?**
 - [ ] Yes, definitely
 - [ ] Maybe, depends on features and price
 - [ ] No, I prefer free apps
@@ -201,10 +201,10 @@ Monthly subscription:
 - [ ] Cloud backup
 - [ ] Custom themes
 
-**Q5: At what price would ThinkFast feel like a great deal?**
+**Q5: At what price would Intently feel like a great deal?**
 - Open text: $_____
 
-**Q6: At what price would ThinkFast start to feel expensive?**
+**Q6: At what price would Intently start to feel expensive?**
 - Open text: $_____
 
 ---

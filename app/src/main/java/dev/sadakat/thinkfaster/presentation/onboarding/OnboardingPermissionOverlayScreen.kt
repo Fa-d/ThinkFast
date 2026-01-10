@@ -230,7 +230,7 @@ fun OnboardingPermissionOverlayScreen(
 
                     // Helper text
                     Text(
-                        text = "Toggle 'Permit drawing over other apps' ON for ThinkFast.",
+                        text = "Toggle 'Permit drawing over other apps' ON for Intently.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center,

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Think Fast</string>
+    <string name="app_name">Intently</string>
     <string name="widget_description">Daily progress widget showing usage vs goal</string>
 
     <!-- Widget strings -->

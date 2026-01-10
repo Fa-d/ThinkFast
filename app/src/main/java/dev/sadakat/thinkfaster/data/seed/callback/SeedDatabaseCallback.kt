@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import dev.sadakat.thinkfaster.BuildConfig
-import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
+import dev.sadakat.thinkfaster.data.local.database.IntentlyDatabase
 import dev.sadakat.thinkfaster.data.seed.generator.SeedGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +29,7 @@ class SeedDatabaseCallback(
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val database: ThinkFastDatabase by inject(ThinkFastDatabase::class.java)
+                val database: IntentlyDatabase by inject(IntentlyDatabase::class.java)
                 val generator = getSeedGenerator()
 
                 Log.d(TAG, "Starting database seeding...")

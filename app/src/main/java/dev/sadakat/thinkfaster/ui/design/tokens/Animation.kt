@@ -19,7 +19,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.Dp
 
 /**
- * Animation tokens for ThinkFast design system.
+ * Animation tokens for Intently design system.
  *
  * Based on iOS reference with consistent duration and easing values.
  * Provides semantic animation specs for consistent motion across the app.

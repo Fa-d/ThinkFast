@@ -1,6 +1,6 @@
 # Typography System
 
-The ThinkFast typography system provides a complete Material 3 type scale with iOS-inspired semantic naming for cross-platform consistency.
+The Intently typography system provides a complete Material 3 type scale with iOS-inspired semantic naming for cross-platform consistency.
 
 ## Material 3 Type Scale
 
@@ -16,7 +16,7 @@ Large, prominent text for hero sections and major headlines.
 
 ```kotlin
 Text(
-    text = "Welcome to ThinkFast",
+    text = "Welcome to Intently",
     style = MaterialTheme.typography.displayLarge
 )
 ```

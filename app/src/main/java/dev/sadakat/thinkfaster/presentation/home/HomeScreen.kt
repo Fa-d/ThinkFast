@@ -205,7 +205,7 @@ fun HomeScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "ThinkFast",
+                        "Intently",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -1254,7 +1254,7 @@ private fun CompactServiceStatusCard(
             if (hasPermissions) {
                 Text(
                     text = if (isRunning) {
-                        "ThinkFast is monitoring Facebook and Instagram usage"
+                        "Intently is monitoring Facebook and Instagram usage"
                     } else {
                         "Turn on to start tracking your social media usage"
                     },
@@ -1296,7 +1296,7 @@ private fun stopMonitoringService(context: Context) {
 
 /**
  * Complete Setup Banner - shown when user skips onboarding
- * Prompts user to complete setup to activate ThinkFast
+ * Prompts user to complete setup to activate Intently
  */
 @Composable
 private fun CompleteSetupBanner(
@@ -1343,7 +1343,7 @@ private fun CompleteSetupBanner(
                     )
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
-                        text = "ThinkFast isn't active yet. Complete the setup to start protecting your time.",
+                        text = "Intently isn't active yet. Complete the setup to start protecting your time.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
                     )

@@ -1,6 +1,6 @@
 # Color System
 
-The ThinkFast color system uses semantic colors to communicate meaning consistently throughout the app, following Material 3 principles with iOS-inspired polish.
+The Intently color system uses semantic colors to communicate meaning consistently throughout the app, following Material 3 principles with iOS-inspired polish.
 
 ## Design Philosophy
 
@@ -273,7 +273,7 @@ Box(
 
 ## Material 3 Color Scheme
 
-ThinkFast uses Material 3's semantic color scheme:
+Intently uses Material 3's semantic color scheme:
 
 ```kotlin
 MaterialTheme.colorScheme.primary          // Primary brand color

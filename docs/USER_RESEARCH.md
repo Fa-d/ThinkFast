@@ -7,7 +7,7 @@
 ## Research Questions
 
 ### Core Value Proposition
-- [ ] What problem does ThinkFast solve for users?
+- [ ] What problem does Intently solve for users?
 - [ ] What's the primary benefit users get?
 - [ ] What makes users come back to the app?
 
@@ -31,15 +31,15 @@
 **Date:**
 **Demographics:** Age, occupation, tech-savviness
 **Current social media usage:** Hours/day estimate
-**Motivation for trying ThinkFast:**
+**Motivation for trying Intently:**
 
 **Interview Notes:**
 
-1. **What made you try ThinkFast?**
+1. **What made you try Intently?**
 
 2. **What's your biggest frustration with social media usage?**
 
-3. **After using ThinkFast for 1 week, did your usage change?**
+3. **After using Intently for 1 week, did your usage change?**
    - [ ] Yes, reduced by ____%
    - [ ] No change
    - [ ] Actually increased
@@ -48,12 +48,12 @@
 
 5. **What feature would you remove?**
 
-6. **If ThinkFast disappeared tomorrow, would you miss it?**
+6. **If Intently disappeared tomorrow, would you miss it?**
    - [ ] Yes, very much
    - [ ] Somewhat
    - [ ] Not really
 
-7. **Would you pay for ThinkFast?**
+7. **Would you pay for Intently?**
    - [ ] Yes, definitely
    - [ ] Maybe, depends on price
    - [ ] No
@@ -66,9 +66,9 @@
    - [ ] $4.99/month
    - [ ] Other: _______
 
-9. **What would make ThinkFast worth paying for?**
+9. **What would make Intently worth paying for?**
 
-10. **Net Promoter Score: On a scale of 0-10, how likely are you to recommend ThinkFast?**
+10. **Net Promoter Score: On a scale of 0-10, how likely are you to recommend Intently?**
     - Score: ___/10
     - Why?
 
@@ -181,7 +181,7 @@ _Copy structure above_
 
 ## Usage Metrics (Self-Reported)
 
-### Did ThinkFast reduce usage?
+### Did Intently reduce usage?
 
 | User | Week 1 Baseline | Week 2 Usage | % Change | Notes |
 |------|----------------|--------------|----------|-------|
@@ -237,14 +237,14 @@ _Copy structure above_
 | Screen Time (iOS) | | | |
 | Digital Wellbeing (Android) | | | |
 
-### How does ThinkFast compare?
+### How does Intently compare?
 
-**ThinkFast's advantages:**
+**Intently's advantages:**
 1.
 2.
 3.
 
-**ThinkFast's gaps:**
+**Intently's gaps:**
 1.
 2.
 3.

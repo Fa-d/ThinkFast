@@ -15,7 +15,7 @@ import com.facebook.login.LoginResult
  *
  * IMPORTANT: Before using, ensure Facebook SDK is initialized:
  * 1. Add Facebook App ID to strings.xml
- * 2. Initialize Facebook SDK in ThinkFasterApplication.onCreate()
+ * 2. Initialize Facebook SDK in IntentlyApplication.onCreate()
  * 3. Add Facebook meta-data to AndroidManifest.xml
  *
  * See AUTHENTICATION_STATUS.md for detailed setup instructions

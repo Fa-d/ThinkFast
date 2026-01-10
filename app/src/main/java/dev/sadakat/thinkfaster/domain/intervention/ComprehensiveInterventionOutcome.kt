@@ -113,7 +113,7 @@ data class ComprehensiveInterventionOutcome(
     val appUninstalled: Boolean? = null,
 
     /**
-     * Is the user still actively using ThinkFast 30 days later?
+     * Is the user still actively using Intently 30 days later?
      * Critical for measuring intervention burden and user retention
      */
     val userRetention: Boolean? = null,
@@ -243,7 +243,7 @@ fun ComprehensiveInterventionOutcome.calculateReward(): Double {
 
     if (streakMaintained == true) reward += 3.0
     if (appUninstalled == true) reward += 10.0  // Ultimate success for tracked app
-    if (userRetention == false) reward -= 20.0  // Major penalty for ThinkFast churn
+    if (userRetention == false) reward -= 20.0  // Major penalty for Intently churn
 
     avgDailyUsageNext7Days?.let { avgUsage ->
         // Reward for sustained usage reduction

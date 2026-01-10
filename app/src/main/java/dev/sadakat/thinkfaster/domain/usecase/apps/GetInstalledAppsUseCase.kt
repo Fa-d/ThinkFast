@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Use case to get all installed apps on the device
- * Filters out system apps and ThinkFast itself
+ * Filters out system apps and Intently itself
  */
 class GetInstalledAppsUseCase(
     private val context: Context
@@ -43,7 +43,7 @@ class GetInstalledAppsUseCase(
 
             val filteredApps = allApps
                 .filter { appInfo ->
-                    // Exclude ThinkFast itself
+                    // Exclude Intently itself
                     if (appInfo.packageName == context.packageName) {
                         return@filter false
                     }

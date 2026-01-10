@@ -1,7 +1,7 @@
 package dev.sadakat.thinkfast.seed
 
 import android.content.Context
-import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
+import dev.sadakat.thinkfaster.data.local.database.IntentlyDatabase
 import dev.sadakat.thinkfaster.data.preferences.InterventionPreferences
 import dev.sadakat.thinkfaster.data.seed.config.PersonaConfigurations
 import dev.sadakat.thinkfaster.data.seed.generator.BaseSeedGenerator
@@ -31,7 +31,7 @@ class LockedModeUserSeedGenerator : BaseSeedGenerator(
     config = PersonaConfigurations.LOCKED_MODE_USER
 ) {
 
-    override suspend fun seedDatabase(database: ThinkFastDatabase) {
+    override suspend fun seedDatabase(database: IntentlyDatabase) {
         val targetApps = listOf(FACEBOOK_PACKAGE, INSTAGRAM_PACKAGE)
         val days = random.nextInt(50, 61)  // 50-60 days of data
 

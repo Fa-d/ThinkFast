@@ -1,7 +1,7 @@
 package dev.sadakat.thinkfaster.domain.model
 
 /**
- * Represents an app that can be tracked by ThinkFast
+ * Represents an app that can be tracked by Intently
  * Used for both curated suggestions and user-selected apps
  */
 data class TrackedApp(

@@ -48,7 +48,7 @@ import dev.sadakat.thinkfaster.analytics.AnalyticsManager
 import dev.sadakat.thinkfaster.domain.model.ContentEffectivenessStats
 import dev.sadakat.thinkfaster.domain.model.OverallAnalytics
 import dev.sadakat.thinkfaster.ui.theme.getMaxContentWidth
-import dev.sadakat.thinkfaster.ui.theme.ThinkFasterTheme
+import dev.sadakat.thinkfaster.ui.theme.IntentlyerTheme
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.context.GlobalContext
 
@@ -68,7 +68,7 @@ fun AnalyticsScreen(
         viewModel.loadAnalytics()
     }
 
-    ThinkFasterTheme {
+    IntentlyerTheme {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -607,7 +607,7 @@ private fun AnonymousAnalyticsCard() {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = if (isEnabled)
-                        "Help improve ThinkFast with anonymous data"
+                        "Help improve Intently with anonymous data"
                     else
                         "No analytics data is collected",
                     fontSize = 14.sp,

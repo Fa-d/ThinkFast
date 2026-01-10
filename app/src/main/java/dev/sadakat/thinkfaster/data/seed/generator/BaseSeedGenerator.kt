@@ -1,7 +1,7 @@
 package dev.sadakat.thinkfaster.data.seed.generator
 
 import android.util.Log
-import dev.sadakat.thinkfaster.data.local.database.ThinkFastDatabase
+import dev.sadakat.thinkfaster.data.local.database.IntentlyDatabase
 import dev.sadakat.thinkfaster.data.local.database.entities.DailyStatsEntity
 import dev.sadakat.thinkfaster.data.local.database.entities.GoalEntity
 import dev.sadakat.thinkfaster.data.local.database.entities.InterventionResultEntity
@@ -223,7 +223,7 @@ abstract class BaseSeedGenerator(
     /**
      * Inserts all seed data into the database with proper foreign key handling.
      */
-    protected suspend fun insertSeedData(database: ThinkFastDatabase, seedData: SeedData) {
+    protected suspend fun insertSeedData(database: IntentlyDatabase, seedData: SeedData) {
         // 1. Insert goals first (no dependencies)
         for (goalData in seedData.goals) {
             val goalEntity = GoalEntity(

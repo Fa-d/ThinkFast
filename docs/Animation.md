@@ -1,6 +1,6 @@
 # Animation System
 
-The ThinkFast animation system provides smooth, natural motion with Material 3 easing curves and iOS-inspired spring physics. All animations respect user accessibility preferences.
+The Intently animation system provides smooth, natural motion with Material 3 easing curves and iOS-inspired spring physics. All animations respect user accessibility preferences.
 
 ## Motion Principles
 

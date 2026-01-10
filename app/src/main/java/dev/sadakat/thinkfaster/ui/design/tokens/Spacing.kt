@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Spacing tokens for ThinkFast design system.
+ * Spacing tokens for Intently design system.
  *
  * Based on iOS reference with a consistent 4dp baseline scale.
  * Provides semantic spacing values for consistent layouts across the app.

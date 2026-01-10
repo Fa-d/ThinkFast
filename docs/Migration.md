@@ -1,6 +1,6 @@
 # Migration Guide
 
-This guide helps you migrate existing code to the ThinkFast design system. Follow these steps to refactor components, screens, and patterns systematically.
+This guide helps you migrate existing code to the Intently design system. Follow these steps to refactor components, screens, and patterns systematically.
 
 ---
 

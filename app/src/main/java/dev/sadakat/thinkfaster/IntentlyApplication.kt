@@ -35,7 +35,7 @@ import org.koin.core.logger.Level
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
-class ThinkFasterApplication : Application(), KoinComponent {
+class IntentlyApplication : Application(), KoinComponent {
     // Inject AnalyticsManager to schedule daily uploads
     private val analyticsManager: dev.sadakat.thinkfaster.analytics.AnalyticsManager by inject()
 
@@ -45,7 +45,7 @@ class ThinkFasterApplication : Application(), KoinComponent {
         // Initialize Koin
         startKoin {
             androidLogger(Level.ERROR)
-            androidContext(this@ThinkFasterApplication)
+            androidContext(this@IntentlyApplication)
             modules(
                 databaseModule,
                 repositoryModule,

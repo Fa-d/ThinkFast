@@ -84,7 +84,7 @@
 
 ## 1.3 Intervention Overlay Enhancement (THE CORE)
 
-**⚠️ CRITICAL:** This is THE most important feature in ThinkFast. The intervention overlays (reminder + timer) are where behavior change happens. Users interact with these 5-20 times per day. Poor interventions = uninstall. Great interventions = retention + word-of-mouth growth.
+**⚠️ CRITICAL:** This is THE most important feature in Intently. The intervention overlays (reminder + timer) are where behavior change happens. Users interact with these 5-20 times per day. Poor interventions = uninstall. Great interventions = retention + word-of-mouth growth.
 
 **📖 Full Strategy:** See `/docs/INTERVENTION_OVERLAY_STRATEGY.md` for complete research and implementation plan.
 
@@ -220,8 +220,8 @@
 5. "Do you find yourself pausing before opening these apps now?"
 
 **Week 4:**
-6. "Would you keep using ThinkFast if it cost $3/month?"
-7. "Have you recommended ThinkFast to anyone? Why or why not?"
+6. "Would you keep using Intently if it cost $3/month?"
+7. "Have you recommended Intently to anyone? Why or why not?"
 
 ### Files to Create
 - `/app/src/main/java/dev/sadakat/thinkfast/domain/model/InterventionContent.kt`
@@ -238,7 +238,7 @@
 
 **Estimated Time:** 3-4 weeks (can be done in parallel with other tasks)
 
-**Priority:** 🔴 CRITICAL - This is THE core of ThinkFast's value proposition
+**Priority:** 🔴 CRITICAL - This is THE core of Intently's value proposition
 
 ---
 
@@ -334,7 +334,7 @@
 - [ ] Track usage in Firebase Analytics (optional)
 
 ### Questions to Ask Beta Users (Week 1)
-1. On a scale of 1-10, how likely are you to recommend ThinkFast?
+1. On a scale of 1-10, how likely are you to recommend Intently?
 2. What's the #1 thing you love about the app?
 3. What's the most frustrating part?
 4. Would you be sad if this app disappeared tomorrow?
@@ -344,7 +344,7 @@
 - Onboarding completion rate (target: >80%)
 - Goal setup rate (target: >70% within 3 days)
 - Daily app opens (target: 4+ per week)
-- Session duration in ThinkFast (target: <2 min - quick checks)
+- Session duration in Intently (target: <2 min - quick checks)
 - Actual usage reduction (target: 20%+ in first week)
 
 ---

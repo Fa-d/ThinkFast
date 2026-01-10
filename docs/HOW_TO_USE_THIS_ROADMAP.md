@@ -54,7 +54,7 @@ Every time you get feedback from a user, log it in `USER_RESEARCH.md`:
 When you open a new conversation with Claude Code, start with:
 
 ```
-"I'm working on ThinkFast app development.
+"I'm working on Intently app development.
 Please read /docs/ROADMAP.md to understand the full context.
 I'm currently on Phase [X], working on [specific task].
 Let's continue from where I left off."
@@ -126,7 +126,7 @@ Help me evaluate if I've met the checkpoint criteria before moving to Phase 2."
 
 ### Starting Phase 1
 ```
-"I'm starting ThinkFast Phase 1: UX Foundation.
+"I'm starting Intently Phase 1: UX Foundation.
 Please read /docs/PHASE_1_PROGRESS.md and /docs/ROADMAP.md.
 Let's begin with task 1.1: Onboarding Overhaul.
 Help me design the 3-screen onboarding flow."
