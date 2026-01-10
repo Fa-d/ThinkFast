@@ -21,7 +21,8 @@ import java.util.Locale
 class SessionDetector(
     private val usageRepository: UsageRepository,
     private val scope: CoroutineScope,
-    private val getTimerDurationMillis: () -> Long  // Function to get dynamic timer duration
+    private val getTimerDurationMillis: () -> Long,  // Function to get dynamic timer duration
+    private val checkBehavioralDistress: ((SessionState) -> Boolean)? = null  // Phase 3: Check for behavioral cues requiring early intervention
 ) {
 
     private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.US)
@@ -45,8 +46,14 @@ class SessionDetector(
     // Callback for when a new session starts
     var onSessionStart: ((SessionState) -> Unit)? = null
 
-    // Callback for when session needs 10-minute alert
-    var onTenMinuteAlert: ((SessionState) -> Unit)? = null
+    // Callback for when timer threshold is reached (algorithm decides whether to show)
+    var onTimerThresholdReached: ((SessionState) -> Unit)? = null
+
+    // Legacy callback name (kept for backward compatibility)
+    @Deprecated("Use onTimerThresholdReached instead", ReplaceWith("onTimerThresholdReached"))
+    var onTenMinuteAlert: ((SessionState) -> Unit)?
+        get() = onTimerThresholdReached
+        set(value) { onTimerThresholdReached = value }
 
     // Callback for when session ends
     var onSessionEnd: ((SessionState) -> Unit)? = null
@@ -218,6 +225,9 @@ class SessionDetector(
         val duration = timestamp - current.startTimestamp
         current.totalDuration = duration
 
+        // Phase 3: Check for behavioral distress requiring early intervention
+        val hasDistressSignals = checkBehavioralDistress?.invoke(current) ?: false
+
         // Check if timer threshold is reached
         // The alert should show periodically at timerDuration intervals
         // Timer is based on timerStartTime (resets when reminder is shown)
@@ -231,13 +241,33 @@ class SessionDetector(
             timeSinceTimerStarted - current.lastTimerAlertTime  // Time since last alert
         }
 
+        // Phase 3: Early intervention if behavioral distress detected
+        if (hasDistressSignals) {
+            // Trigger early intervention at 50% of normal threshold
+            val earlyThreshold = (timerDuration * 0.5).toLong()
+            if (timeSinceLastAlert >= earlyThreshold) {
+                ErrorLogger.info(
+                    "Behavioral distress detected! Early intervention at ${earlyThreshold}ms " +
+                    "(50% of normal ${timerDuration}ms) for ${current.targetApp}",
+                    context = "SessionDetector.continueSession"
+                )
+                current.lastTimerAlertTime = timeSinceTimerStarted
+                onTimerThresholdReached?.invoke(current)
+                return  // Exit early after triggering intervention
+            }
+        }
+
+        // Standard timer threshold check (with dynamic duration from RL)
         if (timeSinceLastAlert >= timerDuration) {
             ErrorLogger.info(
-                "Timer threshold reached! Triggering alert for ${current.targetApp}",
+                "Timer threshold reached! Notifying algorithm for decision on ${current.targetApp} " +
+                "(duration=${timerDuration}ms, includes RL frequency multiplier)",
                 context = "SessionDetector.continueSession"
             )
             current.lastTimerAlertTime = timeSinceTimerStarted
-            onTenMinuteAlert?.invoke(current)
+            // Notify callback - algorithm will decide whether to actually show overlay
+            // based on JITAI factors: opportunity, burden, timing patterns, etc.
+            onTimerThresholdReached?.invoke(current)
         }
 
         // Update session duration in database periodically

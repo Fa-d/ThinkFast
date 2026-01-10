@@ -9,6 +9,8 @@ import dev.sadakat.thinkfaster.domain.intervention.InteractionDepth
 import dev.sadakat.thinkfaster.domain.intervention.InterventionContext
 import dev.sadakat.thinkfaster.domain.intervention.InterventionType
 import dev.sadakat.thinkfaster.domain.intervention.InterventionUserChoice
+import dev.sadakat.thinkfaster.domain.intervention.RLVariant
+import dev.sadakat.thinkfaster.domain.intervention.UnifiedContentSelection
 import dev.sadakat.thinkfaster.domain.model.InterventionContent
 import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.domain.model.InterventionResult
@@ -112,18 +114,35 @@ class TimerOverlayViewModel(
             // Check for debug override first
             val debugForceType = settingsRepository.getDebugForceInterventionType()
 
-            val interventionContent = if (debugForceType != null) {
+            val interventionContent: InterventionContent
+            val rlVariant: RLVariant?
+            val rlContentType: String?
+            val rlSelectionReason: String?
+
+            if (debugForceType != null) {
                 // Debug: Use forced content type (bypass A/B testing)
-                dev.sadakat.thinkfaster.domain.intervention.ContentSelector().generateContentByType(debugForceType, context)
+                interventionContent = dev.sadakat.thinkfaster.domain.intervention.ContentSelector().generateContentByType(debugForceType, context)
+                rlVariant = null
+                rlContentType = null
+                rlSelectionReason = "Debug override: $debugForceType"
             } else {
                 // Phase 4: Use UnifiedContentSelector for A/B testing (Control vs RL Treatment)
                 val effectivenessData = resultRepository.getEffectivenessByContentType()
-                val unifiedSelection = unifiedContentSelector.selectContent(
+                val unifiedSelection: UnifiedContentSelection = unifiedContentSelector.selectContent(
                     context = context,
-                    interventionType = DomainInterventionType.TIMER,  // Use domain.model.InterventionType
+                    interventionType = DomainInterventionType.TIMER,
                     effectivenessData = effectivenessData
                 )
-                unifiedSelection.content
+                interventionContent = unifiedSelection.content
+                rlVariant = unifiedSelection.variant
+                rlContentType = unifiedSelection.contentType
+                rlSelectionReason = unifiedSelection.selectionReason
+
+                // Log RL variant for analytics
+                dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                    "Timer overlay shown - Variant: ${unifiedSelection.variant}, Content: ${unifiedSelection.contentType}, Reason: ${unifiedSelection.selectionReason}",
+                    context = "TimerOverlayViewModel.onOverlayShown"
+                )
             }
 
             // Format times for display
@@ -145,7 +164,10 @@ class TimerOverlayViewModel(
                 frictionLevel = context.userFrictionLevel,
                 interventionContent = interventionContent,
                 interventionContext = context,
-                isLoading = false
+                isLoading = false,
+                rlVariant = rlVariant,
+                rlContentType = rlContentType,
+                rlSelectionReason = rlSelectionReason
             )
 
             // Log timer alert shown event
@@ -413,6 +435,64 @@ class TimerOverlayViewModel(
     }
 
     /**
+     * Phase 4: Record RL outcome to close the Thompson Sampling feedback loop
+     * Updates the UnifiedContentSelector with the intervention outcome
+     * Only records for RL_TREATMENT variant (CONTROL doesn't use Thompson Sampling)
+     */
+    private suspend fun recordRLOutcome(
+        userChoice: String,
+        feedback: String?,
+        sessionContinued: Boolean?
+    ) {
+        val currentState = _uiState.value
+        val variant = currentState.rlVariant
+        val sessionId = currentState.sessionId ?: return
+        val contentType = currentState.rlContentType
+        val context = currentState.interventionContext ?: return
+
+        // Skip if debug session or not RL variant
+        if (sessionId == -1L || variant != RLVariant.RL_TREATMENT || contentType == null) {
+            dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                "Skipping RL outcome recording - sessionId=$sessionId, variant=$variant, contentType=$contentType",
+                context = "TimerOverlayViewModel.recordRLOutcome"
+            )
+            return
+        }
+
+        try {
+            // Get timing info from context
+            val calendar = java.util.Calendar.getInstance()
+            val hourOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+            val isWeekend = context.isWeekend
+
+            // Record outcome to UnifiedContentSelector (updates Thompson Sampling)
+            unifiedContentSelector.recordOutcome(
+                interventionId = sessionId,
+                variant = variant,
+                userChoice = userChoice,
+                feedback = feedback,
+                sessionContinued = sessionContinued,
+                sessionDurationAfter = null,  // Will be updated later when session ends
+                quickReopen = context.quickReopenAttempt,
+                targetApp = currentState.targetApp,
+                hourOfDay = hourOfDay,
+                isWeekend = isWeekend
+            )
+
+            dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                "RL outcome recorded: variant=$variant, contentType=$contentType, choice=$userChoice, feedback=$feedback",
+                context = "TimerOverlayViewModel.recordRLOutcome"
+            )
+        } catch (e: Exception) {
+            dev.sadakat.thinkfaster.util.ErrorLogger.error(
+                e,
+                message = "Failed to record RL outcome",
+                context = "TimerOverlayViewModel.recordRLOutcome"
+            )
+        }
+    }
+
+    /**
      * Phase G: Call this when session ends to update the outcome
      */
     suspend fun updateSessionOutcome(sessionId: Long, finalDurationMs: Long, endedNormally: Boolean) {
@@ -431,6 +511,7 @@ class TimerOverlayViewModel(
     /**
      * Called when user provides feedback (thumbs up or thumbs down)
      * Records feedback to database and triggers overlay dismissal
+     * Phase 4: Records RL outcome with feedback (strong signal for Thompson Sampling)
      */
     fun onFeedbackReceived(feedback: InterventionFeedback) {
         val currentState = _uiState.value
@@ -442,6 +523,14 @@ class TimerOverlayViewModel(
                     sessionId = currentState.sessionId,
                     feedback = feedback,
                     timestamp = System.currentTimeMillis()
+                )
+
+                // Phase 4: Record RL outcome with feedback (strong signal!)
+                val previousChoice = if (currentState.userChoseGoBack) "GO_BACK" else "CONTINUE"
+                recordRLOutcome(
+                    userChoice = previousChoice,
+                    feedback = feedback.name,
+                    sessionContinued = if (previousChoice == "CONTINUE") true else false
                 )
 
                 // Track to Firebase Analytics
@@ -489,17 +578,37 @@ class TimerOverlayViewModel(
     /**
      * Called when user skips feedback prompt
      * Dismisses overlay without recording feedback
+     * Phase 4: Records RL outcome with NO feedback (completes the feedback loop)
      */
     fun onSkipFeedback() {
-        _uiState.value = _uiState.value.copy(
-            shouldDismiss = true,
-            showFeedbackPrompt = false
-        )
+        val currentState = _uiState.value
+        if (currentState.sessionId == null) {
+            _uiState.value = _uiState.value.copy(
+                shouldDismiss = true,
+                showFeedbackPrompt = false
+            )
+            return
+        }
 
-        dev.sadakat.thinkfaster.util.ErrorLogger.info(
-            "User skipped feedback",
-            context = "TimerOverlayViewModel.onSkipFeedback"
-        )
+        viewModelScope.launch {
+            // Phase 4: Record RL outcome with no feedback
+            val previousChoice = if (currentState.userChoseGoBack) "GO_BACK" else "CONTINUE"
+            recordRLOutcome(
+                userChoice = previousChoice,
+                feedback = null,  // No feedback provided
+                sessionContinued = if (previousChoice == "CONTINUE") true else false
+            )
+
+            _uiState.value = _uiState.value.copy(
+                shouldDismiss = true,
+                showFeedbackPrompt = false
+            )
+
+            dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                "User skipped feedback - RL outcome recorded with no feedback",
+                context = "TimerOverlayViewModel.onSkipFeedback"
+            )
+        }
     }
 
     // ========== Phase 2: Snooze Functionality ==========
@@ -579,6 +688,7 @@ class TimerOverlayViewModel(
  * UI state for the timer overlay screen
  * Phase G: Enhanced with full context-aware intervention support
  * Phase 1: Added feedback UI state
+ * Phase 4: Added RL variant tracking for Thompson Sampling
  */
 data class TimerOverlayState(
     val sessionId: Long? = null,
@@ -600,5 +710,9 @@ data class TimerOverlayState(
     val userChoseGoBack: Boolean = false,
     // Phase 1: Feedback UI state
     val userMadeChoice: Boolean = false,  // User clicked Go Back or Proceed
-    val showFeedbackPrompt: Boolean = false  // Show feedback prompt after choice
+    val showFeedbackPrompt: Boolean = false,  // Show feedback prompt after choice
+    // Phase 4: RL tracking
+    val rlVariant: RLVariant? = null,  // Which variant was used (CONTROL or RL_TREATMENT)
+    val rlContentType: String? = null,  // Content type selected by RL
+    val rlSelectionReason: String? = null  // Why this content was selected
 )

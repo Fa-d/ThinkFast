@@ -60,6 +60,10 @@ class UsageMonitorService : Service() {
     private val decisionLogger: dev.sadakat.thinkfaster.domain.intervention.DecisionLogger by inject()
     private val burdenTracker: dev.sadakat.thinkfaster.domain.intervention.InterventionBurdenTracker by inject()
 
+    // Phase 4 dependencies - RL-based adaptive content selection and timing optimization
+    private val adaptiveContentSelector: dev.sadakat.thinkfaster.domain.intervention.AdaptiveContentSelector by inject()
+    private val unifiedContentSelector: dev.sadakat.thinkfaster.domain.intervention.UnifiedContentSelector by inject()
+
     private lateinit var appLaunchDetector: AppLaunchDetector
     private lateinit var sessionDetector: SessionDetector
     private lateinit var contextDetector: ContextDetector
@@ -86,6 +90,12 @@ class UsageMonitorService : Service() {
     private var reminderOverlayShownTime = 0L  // When reminder overlay was first shown
     private var timerOverlayShownTime = 0L     // When timer overlay was shown
 
+    // Phase 3: Behavioral tracking for enhanced cues
+    private var screenOnTimestamp = 0L  // When screen was turned on (for continuous screen-on tracking)
+    private val unlockTimestamps = mutableListOf<Long>()  // Track unlock times for frequency calculation
+    private val appLaunchTimestamps = mutableListOf<Pair<Long, String>>()  // Track app launches for rapid switching detection
+    private val quickReopenTimestamps = mutableListOf<Long>()  // Track quick reopens for compulsive behavior
+
     // Broadcast receiver for screen on/off events
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -96,7 +106,22 @@ class UsageMonitorService : Service() {
                 }
                 Intent.ACTION_SCREEN_ON -> {
                     isScreenOn = true
+                    screenOnTimestamp = System.currentTimeMillis()  // Phase 3: Track screen-on time
                     onScreenOn()
+                }
+                Intent.ACTION_USER_PRESENT -> {
+                    // Phase 3: Track screen unlock events for unlock frequency
+                    val currentTime = System.currentTimeMillis()
+                    unlockTimestamps.add(currentTime)
+
+                    // Keep only last hour of unlock events
+                    val oneHourAgo = currentTime - (60 * 60 * 1000)
+                    unlockTimestamps.removeAll { it < oneHourAgo }
+
+                    ErrorLogger.debug(
+                        "Screen unlocked. Unlock count in last hour: ${unlockTimestamps.size}",
+                        context = "UsageMonitorService.screenStateReceiver"
+                    )
                 }
             }
         }
@@ -148,9 +173,67 @@ class UsageMonitorService : Service() {
             usageRepository = usageRepository,
             scope = serviceScope,
             getTimerDurationMillis = {
-                // Get timer duration from settings (blocking call is acceptable here)
-                runBlocking {
+                // Phase 4: Apply dynamic threshold with frequency multiplier
+                val baseTimerDuration = runBlocking {
                     settingsRepository.getSettingsOnce().getTimerDurationMillis()
+                }
+
+                // Apply RL-learned frequency multiplier
+                val frequencyMultiplier = runBlocking {
+                    try {
+                        adaptiveContentSelector.getFrequencyMultiplier()
+                    } catch (e: Exception) {
+                        ErrorLogger.warning(
+                            "Failed to get frequency multiplier, using default: ${e.message}",
+                            context = "UsageMonitorService.getTimerDurationMillis"
+                        )
+                        1.0f  // Default to no adjustment
+                    }
+                }
+
+                val adjustedDuration = (baseTimerDuration * frequencyMultiplier).toLong()
+
+                ErrorLogger.debug(
+                    "Dynamic timer threshold: base=${baseTimerDuration}ms, " +
+                    "multiplier=$frequencyMultiplier, adjusted=${adjustedDuration}ms",
+                    context = "UsageMonitorService.getTimerDurationMillis"
+                )
+
+                adjustedDuration
+            },
+            checkBehavioralDistress = { sessionState ->
+                // Phase 3: Check for behavioral cues requiring early intervention
+                runBlocking {
+                    try {
+                        val interventionContext = buildInterventionContext(sessionState)
+
+                        // Check for distress signals from Phase 3 enhanced behavioral cues
+                        val hasDistress = interventionContext.compulsiveBehaviorDetected ||
+                                         interventionContext.rapidAppSwitching ||
+                                         interventionContext.unusualUsageTime ||
+                                         interventionContext.isLongScreenSession ||
+                                         interventionContext.isExcessiveUnlocking
+
+                        if (hasDistress) {
+                            ErrorLogger.info(
+                                "Behavioral distress detected: " +
+                                "compulsive=${interventionContext.compulsiveBehaviorDetected}, " +
+                                "rapidSwitch=${interventionContext.rapidAppSwitching}, " +
+                                "unusualTime=${interventionContext.unusualUsageTime}, " +
+                                "longScreen=${interventionContext.isLongScreenSession}, " +
+                                "excessiveUnlock=${interventionContext.isExcessiveUnlocking}",
+                                context = "UsageMonitorService.checkBehavioralDistress"
+                            )
+                        }
+
+                        hasDistress
+                    } catch (e: Exception) {
+                        ErrorLogger.warning(
+                            "Failed to check behavioral distress: ${e.message}",
+                            context = "UsageMonitorService.checkBehavioralDistress"
+                        )
+                        false  // Default to no distress
+                    }
                 }
             }
         )
@@ -220,6 +303,7 @@ class UsageMonitorService : Service() {
         val screenFilter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)  // Phase 3: Track screen unlocks
         }
         registerReceiver(screenStateReceiver, screenFilter)
 
@@ -229,6 +313,16 @@ class UsageMonitorService : Service() {
 
         // Update power save mode status
         updatePowerSaveMode()
+
+        // Phase 3: Initialize screen-on timestamp if screen is currently on
+        val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (powerManager?.isInteractive == true) {
+            screenOnTimestamp = System.currentTimeMillis()
+            ErrorLogger.debug(
+                "Service started with screen already on. Tracking screen-on duration.",
+                context = "UsageMonitorService.onCreate"
+            )
+        }
 
         // Initialize session detector
         serviceScope.launch {
@@ -465,6 +559,40 @@ class UsageMonitorService : Service() {
      * Handle tracked app detection
      */
     private suspend fun onTargetAppDetected(launchEvent: AppLaunchDetector.AppLaunchEvent) {
+        // Phase 3: Track app launches for rapid switching detection
+        val currentTime = System.currentTimeMillis()
+        appLaunchTimestamps.add(Pair(currentTime, launchEvent.packageName))
+
+        // Keep only last 30 seconds of app launches
+        val thirtySecondsAgo = currentTime - (30 * 1000)
+        appLaunchTimestamps.removeAll { it.first < thirtySecondsAgo }
+
+        // Phase 3: Track quick reopens for compulsive behavior detection
+        val sessionsToday = usageRepository.getSessionsInRange(
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()),
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+        )
+        val lastSessionOfThisApp = sessionsToday
+            .filter { it.targetApp == launchEvent.packageName && it.endTimestamp != null }
+            .maxByOrNull { it.endTimestamp ?: 0L }
+
+        if (lastSessionOfThisApp != null && lastSessionOfThisApp.endTimestamp != null) {
+            val timeSinceLastSession = currentTime - lastSessionOfThisApp.endTimestamp!!
+            if (timeSinceLastSession < 2 * 60 * 1000) {  // < 2 minutes = quick reopen
+                quickReopenTimestamps.add(currentTime)
+
+                // Keep only last 5 minutes of quick reopens
+                val fiveMinutesAgo = currentTime - (5 * 60 * 1000)
+                quickReopenTimestamps.removeAll { it < fiveMinutesAgo }
+
+                ErrorLogger.debug(
+                    "Quick reopen detected for ${launchEvent.packageName}. " +
+                    "Quick reopens in last 5 min: ${quickReopenTimestamps.size}",
+                    context = "UsageMonitorService.onTargetAppDetected"
+                )
+            }
+        }
+
         // Update session detector first (this will trigger onSessionStart for new sessions)
         sessionDetector.onAppInForeground(launchEvent.packageName, launchEvent.timestamp)
 
@@ -506,14 +634,20 @@ class UsageMonitorService : Service() {
         }
 
         // Called when configured timer threshold is reached
-        sessionDetector.onTenMinuteAlert = { sessionState ->
+        // Phase 4: Algorithm then decides whether to actually show overlay based on JITAI factors
+        sessionDetector.onTimerThresholdReached = { sessionState ->
             ErrorLogger.info(
-                "onTenMinuteAlert callback triggered for ${sessionState.targetApp}, " +
-                "sessionId=${sessionState.sessionId}, duration=${sessionState.totalDuration}ms",
+                "Timer threshold reached for ${sessionState.targetApp}, " +
+                "sessionId=${sessionState.sessionId}, duration=${sessionState.totalDuration}ms | " +
+                "Consulting AdaptiveInterventionRateLimiter for JITAI decision",
                 context = "UsageMonitorService.setupSessionCallbacks"
             )
 
-            // Show timer overlay
+            // Algorithm decides whether to show overlay based on:
+            // - Opportunity detection (is this a good moment to interrupt?)
+            // - Burden metrics (is user fatigued?)
+            // - Timing optimization (is this the optimal time?)
+            // - Rate limiting (have we shown too many interventions?)
             showTimerOverlay(sessionState)
 
             // Log event
@@ -680,6 +814,41 @@ class UsageMonitorService : Service() {
             )
         }
 
+        // Phase 3: Calculate behavioral cues
+        val currentTime = System.currentTimeMillis()
+
+        // 1. Rapid app switching: 3+ different apps in last 30 seconds
+        val uniqueAppsIn30Sec = appLaunchTimestamps.map { it.second }.distinct().size
+        val rapidAppSwitching = uniqueAppsIn30Sec >= 3
+
+        // 2. Compulsive behavior: 3+ quick reopens in last 5 minutes
+        val compulsiveBehavior = quickReopenTimestamps.size >= 3
+
+        // 3. Unusual usage time: using between 1 AM - 5 AM or 23:00 - 01:00
+        val calendar = java.util.Calendar.getInstance()
+        val currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+        val unusualUsageTime = currentHour in 1..5 || currentHour == 23 || currentHour == 0
+
+        // 4. Screen-on duration: continuous screen-on time
+        val screenOnDuration = if (screenOnTimestamp > 0 && isScreenOn) {
+            currentTime - screenOnTimestamp
+        } else {
+            0L
+        }
+
+        // 5. Unlock frequency: number of unlocks in last hour
+        val unlockFrequency = unlockTimestamps.size
+
+        ErrorLogger.debug(
+            "Phase 3 Behavioral Cues: " +
+            "rapidSwitch=$rapidAppSwitching ($uniqueAppsIn30Sec apps/30s), " +
+            "compulsive=$compulsiveBehavior (${quickReopenTimestamps.size} quick reopens/5min), " +
+            "unusualTime=$unusualUsageTime (hour=$currentHour), " +
+            "screenOn=${screenOnDuration}ms, " +
+            "unlocks=$unlockFrequency/hour",
+            context = "UsageMonitorService.buildInterventionContext"
+        )
+
         return dev.sadakat.thinkfaster.domain.intervention.InterventionContext.create(
             targetApp = sessionState.targetApp,
             currentSessionDuration = System.currentTimeMillis() - sessionState.startTimestamp,
@@ -696,7 +865,13 @@ class UsageMonitorService : Service() {
             streakDays = streakDays,
             userFrictionLevel = frictionLevel,
             installDate = installDate,
-            bestSessionMinutes = bestSessionMinutes
+            bestSessionMinutes = bestSessionMinutes,
+            // Phase 3: Pass behavioral cues
+            rapidAppSwitching = rapidAppSwitching,
+            compulsiveBehaviorDetected = compulsiveBehavior,
+            unusualUsageTime = unusualUsageTime,
+            screenOnDuration = screenOnDuration,
+            unlockFrequency = unlockFrequency
         )
     }
 
@@ -768,6 +943,42 @@ class UsageMonitorService : Service() {
                         context = "UsageMonitorService.showReminderOverlay"
                     )
                     return@launch
+                }
+
+                // Phase 4: Check timing optimization - delay if suboptimal timing
+                val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val isWeekend = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) in
+                    listOf(java.util.Calendar.SATURDAY, java.util.Calendar.SUNDAY)
+
+                val timingRecommendation = try {
+                    adaptiveContentSelector.recommendTiming(
+                        targetApp = sessionState.targetApp,
+                        currentHour = currentHour,
+                        isWeekend = isWeekend
+                    )
+                } catch (e: Exception) {
+                    ErrorLogger.warning(
+                        "Failed to get timing recommendation: ${e.message}",
+                        context = "UsageMonitorService.showReminderOverlay"
+                    )
+                    null  // Proceed without timing optimization
+                }
+
+                // Check if we should delay intervention based on learned timing patterns
+                if (timingRecommendation != null && timingRecommendation.shouldDelay) {
+                    val alternativeHours = if (timingRecommendation.alternativeHours.isNotEmpty()) {
+                        timingRecommendation.alternativeHours.joinToString(", ")
+                    } else {
+                        "N/A"
+                    }
+                    ErrorLogger.info(
+                        "Delaying reminder intervention - ${timingRecommendation.reason}. " +
+                        "Current hour: ${currentHour}h, Alternative hours: [$alternativeHours], " +
+                        "Delay: ${timingRecommendation.recommendedDelayMs}ms, " +
+                        "Confidence: ${timingRecommendation.confidence}",
+                        context = "UsageMonitorService.showReminderOverlay"
+                    )
+                    return@launch  // Skip showing overlay now
                 }
 
                 // Track that reminder overlay is showing
@@ -921,6 +1132,42 @@ class UsageMonitorService : Service() {
                     return@launch
                 }
 
+                // Phase 4: Check timing optimization - delay if suboptimal timing
+                val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val isWeekend = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) in
+                    listOf(java.util.Calendar.SATURDAY, java.util.Calendar.SUNDAY)
+
+                val timingRecommendation = try {
+                    adaptiveContentSelector.recommendTiming(
+                        targetApp = sessionState.targetApp,
+                        currentHour = currentHour,
+                        isWeekend = isWeekend
+                    )
+                } catch (e: Exception) {
+                    ErrorLogger.warning(
+                        "Failed to get timing recommendation: ${e.message}",
+                        context = "UsageMonitorService.showTimerOverlay"
+                    )
+                    null  // Proceed without timing optimization
+                }
+
+                // Check if we should delay intervention based on learned timing patterns
+                if (timingRecommendation != null && timingRecommendation.shouldDelay) {
+                    val alternativeHours = if (timingRecommendation.alternativeHours.isNotEmpty()) {
+                        timingRecommendation.alternativeHours.joinToString(", ")
+                    } else {
+                        "N/A"
+                    }
+                    ErrorLogger.info(
+                        "Delaying timer intervention - ${timingRecommendation.reason}. " +
+                        "Current hour: ${currentHour}h, Alternative hours: [$alternativeHours], " +
+                        "Delay: ${timingRecommendation.recommendedDelayMs}ms, " +
+                        "Confidence: ${timingRecommendation.confidence}",
+                        context = "UsageMonitorService.showTimerOverlay"
+                    )
+                    return@launch  // Skip showing overlay now, will check again next time
+                }
+
                 // Track that timer overlay is being shown
                 timerOverlayShownTime = System.currentTimeMillis()
 
@@ -960,6 +1207,9 @@ class UsageMonitorService : Service() {
      * Handle screen off event
      */
     private fun onScreenOff() {
+        // Phase 3: Reset screen-on duration tracking
+        screenOnTimestamp = 0L
+
         // End any active session when screen turns off
         sessionDetector.forceEndSession(
             timestamp = System.currentTimeMillis(),

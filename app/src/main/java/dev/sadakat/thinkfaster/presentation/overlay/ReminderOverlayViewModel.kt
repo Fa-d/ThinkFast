@@ -8,6 +8,8 @@ import dev.sadakat.thinkfaster.domain.intervention.InteractionDepth
 import dev.sadakat.thinkfaster.domain.intervention.InterventionContext
 import dev.sadakat.thinkfaster.domain.intervention.InterventionType
 import dev.sadakat.thinkfaster.domain.intervention.InterventionUserChoice
+import dev.sadakat.thinkfaster.domain.intervention.RLVariant
+import dev.sadakat.thinkfaster.domain.intervention.UnifiedContentSelection
 import dev.sadakat.thinkfaster.domain.model.InterventionContent
 import dev.sadakat.thinkfaster.domain.model.InterventionFeedback
 import dev.sadakat.thinkfaster.domain.model.InterventionResult
@@ -59,6 +61,7 @@ class ReminderOverlayViewModel(
     /**
      * Called when the overlay is shown to the user
      * Generates context-aware content and logs the reminder shown event
+     * Phase 4: Now stores RL variant info for outcome recording
      */
     fun onOverlayShown(sessionId: Long, targetApp: String) {
         viewModelScope.launch {
@@ -76,27 +79,45 @@ class ReminderOverlayViewModel(
             // Check for debug override first
             val debugForceType: String? = settingsRepository.getDebugForceInterventionType()
 
-            val content = if (debugForceType != null) {
+            if (debugForceType != null) {
                 // Debug: Use forced content type (bypass A/B testing)
-                dev.sadakat.thinkfaster.domain.intervention.ContentSelector().generateContentByType(debugForceType, context)
+                val content = dev.sadakat.thinkfaster.domain.intervention.ContentSelector().generateContentByType(debugForceType, context)
+                _uiState.value = _uiState.value.copy(
+                    sessionId = sessionId,
+                    targetApp = targetApp,
+                    interventionContent = content,
+                    interventionContext = context,
+                    isLoading = false,
+                    rlVariant = null,  // Debug mode doesn't use RL
+                    rlContentType = null,
+                    rlSelectionReason = "Debug override: $debugForceType"
+                )
             } else {
                 // Phase 4: Use UnifiedContentSelector for A/B testing (Control vs RL Treatment)
                 val effectivenessData = resultRepository.getEffectivenessByContentType()
-                val unifiedSelection = unifiedContentSelector.selectContent(
+                val unifiedSelection: UnifiedContentSelection = unifiedContentSelector.selectContent(
                     context = context,
-                    interventionType = DomainInterventionType.REMINDER,  // Use domain.model.InterventionType
+                    interventionType = DomainInterventionType.REMINDER,
                     effectivenessData = effectivenessData
                 )
-                unifiedSelection.content
-            }
 
-            _uiState.value = _uiState.value.copy(
-                sessionId = sessionId,
-                targetApp = targetApp,
-                interventionContent = content,
-                interventionContext = context,
-                isLoading = false
-            )
+                _uiState.value = _uiState.value.copy(
+                    sessionId = sessionId,
+                    targetApp = targetApp,
+                    interventionContent = unifiedSelection.content,
+                    interventionContext = context,
+                    isLoading = false,
+                    rlVariant = unifiedSelection.variant,
+                    rlContentType = unifiedSelection.contentType,
+                    rlSelectionReason = unifiedSelection.selectionReason
+                )
+
+                // Log RL variant for analytics
+                dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                    "Reminder overlay shown - Variant: ${unifiedSelection.variant}, Content: ${unifiedSelection.contentType}, Reason: ${unifiedSelection.selectionReason}",
+                    context = "ReminderOverlayViewModel.onOverlayShown"
+                )
+            }
 
             // Log reminder shown event (skip for debug sessions)
             if (sessionId != -1L) {
@@ -105,7 +126,7 @@ class ReminderOverlayViewModel(
                         sessionId = sessionId,
                         eventType = Constants.EVENT_REMINDER_SHOWN,
                     timestamp = interventionShownTime,
-                    metadata = "App: $targetApp | Content: ${content::class.simpleName}"
+                    metadata = "App: $targetApp | Content: ${_uiState.value.interventionContent?.javaClass?.simpleName}"
                 )
             )
             }
@@ -115,6 +136,7 @@ class ReminderOverlayViewModel(
     /**
      * Called when user clicks "Proceed" button
      * Phase G: Records intervention result for effectiveness tracking
+     * Phase 4: RL outcome will be recorded after feedback (or skipped)
      */
     fun onProceedClicked() {
         val currentState = _uiState.value
@@ -165,6 +187,7 @@ class ReminderOverlayViewModel(
     /**
      * Called when user clicks "Go Back" button
      * Phase G: Records successful intervention
+     * Phase 4: RL outcome will be recorded after feedback (or skipped)
      */
     fun onGoBackClicked() {
         val currentState = _uiState.value
@@ -342,6 +365,64 @@ class ReminderOverlayViewModel(
     }
 
     /**
+     * Phase 4: Record RL outcome to close the Thompson Sampling feedback loop
+     * Updates the UnifiedContentSelector with the intervention outcome
+     * Only records for RL_TREATMENT variant (CONTROL doesn't use Thompson Sampling)
+     */
+    private suspend fun recordRLOutcome(
+        userChoice: String,
+        feedback: String?,
+        sessionContinued: Boolean?
+    ) {
+        val currentState = _uiState.value
+        val variant = currentState.rlVariant
+        val sessionId = currentState.sessionId ?: return
+        val contentType = currentState.rlContentType
+        val context = currentState.interventionContext ?: return
+
+        // Skip if debug session or not RL variant
+        if (sessionId == -1L || variant != RLVariant.RL_TREATMENT || contentType == null) {
+            dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                "Skipping RL outcome recording - sessionId=$sessionId, variant=$variant, contentType=$contentType",
+                context = "ReminderOverlayViewModel.recordRLOutcome"
+            )
+            return
+        }
+
+        try {
+            // Get timing info from context
+            val calendar = java.util.Calendar.getInstance()
+            val hourOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+            val isWeekend = context.isWeekend
+
+            // Record outcome to UnifiedContentSelector (updates Thompson Sampling)
+            unifiedContentSelector.recordOutcome(
+                interventionId = sessionId,
+                variant = variant,
+                userChoice = userChoice,
+                feedback = feedback,
+                sessionContinued = sessionContinued,
+                sessionDurationAfter = null,  // Will be updated later when session ends
+                quickReopen = context.quickReopenAttempt,
+                targetApp = currentState.targetApp,
+                hourOfDay = hourOfDay,
+                isWeekend = isWeekend
+            )
+
+            dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                "RL outcome recorded: variant=$variant, contentType=$contentType, choice=$userChoice, feedback=$feedback",
+                context = "ReminderOverlayViewModel.recordRLOutcome"
+            )
+        } catch (e: Exception) {
+            dev.sadakat.thinkfaster.util.ErrorLogger.error(
+                e,
+                message = "Failed to record RL outcome",
+                context = "ReminderOverlayViewModel.recordRLOutcome"
+            )
+        }
+    }
+
+    /**
      * Phase G: Call this when session ends to update the outcome
      */
     suspend fun updateSessionOutcome(sessionId: Long, finalDurationMs: Long, endedNormally: Boolean) {
@@ -360,6 +441,7 @@ class ReminderOverlayViewModel(
     /**
      * Called when user provides feedback (thumbs up or thumbs down)
      * Records feedback to database and triggers overlay dismissal
+     * Phase 4: Records RL outcome with feedback (strong signal for Thompson Sampling)
      */
     fun onFeedbackReceived(feedback: InterventionFeedback) {
         val currentState = _uiState.value
@@ -385,6 +467,14 @@ class ReminderOverlayViewModel(
                         )
                     )
                 }
+
+                // Phase 4: Record RL outcome with feedback (strong signal!)
+                val previousChoice = if (currentState.userChoseGoBack) "GO_BACK" else "CONTINUE"
+                recordRLOutcome(
+                    userChoice = previousChoice,
+                    feedback = feedback.name,
+                    sessionContinued = if (previousChoice == "CONTINUE") true else false
+                )
 
                 // Track to Firebase Analytics
                 analyticsManager.trackInterventionFeedback(
@@ -421,17 +511,37 @@ class ReminderOverlayViewModel(
     /**
      * Called when user skips feedback prompt
      * Dismisses overlay without recording feedback
+     * Phase 4: Records RL outcome with NO feedback (completes the feedback loop)
      */
     fun onSkipFeedback() {
-        _uiState.value = _uiState.value.copy(
-            shouldDismiss = true,
-            showFeedbackPrompt = false
-        )
+        val currentState = _uiState.value
+        if (currentState.sessionId == null) {
+            _uiState.value = _uiState.value.copy(
+                shouldDismiss = true,
+                showFeedbackPrompt = false
+            )
+            return
+        }
 
-        dev.sadakat.thinkfaster.util.ErrorLogger.info(
-            "User skipped feedback",
-            context = "ReminderOverlayViewModel.onSkipFeedback"
-        )
+        viewModelScope.launch {
+            // Phase 4: Record RL outcome with no feedback
+            val previousChoice = if (currentState.userChoseGoBack) "GO_BACK" else "CONTINUE"
+            recordRLOutcome(
+                userChoice = previousChoice,
+                feedback = null,  // No feedback provided
+                sessionContinued = if (previousChoice == "CONTINUE") true else false
+            )
+
+            _uiState.value = _uiState.value.copy(
+                shouldDismiss = true,
+                showFeedbackPrompt = false
+            )
+
+            dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                "User skipped feedback - RL outcome recorded with no feedback",
+                context = "ReminderOverlayViewModel.onSkipFeedback"
+            )
+        }
     }
 
     // ========== Phase 2: Snooze Functionality ==========
@@ -439,6 +549,7 @@ class ReminderOverlayViewModel(
     /**
      * Called when user clicks snooze button
      * Sets snooze with user-selected duration and dismisses overlay
+     * Phase 4: Records RL outcome (snooze is treated as CONTINUE/dismissal)
      */
     fun onSnoozeClicked() {
         val currentState = _uiState.value
@@ -461,6 +572,13 @@ class ReminderOverlayViewModel(
 
                 // Track dismissal for working mode suggestion
                 interventionPreferences.incrementDismissalCount()
+
+                // Phase 4: Record RL outcome (snooze = user chose to continue)
+                recordRLOutcome(
+                    userChoice = "CONTINUE",
+                    feedback = null,
+                    sessionContinued = true
+                )
 
                 // Track analytics - intervention snoozed
                 analyticsManager.trackInterventionSnoozed(snoozeDurationMinutes)
@@ -544,6 +662,7 @@ class ReminderOverlayViewModel(
  * UI state for the reminder overlay screen
  * Phase G: Enhanced with intervention tracking
  * Phase 1: Added feedback UI state
+ * Phase 4: Added RL variant tracking for Thompson Sampling
  */
 data class ReminderOverlayState(
     val sessionId: Long? = null,
@@ -555,5 +674,9 @@ data class ReminderOverlayState(
     val userChoseGoBack: Boolean = false,
     // Phase 1: Feedback UI state
     val userMadeChoice: Boolean = false,  // User clicked Go Back or Proceed
-    val showFeedbackPrompt: Boolean = false  // Show feedback prompt after choice
+    val showFeedbackPrompt: Boolean = false,  // Show feedback prompt after choice
+    // Phase 4: RL tracking
+    val rlVariant: RLVariant? = null,  // Which variant was used (CONTROL or RL_TREATMENT)
+    val rlContentType: String? = null,  // Content type selected by RL (e.g., "ReflectionQuestion")
+    val rlSelectionReason: String? = null  // Why this content was selected
 )
