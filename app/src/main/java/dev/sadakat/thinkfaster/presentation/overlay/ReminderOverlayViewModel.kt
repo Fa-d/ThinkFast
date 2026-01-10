@@ -38,7 +38,7 @@ class ReminderOverlayViewModel(
     private val resultRepository: InterventionResultRepository,
     private val analyticsManager: AnalyticsManager,
     private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences,
-    private val rateLimiter: InterventionRateLimiter,
+    private val rateLimiter: dev.sadakat.thinkfaster.service.AdaptiveInterventionRateLimiter,  // Phase 2: Use adaptive rate limiter with cooldown adjustments
     private val settingsRepository: dev.sadakat.thinkfaster.domain.repository.SettingsRepository,
     private val comprehensiveOutcomeTracker: ComprehensiveOutcomeTracker,
     private val unifiedContentSelector: UnifiedContentSelector  // Phase 4: A/B testing content selector
@@ -467,6 +467,13 @@ class ReminderOverlayViewModel(
                         )
                     )
                 }
+
+                // Phase 2: Adjust cooldown based on user feedback
+                rateLimiter.adjustCooldownForFeedback(feedback)
+                dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                    "Cooldown adjusted for feedback: $feedback",
+                    context = "ReminderOverlayViewModel.onFeedbackReceived"
+                )
 
                 // Phase 4: Record RL outcome with feedback (strong signal!)
                 val previousChoice = if (currentState.userChoseGoBack) "GO_BACK" else "CONTINUE"

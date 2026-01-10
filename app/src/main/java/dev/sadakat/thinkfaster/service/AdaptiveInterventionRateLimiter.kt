@@ -189,9 +189,7 @@ class AdaptiveInterventionRateLimiter(
             )
 
             // If timing is very poor and we have high confidence, consider blocking
-            if (!timingRecommendation.shouldInterveneNow &&
-                timingRecommendation.confidence == TimingConfidence.HIGH &&
-                timingRecommendation.shouldDelay) {
+            if (!timingRecommendation.shouldInterveneNow && timingRecommendation.confidence == TimingConfidence.HIGH && timingRecommendation.shouldDelay) {
 
                 val explanation = buildDecisionExplanation(
                     targetApp = interventionContext.targetApp,
@@ -233,14 +231,12 @@ class AdaptiveInterventionRateLimiter(
         // Step 4: Basic rate limit checks (existing logic)
         val basicResult = baseRateLimiter.canShowIntervention(
             interventionType = when (interventionType) {
-                dev.sadakat.thinkfaster.domain.intervention.InterventionType.REMINDER ->
-                    InterventionRateLimiter.InterventionType.REMINDER
-                dev.sadakat.thinkfaster.domain.intervention.InterventionType.TIMER ->
-                    InterventionRateLimiter.InterventionType.TIMER
-                dev.sadakat.thinkfaster.domain.intervention.InterventionType.CUSTOM ->
-                    InterventionRateLimiter.InterventionType.REMINDER  // Treat custom as reminder
-            },
-            sessionDurationMs = sessionDurationMs
+                dev.sadakat.thinkfaster.domain.intervention.InterventionType.REMINDER -> InterventionRateLimiter.InterventionType.REMINDER
+
+                dev.sadakat.thinkfaster.domain.intervention.InterventionType.TIMER -> InterventionRateLimiter.InterventionType.TIMER
+
+                dev.sadakat.thinkfaster.domain.intervention.InterventionType.CUSTOM -> InterventionRateLimiter.InterventionType.REMINDER  // Treat custom as reminder
+            }, sessionDurationMs = sessionDurationMs
         )
 
         // If basic checks fail, log decision and return with JITAI context
@@ -380,6 +376,7 @@ class AdaptiveInterventionRateLimiter(
                     decisionSource = "OPPORTUNITY_DETECTION"
                 )
             }
+
             else -> {
                 // All checks passed - log SHOW decision
                 val explanation = buildDecisionExplanation(
@@ -474,6 +471,7 @@ class AdaptiveInterventionRateLimiter(
             InterventionOutcome.SHOW_INTERVENTION -> {
                 "Showing intervention: $opportunityLevel opportunity ($opportunityScore/100) for $persona user"
             }
+
             InterventionOutcome.SKIP_INTERVENTION -> {
                 "Skipping intervention: ${blockingReason?.name} (opportunity: $opportunityScore/100, persona: $persona)"
             }
@@ -587,8 +585,7 @@ class AdaptiveInterventionRateLimiter(
 
             // CONSERVATIVE: Only GOOD or EXCELLENT
             InterventionFrequency.CONSERVATIVE -> {
-                opportunityLevel == OpportunityLevel.EXCELLENT ||
-                opportunityLevel == OpportunityLevel.GOOD
+                opportunityLevel == OpportunityLevel.EXCELLENT || opportunityLevel == OpportunityLevel.GOOD
             }
 
             // BALANCED: Anything except POOR
@@ -623,28 +620,20 @@ class AdaptiveInterventionRateLimiter(
      * Generate explanation for why intervention was blocked by persona rules
      */
     private fun generatePersonaBlockReason(
-        persona: UserPersona,
-        opportunityScore: Int,
-        opportunityLevel: OpportunityLevel
+        persona: UserPersona, opportunityScore: Int, opportunityLevel: OpportunityLevel
     ): String {
         return when (persona.frequency) {
-            InterventionFrequency.MINIMAL ->
-                "Problematic pattern: Only EXCELLENT opportunities allowed (score: $opportunityScore, level: $opportunityLevel)"
+            InterventionFrequency.MINIMAL -> "Problematic pattern: Only EXCELLENT opportunities allowed (score: $opportunityScore, level: $opportunityLevel)"
 
-            InterventionFrequency.CONSERVATIVE ->
-                "Heavy compulsive: Only GOOD or EXCELLENT opportunities (score: $opportunityScore, level: $opportunityLevel)"
+            InterventionFrequency.CONSERVATIVE -> "Heavy compulsive: Only GOOD or EXCELLENT opportunities (score: $opportunityScore, level: $opportunityLevel)"
 
-            InterventionFrequency.BALANCED ->
-                "Opportunity level too low: $opportunityLevel (score: $opportunityScore)"
+            InterventionFrequency.BALANCED -> "Opportunity level too low: $opportunityLevel (score: $opportunityScore)"
 
-            InterventionFrequency.MODERATE ->
-                "Score below threshold: $opportunityScore < 25"
+            InterventionFrequency.MODERATE -> "Score below threshold: $opportunityScore < 25"
 
-            InterventionFrequency.ADAPTIVE ->
-                "Adaptive filtering: Current context not optimal (score: $opportunityScore)"
+            InterventionFrequency.ADAPTIVE -> "Adaptive filtering: Current context not optimal (score: $opportunityScore)"
 
-            InterventionFrequency.ONBOARDING ->
-                "New user onboarding: Daytime, moderate+ opportunities only"
+            InterventionFrequency.ONBOARDING -> "New user onboarding: Daytime, moderate+ opportunities only"
         }
     }
 
@@ -696,12 +685,11 @@ class AdaptiveInterventionRateLimiter(
     ) {
         baseRateLimiter.recordIntervention(
             when (interventionType) {
-                dev.sadakat.thinkfaster.domain.intervention.InterventionType.REMINDER ->
-                    InterventionRateLimiter.InterventionType.REMINDER
-                dev.sadakat.thinkfaster.domain.intervention.InterventionType.TIMER ->
-                    InterventionRateLimiter.InterventionType.TIMER
-                dev.sadakat.thinkfaster.domain.intervention.InterventionType.CUSTOM ->
-                    InterventionRateLimiter.InterventionType.REMINDER  // Treat custom as reminder
+                dev.sadakat.thinkfaster.domain.intervention.InterventionType.REMINDER -> InterventionRateLimiter.InterventionType.REMINDER
+
+                dev.sadakat.thinkfaster.domain.intervention.InterventionType.TIMER -> InterventionRateLimiter.InterventionType.TIMER
+
+                dev.sadakat.thinkfaster.domain.intervention.InterventionType.CUSTOM -> InterventionRateLimiter.InterventionType.REMINDER  // Treat custom as reminder
             }
         )
     }
@@ -718,10 +706,12 @@ class AdaptiveInterventionRateLimiter(
                 val reduced = currentMultiplier * HELPFUL_COOLDOWN_REDUCTION
                 reduced.coerceAtLeast(0.5f)  // Minimum 0.5x
             }
+
             InterventionFeedback.DISRUPTIVE -> {
                 val increased = currentMultiplier * DISRUPTIVE_COOLDOWN_INCREASE
                 increased.coerceAtMost(3.0f)  // Maximum 3.0x
             }
+
             else -> currentMultiplier
         }
 

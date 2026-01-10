@@ -13,12 +13,11 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel for the Analytics debug screen
  * Phase G: Effectiveness tracking
- * Phase 4: RL A/B testing metrics & timing optimization
+ * Phase 4: RL A/B testing metrics, content effectiveness & timing optimization
  */
 class AnalyticsViewModel(
     private val resultRepository: InterventionResultRepository,
-    private val rlRolloutController: dev.sadakat.thinkfaster.domain.intervention.RLRolloutController? = null,  // Phase 4: Optional RL controller
-    private val adaptiveContentSelector: dev.sadakat.thinkfaster.domain.intervention.AdaptiveContentSelector? = null  // Phase 4: Timing effectiveness
+    private val unifiedContentSelector: dev.sadakat.thinkfaster.domain.intervention.UnifiedContentSelector? = null  // Phase 4: Unified content selector (wraps all RL features)
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AnalyticsUiState>(AnalyticsUiState.Loading)
@@ -42,21 +41,17 @@ class AnalyticsViewModel(
                     effectivenessData = contentEffectiveness
                 )
 
-                // Phase 4: Load RL A/B testing metrics
-                val rlMetrics = rlRolloutController?.getEffectivenessMetrics()
-
-                // Phase 4: Load timing effectiveness data
-                val timingEffectiveness = adaptiveContentSelector?.getTimingEffectiveness()
-                val hasReliableTimingData = adaptiveContentSelector?.hasReliableTimingData() ?: false
+                // Phase 4: Load RL metrics from UnifiedContentSelector
+                val rlMetrics = unifiedContentSelector?.getRolloutMetrics()
+                val rlContentEffectiveness = unifiedContentSelector?.getContentEffectiveness()
 
                 _uiState.value = AnalyticsUiState.Success(
                     analytics = analytics,
                     contentEffectiveness = contentEffectiveness,
                     appStats = appStats,
                     underperformingContent = underperformingContent,
-                    rlMetrics = rlMetrics,  // Phase 4: Include RL metrics
-                    timingEffectiveness = timingEffectiveness,  // Phase 4: Timing effectiveness
-                    hasReliableTimingData = hasReliableTimingData  // Phase 4: Data reliability flag
+                    rlMetrics = rlMetrics,  // Phase 4: RL A/B testing metrics
+                    rlContentEffectiveness = rlContentEffectiveness  // Phase 4: RL content type effectiveness
                 )
             } catch (e: Exception) {
                 _uiState.value = AnalyticsUiState.Error(
@@ -78,6 +73,7 @@ sealed class AnalyticsUiState {
         val appStats: Map<String, AppInterventionStats>,
         val underperformingContent: List<String> = emptyList(),
         val rlMetrics: dev.sadakat.thinkfaster.domain.intervention.RLEffectivenessMetrics? = null,  // Phase 4: RL A/B testing metrics
+        val rlContentEffectiveness: List<dev.sadakat.thinkfaster.domain.intervention.ContentEffectiveness>? = null,  // Phase 4: RL content type effectiveness (Thompson Sampling)
         val timingEffectiveness: Map<Int, Float>? = null,  // Phase 4: Hour -> effectiveness score (0.0-1.0)
         val hasReliableTimingData: Boolean = false  // Phase 4: Whether timing data is reliable enough
     ) : AnalyticsUiState()

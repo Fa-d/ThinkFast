@@ -44,7 +44,7 @@ class TimerOverlayViewModel(
     private val analyticsManager: AnalyticsManager,
     private val settingsRepository: SettingsRepository,
     private val interventionPreferences: dev.sadakat.thinkfaster.data.preferences.InterventionPreferences,
-    private val rateLimiter: dev.sadakat.thinkfaster.service.InterventionRateLimiter,
+    private val rateLimiter: dev.sadakat.thinkfaster.service.AdaptiveInterventionRateLimiter,  // Phase 2: Use adaptive rate limiter with cooldown adjustments
     private val comprehensiveOutcomeTracker: ComprehensiveOutcomeTracker,
     private val unifiedContentSelector: UnifiedContentSelector  // Phase 4: A/B testing content selector
 ) : ViewModel() {
@@ -523,6 +523,13 @@ class TimerOverlayViewModel(
                     sessionId = currentState.sessionId,
                     feedback = feedback,
                     timestamp = System.currentTimeMillis()
+                )
+
+                // Phase 2: Adjust cooldown based on user feedback
+                rateLimiter.adjustCooldownForFeedback(feedback)
+                dev.sadakat.thinkfaster.util.ErrorLogger.info(
+                    "Cooldown adjusted for feedback: $feedback",
+                    context = "TimerOverlayViewModel.onFeedbackReceived"
                 )
 
                 // Phase 4: Record RL outcome with feedback (strong signal!)

@@ -184,6 +184,15 @@ private fun SuccessView(
             }
         }
 
+        // Phase 4: RL Content Effectiveness (Thompson Sampling)
+        state.rlContentEffectiveness?.let { contentEffectiveness ->
+            if (contentEffectiveness.isNotEmpty()) {
+                item {
+                    RLContentEffectivenessCard(contentEffectiveness = contentEffectiveness)
+                }
+            }
+        }
+
         // Phase 4: Timing Effectiveness (Personalized Timing)
         if (state.hasReliableTimingData && state.timingEffectiveness != null) {
             item {
@@ -737,6 +746,103 @@ private fun RLMetricsCard(metrics: dev.sadakat.thinkfaster.domain.intervention.R
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Phase 4: RL Content Effectiveness Card
+ * Shows Thompson Sampling results - estimated success rate for each content type
+ */
+@Composable
+private fun RLContentEffectivenessCard(
+    contentEffectiveness: List<dev.sadakat.thinkfaster.domain.intervention.ContentEffectiveness>
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "🎯 RL Content Performance (Thompson Sampling)",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Learned success rates from reinforcement learning",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Sort by estimated success rate (best first)
+            val sortedContent = contentEffectiveness.sortedByDescending { it.estimatedSuccessRate }
+
+            sortedContent.forEach { content ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = content.displayName,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "n=${content.totalShown}",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                        )
+                    }
+
+                    // Success rate with color coding
+                    val successRateColor = when {
+                        content.estimatedSuccessRate >= 0.50f -> Color(0xFF4CAF50)  // Green - Good
+                        content.estimatedSuccessRate >= 0.35f -> Color(0xFFFFC107)  // Amber - OK
+                        else -> Color(0xFFF44336)  // Red - Needs improvement
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "${(content.estimatedSuccessRate * 100).toInt()}%",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = successRateColor
+                        )
+                        Text(
+                            text = "success rate",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Summary text
+            if (sortedContent.isNotEmpty()) {
+                val bestContent = sortedContent.first()
+                Text(
+                    text = "Best performer: ${bestContent.displayName} (${(bestContent.estimatedSuccessRate * 100).toInt()}%)",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                 )
             }
         }

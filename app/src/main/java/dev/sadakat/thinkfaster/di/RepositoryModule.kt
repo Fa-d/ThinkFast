@@ -57,6 +57,20 @@ val repositoryModule = module {
         )
     }
 
+    // AdaptiveInterventionRateLimiter (singleton) - Phase 2: JITAI-enhanced rate limiting with cooldown adjustments
+    single {
+        dev.sadakat.thinkfaster.service.AdaptiveInterventionRateLimiter(
+            context = androidContext(),
+            interventionPreferences = get(),
+            baseRateLimiter = get(),
+            personaDetector = get(),
+            opportunityDetector = get(),
+            decisionLogger = get(),
+            burdenTracker = get(),
+            timingOptimizer = getOrNull()  // Phase 3: Optional contextual timing
+        )
+    }
+
     // PersonaDetector (singleton) - Phase 2 JITAI: Behavioral user segmentation
     single {
         PersonaDetector(

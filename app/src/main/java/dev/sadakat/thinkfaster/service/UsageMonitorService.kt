@@ -60,8 +60,7 @@ class UsageMonitorService : Service() {
     private val decisionLogger: dev.sadakat.thinkfaster.domain.intervention.DecisionLogger by inject()
     private val burdenTracker: dev.sadakat.thinkfaster.domain.intervention.InterventionBurdenTracker by inject()
 
-    // Phase 4 dependencies - RL-based adaptive content selection and timing optimization
-    private val adaptiveContentSelector: dev.sadakat.thinkfaster.domain.intervention.AdaptiveContentSelector by inject()
+    // Phase 4 dependencies - Unified content selection (orchestrates rule-based & RL)
     private val unifiedContentSelector: dev.sadakat.thinkfaster.domain.intervention.UnifiedContentSelector by inject()
 
     private lateinit var appLaunchDetector: AppLaunchDetector
@@ -181,7 +180,7 @@ class UsageMonitorService : Service() {
                 // Apply RL-learned frequency multiplier
                 val frequencyMultiplier = runBlocking {
                     try {
-                        adaptiveContentSelector.getFrequencyMultiplier()
+                        unifiedContentSelector.getFrequencyMultiplier()
                     } catch (e: Exception) {
                         ErrorLogger.warning(
                             "Failed to get frequency multiplier, using default: ${e.message}",
@@ -951,7 +950,7 @@ class UsageMonitorService : Service() {
                     listOf(java.util.Calendar.SATURDAY, java.util.Calendar.SUNDAY)
 
                 val timingRecommendation = try {
-                    adaptiveContentSelector.recommendTiming(
+                    unifiedContentSelector.recommendTiming(
                         targetApp = sessionState.targetApp,
                         currentHour = currentHour,
                         isWeekend = isWeekend
@@ -1138,7 +1137,7 @@ class UsageMonitorService : Service() {
                     listOf(java.util.Calendar.SATURDAY, java.util.Calendar.SUNDAY)
 
                 val timingRecommendation = try {
-                    adaptiveContentSelector.recommendTiming(
+                    unifiedContentSelector.recommendTiming(
                         targetApp = sessionState.targetApp,
                         currentHour = currentHour,
                         isWeekend = isWeekend

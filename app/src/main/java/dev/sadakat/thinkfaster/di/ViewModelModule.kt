@@ -45,7 +45,7 @@ val viewModelModule = module {
     viewModel { OnboardingViewModel(goalRepository = get(), analyticsManager = get()) }
     viewModel { ReminderOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), interventionPreferences = get(), rateLimiter = get(), settingsRepository = get(), comprehensiveOutcomeTracker = get(), unifiedContentSelector = get()) }
     viewModel { TimerOverlayViewModel(usageRepository = get(), resultRepository = get(), analyticsManager = get(), settingsRepository = get(), interventionPreferences = get(), rateLimiter = get(), comprehensiveOutcomeTracker = get(), unifiedContentSelector = get()) }
-    viewModel { AnalyticsViewModel(resultRepository = get(), rlRolloutController = getOrNull(), adaptiveContentSelector = getOrNull()) }  // Phase 4: Inject RL controller & adaptive selector
+    viewModel { AnalyticsViewModel(resultRepository = get(), unifiedContentSelector = getOrNull()) }  // Phase 4: Inject unified content selector
     viewModel {
         StatsViewModel(
             getDailyStatisticsUseCase = get(),
